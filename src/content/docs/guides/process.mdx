@@ -1,0 +1,77 @@
+---
+title: Process を書く
+description: 引数に 1 を足して返す Process を Rust、C++、Python で書きます。
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+引数に 1 を足して返すだけの Process を例にします。関数（または manifest）の名前が Process の型名になります。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```rust
+use juiz_sdk::prelude::*;
+
+#[juiz_process]
+fn increment_process(arg1: i64) -> JuizResult<Capsule> {
+    log::trace!("increment_process({:?}) called", arg1);
+    return Ok(jvalue!(arg1 + 1).into());
+}
+```
+
+`#[juiz_process]` マクロを付けた関数が Process の本体になります。
+引数は複数使えて、`i64`、`f64`、`bool`、`String`、`Value`、`Vec<Value>` などを受け取れます。引数の名前がそのままパラメータ名になります。
+
+</TabItem>
+<TabItem label="C++">
+
+```cpp
+#include "juiz/juiz.h"
+
+juiz::Value manifest() {
+    return ProcessManifest{"increment_process_cpp"}
+        .add_int_arg("arg1", "test_argument", 1)
+        .into_value();
+}
+
+std::optional<int64_t> increment_process(juiz::CapsuleMap cm) {
+    auto a = cm.get_int("arg1");
+    return a + 1;
+}
+
+PROCESS_FACTORY(manifest, increment_process);
+```
+
+C++ では manifest（型名と引数の定義）を自分で書き、`PROCESS_FACTORY` で公開します。
+
+</TabItem>
+<TabItem label="Python">
+
+```python
+from juiz import *
+
+@juiz_process
+def increment_process(arg1: int = 1):
+    return arg1 + 1
+```
+
+`@juiz_process` デコレータを付けるだけで Process になります。独自のデータ型は dataclass で定義し、出力では `asdict` で dict に変換して返します。
+
+</TabItem>
+</Tabs>
+
+## 単体で動かす
+
+ビルドしたファイルを `--process` で指定し、`-e` で実体化して実行します。
+
+```sh
+juiz --process target/debug/libincrement_process.so -l rust -e -1 -d
+```
+
+- `-l` は言語（`rust` / `cpp` / `python`、既定は `rust`）
+- `-e` はロードした Process を一つ実体化し、既定の引数で実行
+- `-1` はロードしたモジュールごとにインスタンスを一つ作成
+- `-d` は実行後に HTTP ブローカーを立てて待機
