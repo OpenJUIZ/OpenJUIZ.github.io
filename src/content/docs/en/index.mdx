@@ -1,0 +1,45 @@
+---
+title: juiz
+description: Middleware for building robots and IoT devices as networked distributed systems
+template: splash
+hero:
+  tagline: Middleware that builds robots and IoT devices from idempotent functions and state containers
+  actions:
+    - text: Get started
+      link: /en/getting-started/install/
+      icon: right-arrow
+    - text: GitHub
+      link: https://github.com/OpenJUIZ/juiz
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+JUIZ lets you write software that drives cameras, robots, motors and sensors in several languages,
+then combine those pieces so they run together as a single software service.
+
+<CardGrid stagger>
+	<Card title="Process" icon="rocket">
+		Write software as idempotent functions with inputs (arguments) and outputs.
+	</Card>
+	<Card title="Container" icon="puzzle">
+		Keep state in a Container and read or write it through ContainerProcesses, so state and behavior stay separate.
+	</Card>
+	<Card title="connect and call" icon="random">
+		Wire Processes together as a dataflow, or call them from outside and get the result back.
+	</Card>
+	<Card title="Rust, C++, Python" icon="seti:rust">
+		Write components in three languages. HTTP+JSON and QUIC brokers are built in.
+	</Card>
+</CardGrid>
+
+## Try it in three lines
+
+```sh
+cargo install juiz_app
+git clone https://github.com/OpenJUIZ/juiz_examples_rust.git && cd juiz_examples_rust && cargo build
+juiz -f increment_process.conf -d
+```
+
+Then open http://127.0.0.1:8000/docs in your browser to call the Process from Swagger UI.
