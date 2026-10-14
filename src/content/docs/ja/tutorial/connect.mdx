@@ -20,7 +20,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 ## サンプルを用意する
 
 第 1 章でクローンしてビルドしたサンプル集をそのまま使います。talker と listener も、第 1 章のビルドで一緒にできあがっています。
-まだの場合は、[第 1 章の「サンプルを用意する」](/tutorial/first-process/#サンプルを用意する) の手順を済ませてください。
+まだの場合は、[第 1 章の「サンプルを用意する」](/ja/tutorial/first-process/#サンプルを用意する) の手順を済ませてください。
 
 | 役割 | 名前 |
 | --- | --- |
@@ -500,6 +500,6 @@ listener も、引数を渡して直接 call すれば、ふつうの Process �
 - `connections` に書くと、Process の出力を別の Process の引数につなげます(connect)。`Push` では、`source` が実行されるたびに `destination` へ値が流れます。
 - Process をいつ実行するかは、Process 自身ではなく Execution Context(EC)が決めます。`main_loop_ec` は `rate` の周期で `bind` の Process を実行します。
 - call は結果を受け取るだけで、つながりには値を流しません。値が流れるのは EC が Process を実行したときです。
-- 設定ファイルの項目は、[ガイドの「設定ファイル」](/guides/config/) にもまとめてあります。
+- 設定ファイルの項目は、[ガイドの「設定ファイル」](/ja/guides/config/) にもまとめてあります。
 
-次の章では、これまで別々のファイルに書いてきた Process と Container を、1 つのプロジェクトにまとめて配布する方法を学びます。[Component にまとめて配布する](/tutorial/component/) に進みましょう。
+次の章では、これまで別々のファイルに書いてきた Process と Container を、1 つのプロジェクトにまとめて配布する方法を学びます。[Component にまとめて配布する](/ja/tutorial/component/) に進みましょう。

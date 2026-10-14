@@ -1,36 +1,35 @@
 ---
-title: juiz の考え方
-description: Process、Container、ContainerProcess と、connect / call という 2 つの使い方。
+title: How juiz works
+description: Process, Container, ContainerProcess, and the two ways to use them, connect and call.
 sidebar:
   order: 1
 ---
 
-juiz は、ROS の Node のような「状態と振る舞いをひとまとめにしたコンポーネント」を分解し、
-振る舞いを **Process**、状態を **Container** として扱います。
+juiz takes apart the kind of component that bundles state and behavior together (like a ROS Node),
+and treats behavior as a **Process** and state as a **Container**.
 
 ## Process
 
-Process は、入力（引数）と出力を持つ冪等な関数です。同じ引数を与えれば同じ結果を返します。
-状態を持たないので、テストしやすく、組み合わせても振る舞いが予測しやすくなります。
+A Process is an idempotent function with inputs (arguments) and outputs: the same arguments always give the same result.
+Because it holds no state, it is easy to test and predictable when combined with others.
 
 :::note
-Process は、以前の発表では「Operation」と呼んでいました。
+Earlier talks called the Process an "Operation".
 :::
 
-## Container と ContainerProcess
+## Container and ContainerProcess
 
-状態を保持したいときは Container を使います。Container は状態を表すデータ（構造体）で、
-その状態を読み書きするのは Container に結びついた **ContainerProcess** です。
-状態に触れる処理が ContainerProcess に限られるので、どこで状態が変わるのかが明確になります。
+When you need to keep state, use a Container: a piece of data (a struct) that holds the state.
+Only the **ContainerProcesses** bound to a Container read or write it, so it is always clear where state changes.
 
-## 2 つの使い方
+## Two ways to use it
 
-- **connect**: Process の出力を別の Process の入力につなぎ、データフローとしてロボットを動かします。ROS などのロボット用ミドルウェアに近い開発スタイルです。
-- **call**: 外部から Process を呼び出して結果を受け取ります。サーバー・クライアント型のソフトウェアに近い開発スタイルです。
+- **connect**: wire one Process's output to another's input and drive the robot as a dataflow, much like ROS and other robot middleware.
+- **call**: call a Process from outside and receive its result, much like client/server software.
 
-## Broker と Execution Context
+## Brokers and Execution Contexts
 
-- **Broker** は Process や Container をネットワーク越しに公開します。HTTP+JSON と QUIC のブローカーを標準で提供し、HTTP ブローカーは OpenAPI 定義を出すので Swagger UI から試せます。
-- **Execution Context** は Process を実行するタイミングを決めます。周期実行の TimerEC、メインスレッドで実行する MainLoopEC、一度だけ実行する OneShotEC があります。
+- A **Broker** exposes Processes and Containers over the network. HTTP+JSON and QUIC brokers are built in, and the HTTP broker serves an OpenAPI definition you can try from Swagger UI.
+- An **Execution Context** decides when a Process runs: TimerEC runs it periodically, MainLoopEC on the main thread, and OneShotEC once.
 
-juiz を作った動機と設計思想は [MOTIVATION.md](https://github.com/OpenJUIZ/juiz/blob/main/MOTIVATION.md) にまとめています。
+The motivation and design philosophy behind juiz are in [MOTIVATION.md](https://github.com/OpenJUIZ/juiz/blob/main/MOTIVATION.md) (Japanese).
