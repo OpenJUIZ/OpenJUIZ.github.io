@@ -1,0 +1,394 @@
+---
+title: 3. 設定ファイルでまとめて起動する
+description: 第 1 章の Process と第 2 章の Container を 1 つの設定ファイルで起動し、読み込みと実体化の違いを学びます。
+sidebar:
+  order: 3
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+第 1 章では Process を、第 2 章では Container を、それぞれ別々に起動しました。
+実際のロボットでは、カメラやモータ、それを処理する Process など、たくさんの部品を一度に動かします。
+この章では、これまでの Process と Container を 1 つの設定ファイルに書いて、まとめて起動します。
+
+<Aside type="tip" title="この章で学ぶこと">
+- 設定ファイルには「何を読み込むか」(`plugins`)と「何を作るか」(`processes` / `containers`)を分けて書くこと
+- 1 つの型から、名前の違うインスタンスをいくつも作れること
+- Container の初期値のような、インスタンスごとの設定を設定ファイルで渡せること
+</Aside>
+
+## サンプルを用意する
+
+第 1 章でクローンしてビルドしたサンプル集をそのまま使います。
+まだの場合は、[第 1 章の「サンプルを用意する」](/tutorial/first-process/#サンプルを用意する) の手順を済ませてください。
+
+この章では、サンプル集のルートに `tutorial.conf` という設定ファイルを新しく作ります。
+
+## 設定ファイルを書く
+
+次の内容で `tutorial.conf` を作ってください。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```yaml title="tutorial.conf"
+name: tutorial
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    increment_process:
+      path: "./target/debug"
+  container_factories:
+    example_container:
+      path: "./target/debug"
+      processes:
+        example_container_increment:
+          path: "./target/debug"
+        example_container_get:
+          path: "./target/debug"
+processes:
+  - type_name: increment_process
+    name: inc0
+  - type_name: increment_process
+    name: inc1
+containers:
+  - type_name: example_container
+    name: counter0
+    processes:
+      - type_name: example_container_increment
+        name: increment0
+      - type_name: example_container_get
+        name: get0
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```yaml title="tutorial.conf"
+name: tutorial
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    increment_process_python:
+      language: python
+      path: "./process"
+  container_factories:
+    example_container_python:
+      language: python
+      path: "./container"
+      processes:
+        example_container_python_increment:
+          path: "./container"
+        example_container_python_get:
+          path: "./container"
+processes:
+  - type_name: increment_process_python
+    name: inc0
+  - type_name: increment_process_python
+    name: inc1
+containers:
+  - type_name: example_container_python
+    name: counter0
+    processes:
+      - type_name: example_container_python_increment
+        name: increment0
+      - type_name: example_container_python_get
+        name: get0
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```yaml title="tutorial.conf"
+name: tutorial
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    increment_process_cpp:
+      language: "c++"
+      path: "./build/plugins"
+  container_factories:
+    example_container_cpp:
+      language: "c++"
+      path: "./build/plugins"
+      processes:
+        example_container_cpp_increment:
+          path: "./build/plugins"
+        example_container_cpp_get:
+          path: "./build/plugins"
+processes:
+  - type_name: increment_process_cpp
+    name: inc0
+  - type_name: increment_process_cpp
+    name: inc1
+containers:
+  - type_name: example_container_cpp
+    name: counter0
+    processes:
+      - type_name: example_container_cpp_increment
+        name: increment0
+      - type_name: example_container_cpp_get
+        name: get0
+```
+
+</TabItem>
+</Tabs>
+
+設定ファイルは YAML で書きます。上から順に見ていきましょう。
+
+### name と option
+
+```yaml
+name: tutorial
+option:
+  http_broker:
+    start: true
+    port: 8000
+```
+
+`name` はこのシステムの名前です。
+`option` の `http_broker` は、これまで `-d` で立ち上げていた HTTP ブローカーの設定です。`port` で待ち受けるポートを変えられます。
+
+### plugins: 読み込む
+
+`plugins` には、どのファイルから型を**読み込む**かを書きます。第 1 章の `--process`、第 2 章の `--container` / `--container_process` に当たる部分です。
+
+- `process_factories` には Process の型を書きます。
+- `container_factories` には Container の型を書き、その下の `processes` に、その Container に結びつく ContainerProcess の型を書きます。
+
+キーには**型名**を書きます。juiz は `path` に書いたディレクトリから、型名に合ったファイルを探します。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+型名 `increment_process` なら、`./target/debug` の中の `libincrement_process.so`(macOS では `.dylib`)が読み込まれます。
+`language` を省略すると `rust` として扱われます。
+
+</TabItem>
+<TabItem label="Python">
+
+型名 `increment_process_python` なら、`./process` の中の `increment_process_python.py` が読み込まれます。
+`language: python` を必ず書いてください。ContainerProcess の言語は、親の Container と同じになります。
+
+</TabItem>
+<TabItem label="C++">
+
+型名 `increment_process_cpp` なら、`./build/plugins` の中の `libincrement_process_cpp.so`(macOS では `.dylib`)が読み込まれます。
+`language: "c++"` を必ず書いてください(コマンドラインの `-l cpp` とは書き方が違います)。ContainerProcess の言語は、親の Container と同じになります。
+
+</TabItem>
+</Tabs>
+
+`plugins` に書くだけでは、まだ何も動きません。juiz が型(作り方)を覚えるだけです。
+
+### processes と containers: 作る
+
+`processes` と `containers` には、読み込んだ型から**インスタンスを作る**ことを書きます。第 1 章・第 2 章の `-1` に当たる部分です。
+
+- `type_name` には `plugins` に書いた型名を、`name` には作るインスタンスの名前を書きます。
+- `processes` では、同じ型 `increment_process` から `inc0` と `inc1` の 2 つのインスタンスを作っています。
+- `containers` では、Container `counter0` を作り、その下の `processes` で、`counter0` に結びつく ContainerProcess `increment0` と `get0` を作っています。
+
+`-1` で作ったときは「型名 + `0`」という名前に決まっていましたが、設定ファイルでは好きな名前を付けられます。
+
+## 動かす
+
+設定ファイルを `-f` で渡して起動します。どの言語でも同じコマンドです。
+
+```sh
+juiz -f tutorial.conf -d
+```
+
+Python の場合は、第 1 章で作った venv を有効にしたターミナルで実行してください。
+
+## 外から呼び出す
+
+`juiz` を起動したまま別のターミナルを開き、Process の一覧を見てみます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/inc0::increment_process", "http://127.0.0.1:8000/process/inc1::increment_process"]
+juiz container-process list
+# => ["core://core/container_process/increment0::example_container_increment:counter0", "core://core/container_process/get0::example_container_get:counter0"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/inc0::increment_process_python", "http://127.0.0.1:8000/process/inc1::increment_process_python"]
+juiz container-process list
+# => ["core://core/container_process/increment0::example_container_python_increment:counter0", "core://core/container_process/get0::example_container_python_get:counter0"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/inc0::increment_process_cpp", "http://127.0.0.1:8000/process/inc1::increment_process_cpp"]
+juiz container-process list
+# => ["core://core/container_process/increment0::example_container_cpp_increment:counter0", "core://core/container_process/get0::example_container_cpp_get:counter0"]
+```
+
+</TabItem>
+</Tabs>
+
+表示される順番は実行ごとに変わることがあります。
+同じ型 `increment_process` のインスタンスが `inc0` と `inc1` の 2 つ、ID の「インスタンス名」の部分だけが違う形で並んでいます。
+それぞれを呼び出してみましょう。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/inc0::increment_process" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz process call "http://127.0.0.1:8000/process/inc1::increment_process" '{"arg1": 10}' -p
+# => CapsulePtr((value:Value(11), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_increment:counter0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(5), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/inc0::increment_process_python" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz process call "http://127.0.0.1:8000/process/inc1::increment_process_python" '{"arg1": 10}' -p
+# => CapsulePtr((value:Value(11), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:counter0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_python_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(5), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/inc0::increment_process_cpp" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz process call "http://127.0.0.1:8000/process/inc1::increment_process_cpp" '{"arg1": 10}' -p
+# => CapsulePtr((value:Value(11), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:counter0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(5), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+第 1 章の Process と第 2 章の Container が、1 つの `juiz` の中で一緒に動いています。
+`inc0` と `inc1` は同じ型から作られた別々のインスタンスですが、Process は状態を持たないので、どちらを呼んでも同じ引数なら同じ結果になります。
+
+## Container に初期値を渡す
+
+`containers` の項目には、`type_name` と `name` のほかに、Container を作る関数に渡す値も書けます。
+カウンタを 3 から始めるように、`counter0` の項目に 1 行足してみましょう。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```yaml ins={4}
+containers:
+  - type_name: example_container
+    name: counter0
+    initial_value: 3
+    processes:
+```
+
+`example_container` 関数の引数 `initial_value` に `3` が渡されます。
+
+</TabItem>
+<TabItem label="Python">
+
+```yaml ins={4}
+containers:
+  - type_name: example_container_python
+    name: counter0
+    initial_value: 3
+    processes:
+```
+
+`example_container_python` 関数の引数 `initial_value` に `3` が渡されます。
+
+</TabItem>
+<TabItem label="C++">
+
+```yaml ins={4}
+containers:
+  - type_name: example_container_cpp
+    name: counter0
+    value: 3
+    processes:
+```
+
+`create_container` が受け取る `CapsuleMap` から、`args.get_int("value")` で `3` を取り出します。
+第 2 章で使った `example_container.conf` に `value: 10` と書かれていたのも、この仕組みです。
+
+</TabItem>
+</Tabs>
+
+`juiz` を Ctrl+C で止めて起動し直し、`get` を呼び出すと `3` が返ってきます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(3), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_python_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(3), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(3), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+コードを書き換えずに、設定ファイルだけで振る舞いの出発点を変えられました。
+
+## やってみよう
+
+- `processes` と `containers` を消して `plugins` だけ残した設定ファイルで起動し、`juiz process list` を見てみましょう。空のリスト `[]` が返ります。読み込んだだけでは、インスタンスは作られないことがわかります。
+- `containers` にもう 1 つ Container(たとえば `counter1`)と、それに結びつく `increment` / `get` を書き足してみましょう。`counter0` と `counter1` は別々の値を持ちます。ContainerProcess の ID には Container の名前が入るので、`increment0` のような名前は Container ごとに同じでもかまいません。
+- サンプル集の `decrement_process` を `plugins` と `processes` に書き足して、1 を引く Process も一緒に動かしてみましょう。
+
+## まとめ
+
+- 設定ファイルには、型を**読み込む** `plugins` と、そこから**インスタンスを作る** `processes` / `containers` を分けて書きます。
+- 1 つの型から、名前の違うインスタンスをいくつも作れます。インスタンスの名前は ID の一部になります。
+- Container の初期値のような、インスタンスごとの設定も設定ファイルで渡せます。
+- 設定ファイルの項目は、[ガイドの「設定ファイル」](/guides/config/) にまとめてあります。
+
+次の章では、設定ファイルに Process どうしのつながりと、Process を動かすタイミングを書き足します。[Process をつなぐ: connect と Execution Context](/tutorial/connect/) に進みましょう。
