@@ -84,7 +84,7 @@ class PyContainer:
         self.value = value
 
 @juiz_container
-def example_container_python(initial_value: int = 0):
+def example_container_python(initial_value: int = 0) -> PyContainer:
     return PyContainer(initial_value)
 ```
 
@@ -139,7 +139,7 @@ CONTAINER_PROCESS_FACTORY(CppContainer, manifest, example_container_increment)
 from juiz import juiz_container_process
 
 @juiz_container_process(container_type="example_container_python")
-def example_container_python_get(container):
+def example_container_python_get(container) -> int:
     return container.value
 ```
 

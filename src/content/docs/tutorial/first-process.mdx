@@ -95,14 +95,14 @@ from juiz import juiz_process
 
 
 @juiz_process
-def increment_process_python(arg1: int = 0):
+def increment_process_python(arg1: int = 0) -> int:
     """引数に 1 を足して返す"""
     print(f"increment_process_python: {arg1} -> {arg1 + 1}")
     return arg1 + 1
 ```
 
 `@juiz_process` を付けた関数が Process になります。関数名 `increment_process_python` が Process の**型名**です。
-引数の名前・型・既定値は、型ヒントと既定値から juiz が読み取ります。
+引数の名前・型・既定値は型ヒントと既定値から、出力の型は戻り値の型ヒント(`-> int`)から juiz が読み取ります。戻り値の型ヒントは省略できません。
 
 ファイル名と関数名をそろえておくと、juiz はファイル名から関数を見つけられます。
 

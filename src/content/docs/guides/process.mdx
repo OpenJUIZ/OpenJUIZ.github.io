@@ -54,7 +54,7 @@ C++ では manifest（型名と引数の定義）を自分で書き、`PROCESS_F
 from juiz import *
 
 @juiz_process
-def increment_process(arg1: int = 1):
+def increment_process(arg1: int = 1) -> int:
     return arg1 + 1
 ```
 
