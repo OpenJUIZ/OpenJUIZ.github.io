@@ -8,6 +8,12 @@ export default defineConfig({
 		starlight({
 			title: 'juiz',
 			description: 'ロボットと IoT のための分散ミドルウェア',
+			logo: {
+				light: './src/assets/logo-light.svg',
+				dark: './src/assets/logo-dark.svg',
+				alt: 'juiz',
+				replacesTitle: true,
+			},
 			defaultLocale: 'root',
 			locales: {
 				root: { label: '日本語', lang: 'ja' },
