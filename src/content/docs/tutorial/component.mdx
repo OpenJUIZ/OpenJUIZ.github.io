@@ -1,0 +1,538 @@
+---
+title: 5. Packaging as a Component
+description: Bundle Processes, Containers and ContainerProcesses into one library and load it with one line of configuration. Learn that a Component is the unit of distribution.
+sidebar:
+  order: 5
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+So far you have built every Process, Container and ContainerProcess as a separate file (library), one per type.
+In the configuration file in chapter 3, you also listed the types in `plugins` one by one so each file was loaded.
+
+When you want to hand someone "the full set of parts for this camera", scattered files are inconvenient.
+In this chapter you build a **Component** that bundles Processes, Containers and ContainerProcesses into one library, and load it from a configuration file.
+
+<Aside type="tip" title="What you will learn">
+- A Component is the **unit of distribution** that bundles several Processes, Containers and ContainerProcesses
+- Types inside a Component keep their type names, and you create instances from them the same way as before
+- `components` in `plugins` takes a single Component name instead of each type
+</Aside>
+
+## Prepare the samples
+
+Keep using the example repository you cloned and built in chapter 1. The Component example was built along with everything else in chapter 1.
+If you have not done that yet, follow [Prepare the samples in chapter 1](/tutorial/first-process/#prepare-the-samples).
+
+The Component used in this chapter contains the following. Each works the same as what you built in the earlier chapters.
+
+| Kind | What it does |
+| --- | --- |
+| Process | Adds 1 to its argument and returns it (same as `increment_process` in chapter 1) |
+| Container | Holds one integer (same as the counter in chapter 2) |
+| ContainerProcess | Reads or changes the Container's value |
+
+## Read the Component code
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`component/example_component/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/component/example_component/src/lib.rs)
+
+```rust
+use juiz_sdk::prelude::*;
+
+#[juiz_component_process]
+fn example_component_increment(arg1: i64) -> JuizResult<Capsule> {
+    log::trace!("increment_process({:?}) called", arg1);
+    return Ok(jvalue!(arg1 + 1).into());
+}
+
+#[repr(Rust)]
+pub struct ExampleComponentContainer {
+    pub value: i64,
+}
+
+#[juiz_component_container]
+fn example_component_container(initial_value: i64) -> JuizResult<Box<ExampleComponentContainer>> {
+    println!("example_component_container({initial_value}) called");
+    Ok(Box::new(ExampleComponentContainer {
+        value: initial_value,
+    }))
+}
+
+#[juiz_component_container_process(container_type = "example_component_container")]
+fn example_component_container_get(
+    container: &mut ContainerImpl<ExampleComponentContainer>,
+) -> JuizResult<Capsule> {
+    println!("example_component_container_get()");
+    Ok(jvalue!(container.value).into())
+}
+
+#[juiz_component_container_process(container_type = "example_component_container")]
+fn example_component_container_increment(
+    container: &mut ContainerImpl<ExampleComponentContainer>,
+) -> JuizResult<Capsule> {
+    println!("example_component_container_increment()");
+    container.value = container.value + 1;
+    Ok(jvalue!(container.value).into())
+}
+
+#[juiz_component_container_process( container_type = "example_component_container" 
+   arguments = {
+      default = {
+        arg1 = 1
+      }
+   }
+)]
+fn example_component_container_add(
+    container: &mut ContainerImpl<ExampleComponentContainer>,
+    arg1: i64,
+) -> JuizResult<Capsule> {
+    println!("example_component_container_add({arg1})");
+    container.value = container.value + arg1;
+    Ok(jvalue!(container.value).into())
+}
+
+juiz_component_manifest!(
+    component_name = "example_component"
+    containers = {
+        example_component_container = [
+            example_component_container_get,
+            example_component_container_increment,
+            example_component_container_add
+        ]
+    }
+    processes = [
+        example_component_increment
+    ]
+);
+```
+
+The functions are written almost the same way as before. Only two things differ.
+
+- The attribute macros change to their `component` versions: `#[juiz_process]` → `#[juiz_component_process]`, `#[juiz_container]` → `#[juiz_component_container]`, and `#[juiz_container_process]` → `#[juiz_component_container_process]`.
+- The final `juiz_component_manifest!` declares the Component's name and the Processes, Containers and ContainerProcesses it contains. ContainerProcesses are listed under the Container they are bound to.
+
+The whole Component is one crate (`crate-type = ["cdylib"]` in [`Cargo.toml`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/component/example_component/Cargo.toml)), built into a single shared library, `target/debug/libexample_component.so` (`.dylib` on macOS).
+
+</TabItem>
+<TabItem label="Python">
+
+[`component/example_component_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/component/example_component_python.py)
+
+```python
+from juiz import juiz_container, juiz_container_process, juiz_process
+
+
+@juiz_process
+def example_component_python_increment(arg1: int = 0) -> int:
+    """Adds 1 to the argument and returns it"""
+    return arg1 + 1
+
+
+class IntegerContainer:
+    def __init__(self, value: int):
+        self.value = value
+
+
+@juiz_container
+def example_component_python_container(initial_value: int = 0) -> IntegerContainer:
+    """A Container that holds one integer"""
+    return IntegerContainer(initial_value)
+
+
+@juiz_container_process(container_type="example_component_python_container")
+def example_component_python_container_set(container, value: int = 0) -> int:
+    """Sets the value of the Container"""
+    container.value = value
+    return container.value
+
+
+@juiz_container_process(container_type="example_component_python_container")
+def example_component_python_container_get(container) -> int:
+    """Returns the value of the Container"""
+    return container.value
+```
+
+The decorators are exactly the same as in chapters 1 and 2. The only difference is that they are **placed in one file**.
+When loaded as a Component, every decorated function in this file becomes a type of this Component. The file name `example_component_python` is the Component's name.
+
+</TabItem>
+<TabItem label="C++">
+
+[`component/example_component_cpp/example_component_cpp.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/component/example_component_cpp/example_component_cpp.cpp)
+
+```cpp
+#include "juiz/juiz.h"
+
+// A Component that bundles a Process, a Container and ContainerProcesses into one library
+//
+// In a Component, each element is exported with COMPONENT_*_FACTORY,
+// and component_manifest() declares them all at the end.
+
+// Process: adds 1 to arg1 and returns it
+static auto example_component_cpp_increment_manif =
+    ProcessManifest("example_component_cpp_increment")
+        .add_int_arg("arg1", "value to be incremented", 1);
+std::optional<int64_t> example_component_cpp_increment(int64_t arg1) {
+    return arg1 + 1;
+}
+COMPONENT_PROCESS_FACTORY(example_component_cpp_increment_manif, example_component_cpp_increment);
+
+// Container: holds one integer
+class ComponentContainer {
+public:
+    int64_t value;
+    ComponentContainer(int64_t v) : value(v) {}
+};
+
+static auto example_component_cpp_container_manif =
+    ContainerManifest("example_component_cpp_container");
+ComponentContainer* example_component_cpp_container(juiz::CapsuleMap args) {
+    int64_t initial_value = 0;
+    if (args.has("value")) {
+        initial_value = args.get_int("value");
+    }
+    return new ComponentContainer(initial_value);
+}
+COMPONENT_CONTAINER_FACTORY(example_component_cpp_container_manif, example_component_cpp_container);
+
+// ContainerProcess: returns the value of the Container
+static auto example_component_cpp_container_get_manif =
+    ProcessManifest("example_component_cpp_container_get");
+std::optional<int64_t> example_component_cpp_container_get(ComponentContainer* container) {
+    return container->value;
+}
+COMPONENT_CONTAINER_PROCESS_FACTORY(ComponentContainer, example_component_cpp_container_get_manif, example_component_cpp_container_get);
+
+// ContainerProcess: adds arg1 to the value of the Container
+static auto example_component_cpp_container_increment_manif =
+    ProcessManifest("example_component_cpp_container_increment")
+        .add_int_arg("arg1", "value to be added", 1);
+std::optional<int64_t> example_component_cpp_container_increment(ComponentContainer* container, int64_t arg1) {
+    container->value += arg1;
+    return container->value;
+}
+COMPONENT_CONTAINER_PROCESS_FACTORY(ComponentContainer, example_component_cpp_container_increment_manif, example_component_cpp_container_increment);
+
+// Manifest of the whole Component
+auto component_manifest() {
+    return ComponentManifest("example_component_cpp")
+        .add_process(example_component_cpp_increment_manifest())
+        .add_container(example_component_cpp_container_manifest()
+            .add_process(example_component_cpp_container_get_manifest())
+            .add_process(example_component_cpp_container_increment_manifest()));
+}
+DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(component_manifest)
+```
+
+Because one library holds several types, the code looks a little different from before.
+
+- Each type's manifest goes in a variable named per type, such as `example_component_cpp_increment_manif`, instead of a function always called `manifest()`.
+- To export, use `COMPONENT_PROCESS_FACTORY`, `COMPONENT_CONTAINER_FACTORY` and `COMPONENT_CONTAINER_PROCESS_FACTORY` instead of `PROCESS_FACTORY` and friends. Besides the function itself, these also generate a function named `<function name>_manifest()`.
+- The final `component_manifest()` declares the Component's name and the types it contains. ContainerProcesses are added with `add_process` to the Container they are bound to, inside `add_container(...)`. `DEFINE_COMPONENT_MANIFEST_ENTRY_POINT` exports it so juiz can read it.
+
+The build is one line in [`component/CMakeLists.txt`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/component/CMakeLists.txt).
+
+```cmake
+add_juiz_component(example_component_cpp SOURCES example_component_cpp/example_component_cpp.cpp)
+```
+
+This produces a single shared library, `build/plugins/libexample_component_cpp.so` (`.dylib` on macOS).
+
+</TabItem>
+</Tabs>
+
+What used to be split per type now lives in one library (one file in Python).
+The bodies of the Processes and ContainerProcesses are unchanged. Processes are still idempotent functions, and only ContainerProcesses touch state.
+
+## Read the configuration file
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`example_component.conf`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/example_component.conf)
+
+```yaml
+name: example_component
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  components:
+    example_component:
+      language: rust
+      path: "./target/debug"
+processes:
+  - type_name: example_component_increment
+    name: proc0
+containers:
+  - type_name: example_component_container
+    name: container0
+    initial_value: 100
+    processes:
+      - type_name: example_component_container_increment
+        name: increment0
+      - type_name: example_component_container_add
+        name: add0
+      - type_name: example_component_container_get
+        name: get0
+```
+
+</TabItem>
+<TabItem label="Python">
+
+[`example_component.conf`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/example_component.conf)
+
+```yaml
+name: example_component
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  components:
+    example_component_python:
+      language: python
+      path: "./component"
+processes:
+  - type_name: example_component_python_increment
+    name: increment0
+containers:
+  - type_name: example_component_python_container
+    name: container0
+    processes:
+      - type_name: example_component_python_container_set
+        name: set0
+      - type_name: example_component_python_container_get
+        name: get0
+```
+
+</TabItem>
+<TabItem label="C++">
+
+[`example_component.conf`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/example_component.conf)
+
+```yaml
+name: example_component
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  components:
+    example_component_cpp:
+      language: "c++"
+      path: "./build/plugins"
+processes:
+  - type_name: example_component_cpp_increment
+    name: proc0
+containers:
+  - type_name: example_component_cpp_container
+    name: container0
+    value: 100
+    processes:
+      - type_name: example_component_cpp_container_increment
+        name: increment0
+      - type_name: example_component_cpp_container_get
+        name: get0
+```
+
+</TabItem>
+</Tabs>
+
+Compare it with the configuration file from chapter 3.
+
+### plugins: one Component entry
+
+```yaml
+plugins:
+  components:
+    example_component:
+      path: "./target/debug"
+```
+
+In chapter 3 you listed types one by one in `process_factories` and `container_factories`, and each ContainerProcess under its Container.
+With a Component, you write **just one Component name** in `components`. As in chapter 3, the key determines which file is loaded.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+For the Component name `example_component`, juiz loads `libexample_component.so` from `./target/debug`.
+
+</TabItem>
+<TabItem label="Python">
+
+For the Component name `example_component_python`, juiz loads `example_component_python.py` from `./component`.
+
+</TabItem>
+<TabItem label="C++">
+
+For the Component name `example_component_cpp`, juiz loads `libexample_component_cpp.so` from `./build/plugins`.
+
+</TabItem>
+</Tabs>
+
+That one entry loads every Process, Container and ContainerProcess type in the Component.
+
+### processes and containers: created as usual
+
+`processes` and `containers` are written exactly as in chapter 3. Put a type name from the Component in `type_name` and the instance name in `name`.
+You can pass a Container's initial value the same way, too (the Python example omits it, so the value starts at `0`).
+
+Where a type came from does not matter to the side creating instances.
+A Component is for "distributing types together", and the instances you create behave exactly as if they had been loaded from separate files.
+
+## Run it
+
+Pass the configuration file with `-f`. The command is the same for every language.
+
+```sh
+juiz -f example_component.conf -d
+```
+
+For Python, run it in a terminal where the venv from chapter 1 is activated.
+
+## Call it from outside
+
+Leave `juiz` running, open another terminal, and look at the lists.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/proc0::example_component_increment"]
+juiz container list
+# => ["core://core/container/container0::example_component_container"]
+juiz container-process list
+# => ["core://core/container_process/add0::example_component_container_add:container0", "core://core/container_process/get0::example_component_container_get:container0", "core://core/container_process/increment0::example_component_container_increment:container0"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment0::example_component_python_increment"]
+juiz container list
+# => ["core://core/container/container0::example_component_python_container"]
+juiz container-process list
+# => ["core://core/container_process/set0::example_component_python_container_set:container0", "core://core/container_process/get0::example_component_python_container_get:container0"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/proc0::example_component_cpp_increment"]
+juiz container list
+# => ["core://core/container/container0::example_component_cpp_container"]
+juiz container-process list
+# => ["core://core/container_process/get0::example_component_cpp_container_get:container0", "core://core/container_process/increment0::example_component_cpp_container_increment:container0"]
+```
+
+</TabItem>
+</Tabs>
+
+Process, Container and ContainerProcess instances have all been created from types loaded from one file. The IDs look exactly like those in earlier chapters.
+Call each of them.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/proc0::example_component_increment" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(100), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_component_container_increment:container0" '{}' -p
+# => CapsulePtr((value:Value(101), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/add0::example_component_container_add:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(106), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(106), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/increment0::example_component_python_increment" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/set0::example_component_python_container_set:container0" '{"value": 10}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_python_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/proc0::example_component_cpp_increment" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_cpp_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(100), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_component_cpp_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(105), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_cpp_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(105), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+The Process adds 1 to its argument and returns it, and the ContainerProcesses change or read the Container's value.
+From the caller's point of view, they are indistinguishable from what you built from separate files in chapters 1 to 3.
+
+## A Component is the unit of distribution
+
+As you have seen, bundling into a Component changes nothing about how Processes and Containers work or how you use them. Only **how the files are bundled** changes.
+
+- **Authors** can write related Processes, Containers and ContainerProcesses in one project and distribute them as one library. For a camera, for example, a Container that opens and holds the camera, a ContainerProcess that reads images, and a Process that converts images can all be one Component.
+- **Users** write one line in `components` under `plugins` to get every type inside. Which types to instantiate, and how many, is still decided freely with `processes` and `containers`.
+
+In other words, Processes, Containers and ContainerProcesses are "units for running", while a Component is the "unit for distributing".
+
+## Try it yourself
+
+- Add another instance of `example_component_increment` (`example_component_python_increment` in Python, `example_component_cpp_increment` in C++) to `processes`. As in chapter 3, you can create any number of instances from types loaded from a Component.
+- Add another Container (for example `container1`) and its ContainerProcesses to `containers`. `container0` and `container1` hold separate values.
+- Add `connections` and `ecs` from chapter 4 and connect the first Process's output to `arg1` of the second Process you added. Types from a Component connect the same way as any other. `plugins` can list `components` and `process_factories` side by side, so you can also connect to a Process from a separate file, such as `increment_process` from chapter 3.
+- You can also load a Component from the command line without a configuration file. With `-1`, juiz creates one instance of every type in the Component (named "type name + `0`" as in chapter 1). Some `ERROR` lines are printed at startup, but it works anyway.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz --component ./target/debug/libexample_component.so -1 -d
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz --component ./component/example_component_python.py -l python -1 -d
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz --component ./build/plugins/libexample_component_cpp.so -l cpp -1 -d
+```
+
+</TabItem>
+</Tabs>
+
+## Summary
+
+- A Component bundles several Processes, Containers and ContainerProcesses into one library (one file in Python).
+- In a configuration file, writing one Component name in `components` under `plugins` loads every type inside it.
+- Creating instances, IDs, calling and connecting all work the same as when types are loaded from separate files. A Component does not change how things run; it is the **unit of distribution**.
+
+In the next chapter you connect juiz instances started separately, using only commands and no configuration file. Move on to [Connecting separate processes](/tutorial/multi-process/).

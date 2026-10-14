@@ -1,0 +1,155 @@
+---
+title: Writing a Container
+description: Write a Container that holds state, and ContainerProcesses that read and write that state.
+sidebar:
+  order: 2
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+This example is a Container that holds one integer, and a ContainerProcess that adds its argument to that value.
+
+## Container
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```rust
+use juiz_sdk::prelude::*;
+
+#[repr(Rust)]
+pub struct ExampleContainer {
+    pub value: i64
+}
+
+#[juiz_container]
+fn example_container(initial_value: i64) -> JuizResult<Box<ExampleContainer>> {
+    Ok(Box::new(ExampleContainer { value: initial_value }))
+}
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```cpp
+// example_container.h
+#pragma once
+#include <cstdint>
+
+class CppContainer {
+public:
+    int64_t value;
+    CppContainer(int64_t v) : value(v) {}
+};
+```
+
+```cpp
+// example_container_cpp.cpp
+#include "juiz/juiz.h"
+#include "example_container.h"
+
+juiz::Value manifest() {
+    return ContainerManifest("example_container_cpp").into_value();
+}
+
+CppContainer* create_container(juiz::Value value) {
+    int64_t int_value = 0;
+    if (value.isObjectValue() && value.hasKey("value")) {
+        auto v = value.objectValue()["value"];
+        if (v.isIntValue()) int_value = v.intValue();
+    }
+    return new CppContainer(int_value);
+}
+
+bool destroy_container(CppContainer* p_container) {
+    if (p_container) {
+        delete p_container;
+        return true;
+    }
+    return false;
+}
+
+CONTAINER_FACTORY(manifest, create_container, destroy_container);
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```python
+from juiz import *
+
+class PyContainer:
+    value: int
+    def __init__(self, value):
+        self.value = value
+
+@juiz_container
+def example_container_python(initial_value: int = 0) -> PyContainer:
+    return PyContainer(initial_value)
+```
+
+</TabItem>
+</Tabs>
+
+## ContainerProcess
+
+A ContainerProcess is a Process that receives the Container as its first argument. `container_type` gives the type name of the Container it is bound to.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```rust
+use example_container::ExampleContainer;
+use juiz_sdk::prelude::*;
+
+#[juiz_container_process(container_type = "example_container")]
+fn increment_function(container: &mut ContainerImpl<ExampleContainer>, arg1: i64) -> JuizResult<Capsule> {
+    container.value = container.value + arg1;
+    return Ok(jvalue!(container.value).into());
+}
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```cpp
+#include "juiz/juiz.h"
+#include "example_container.h"
+
+juiz::Value manifest() {
+    return ProcessManifest("example_container_cpp_increment")
+        .container_type("example_container_cpp")
+        .add_int_arg("arg0", "test_argument", 2)
+        .into_value();
+}
+
+std::optional<int64_t> example_container_increment(CppContainer* container, juiz::CapsuleMap cm) {
+    int64_t v = cm.get_int("arg0");
+    container->value = container->value + v;
+    return container->value;
+}
+
+CONTAINER_PROCESS_FACTORY(CppContainer, manifest, example_container_increment)
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```python
+from juiz import juiz_container_process
+
+@juiz_container_process(container_type="example_container_python")
+def example_container_python_get(container) -> int:
+    return container.value
+```
+
+</TabItem>
+</Tabs>
+
+## Running it on its own
+
+```sh
+juiz --container ./target/debug/libexample_container.so \
+     --container_process ./target/debug/libexample_container_increment.so \
+     -l rust -e -1 -d
+```

@@ -1,0 +1,567 @@
+---
+title: "2. Keeping state: Container and ContainerProcess"
+description: Using a counter as the example, learn a design where state lives in a Container and only ContainerProcesses touch it.
+sidebar:
+  order: 2
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+The Process in chapter 1 was an idempotent function that always returns the same result for the same arguments.
+But when you build parts for robots and IoT devices, you always end up with things you want to remember: a counter value, the current position of a motor, a connection to a camera.
+In this chapter you learn how juiz handles state, using a counter that remembers one integer as the example.
+
+<Aside type="tip" title="What you will learn">
+- State lives in a **Container**, never in a Process
+- Only the **ContainerProcesses** bound to a Container touch its state
+- One Container can have several ContainerProcesses with different roles
+</Aside>
+
+## Prepare the samples
+
+Keep using the example repository you cloned and built in chapter 1. The Container examples were built along with everything else in chapter 1.
+If you have not done that yet, follow [Prepare the samples in chapter 1](/tutorial/first-process/#prepare-the-samples).
+
+This chapter uses these three building blocks.
+
+| Role | What it does |
+| --- | --- |
+| Container | Holds one counter value |
+| ContainerProcess `increment` | Adds `arg1` to the Container's value and returns the new value |
+| ContainerProcess `get` | Returns the Container's value as is |
+
+## Read the Container code
+
+A Container is the state itself. You write only the box that holds the value and the function that creates it.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`container/example_container/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/container/example_container/src/lib.rs)
+
+```rust
+use juiz_sdk::prelude::*;
+
+#[repr(Rust)]
+pub struct ExampleContainer {
+    pub value: i64,
+}
+
+#[juiz_container]
+fn example_container(initial_value: i64) -> JuizResult<Box<ExampleContainer>> {
+    Ok(Box::new(ExampleContainer {
+        value: initial_value,
+    }))
+}
+```
+
+You write the struct `ExampleContainer` that holds the state, and a function that creates it.
+The function marked with `#[juiz_container]` describes how to create the Container, and the function name `example_container` becomes the Container's **type name**.
+
+The ContainerProcesses also use the `ExampleContainer` definition, so this crate's `Cargo.toml` sets `crate-type = ["cdylib", "rlib"]` to make it usable both as a shared library and as a Rust library.
+
+</TabItem>
+<TabItem label="Python">
+
+[`container/example_container_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/container/example_container_python.py)
+
+```python
+from juiz import juiz_container
+
+
+class PyContainer:
+    def __init__(self, value: int):
+        self.value = value
+
+
+@juiz_container
+def example_container_python(initial_value: int = 0) -> PyContainer:
+    """A Container that holds one integer"""
+    return PyContainer(initial_value)
+```
+
+You write the class `PyContainer` that holds the state, and a function that creates and returns an object of it.
+The function decorated with `@juiz_container` describes how to create the Container, and the function name `example_container_python` becomes the Container's **type name**.
+
+</TabItem>
+<TabItem label="C++">
+
+[`container/example_container_cpp/example_container_cpp.h`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/container/example_container_cpp/example_container_cpp.h)
+
+```cpp
+#pragma once
+
+#include <cstdint>
+
+// The state held by the Container
+// Shared by the Container and the ContainerProcesses that operate on it.
+class ExampleContainer {
+public:
+    int64_t value;
+    ExampleContainer(int64_t v) : value(v) {}
+};
+```
+
+[`container/example_container_cpp/example_container_cpp.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/container/example_container_cpp/example_container_cpp.cpp)
+
+```cpp
+#include "juiz/juiz.h"
+#include "example_container_cpp.h"
+
+// A Container that holds one integer
+auto manifest() {
+    return ContainerManifest("example_container_cpp")
+        .description("Holds an integer value.");
+}
+
+// Creates the Container from the entries (such as value) written under containers in the configuration file
+ExampleContainer* create_container(juiz::CapsuleMap args) {
+    int64_t initial_value = 0;
+    if (args.has("value")) {
+        initial_value = args.get_int("value");
+    }
+    return new ExampleContainer(initial_value);
+}
+
+CONTAINER_FACTORY(manifest, create_container);
+```
+
+The class `ExampleContainer` that holds the state goes in a header so the ContainerProcesses can include it too.
+`manifest()` declares the Container's **type name**, and `create_container` creates and returns the object. Finally, `CONTAINER_FACTORY` exports it.
+
+</TabItem>
+</Tabs>
+
+The Container has no code that changes or reads the value. A Container only describes "what to remember".
+
+## Read the ContainerProcess code
+
+Code that changes or reads the state goes in ContainerProcesses.
+A ContainerProcess is a Process that **receives the Container as its first argument**. You specify which Container it pairs with by the Container's type name.
+
+### increment: add to the value
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`container/example_container_increment/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/container/example_container_increment/src/lib.rs)
+
+```rust
+use example_container::ExampleContainer;
+use juiz_sdk::prelude::*;
+
+#[juiz_container_process(
+    container_type = "example_container"
+    description = "Container Process for example_container. This process will add given value to container."
+    arguments = {
+        default = {
+            arg1 = 1
+        }
+    }
+)]
+fn example_container_increment(
+    container: &mut ContainerImpl<ExampleContainer>,
+    arg1: i64,
+) -> JuizResult<Capsule> {
+    container.value = container.value + arg1;
+    return Ok(jvalue!(container.value).into());
+}
+```
+
+Write the type name of the Container to bind, `example_container`, in `container_type` of `#[juiz_container_process]`.
+The first parameter `container` receives the Container, and you can read and write its contents like `container.value`. The remaining parameters (`arg1`) are passed when calling it, just like the Process in chapter 1.
+
+</TabItem>
+<TabItem label="Python">
+
+[`container/example_container_python_increment.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/container/example_container_python_increment.py)
+
+```python
+from juiz import juiz_container_process
+
+
+@juiz_container_process(container_type="example_container_python")
+def example_container_python_increment(container, arg1: int = 1) -> int:
+    """Adds arg1 to the value of the Container and returns the new value"""
+    container.value = container.value + arg1
+    return container.value
+```
+
+Write the type name of the Container to bind in `container_type` of `@juiz_container_process`.
+The first parameter `container` receives the `PyContainer` object returned by the Container's creation function. The remaining parameters (`arg1`) are passed when calling it, just like the Process in chapter 1.
+
+</TabItem>
+<TabItem label="C++">
+
+[`container/example_container_cpp_increment/example_container_cpp_increment.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/container/example_container_cpp_increment/example_container_cpp_increment.cpp)
+
+```cpp
+#include "juiz/juiz.h"
+#include "example_container_cpp.h"
+
+// A ContainerProcess that adds arg1 to the value of the Container and returns the new value
+auto manifest() {
+    return ProcessManifest("example_container_cpp_increment")
+        .description("Adds arg1 to the value of the container.")
+        .container_type("example_container_cpp")
+        .add_int_arg("arg1", "value to be added", 1);
+}
+
+std::optional<int64_t> example_container_cpp_increment(ExampleContainer* container, int64_t arg1) {
+    container->value += arg1;
+    return container->value;
+}
+
+CONTAINER_PROCESS_FACTORY(ExampleContainer, manifest, example_container_cpp_increment);
+```
+
+Write the type name of the Container to bind in `.container_type()` of `manifest()`.
+The function receives a pointer to the Container as its first argument, followed by the arguments declared in `manifest()`.
+To export it, use `CONTAINER_PROCESS_FACTORY` instead of `PROCESS_FACTORY`, and pass the Container class as well.
+
+</TabItem>
+</Tabs>
+
+### get: read the value
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`container/example_container_get/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/container/example_container_get/src/lib.rs)
+
+```rust
+use example_container::ExampleContainer;
+use juiz_sdk::prelude::*;
+
+#[juiz_container_process(container_type = "example_container")]
+fn example_container_get(container: &mut ContainerImpl<ExampleContainer>) -> JuizResult<Capsule> {
+    println!("example_container_get() called");
+    return Ok(jvalue!(container.value).into());
+}
+```
+
+</TabItem>
+<TabItem label="Python">
+
+[`container/example_container_python_get.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/container/example_container_python_get.py)
+
+```python
+from juiz import juiz_container_process
+
+
+@juiz_container_process(container_type="example_container_python")
+def example_container_python_get(container) -> int:
+    """Returns the value of the Container"""
+    return container.value
+```
+
+</TabItem>
+<TabItem label="C++">
+
+[`container/example_container_cpp_get/example_container_cpp_get.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/container/example_container_cpp_get/example_container_cpp_get.cpp)
+
+```cpp
+#include "juiz/juiz.h"
+#include "example_container_cpp.h"
+
+// A ContainerProcess that returns the value of the Container
+auto manifest() {
+    return ProcessManifest("example_container_cpp_get")
+        .description("Returns the value of the container.")
+        .container_type("example_container_cpp");
+}
+
+std::optional<int64_t> example_container_cpp_get(ExampleContainer* container) {
+    return container->value;
+}
+
+CONTAINER_PROCESS_FACTORY(ExampleContainer, manifest, example_container_cpp_get);
+```
+
+</TabItem>
+</Tabs>
+
+`get` has no arguments other than the Container and only returns the value.
+
+This is how you write state (the Container) and behavior (the ContainerProcesses) separately.
+Only the ContainerProcesses bound to a Container can change or read its state.
+When you want to know "where does this value change?", you only need to look at the ContainerProcesses.
+
+## Run it
+
+First, start `juiz` with the files, just like in chapter 1.
+Load a Container with `--container` and a ContainerProcess with `--container_process`.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz --container ./target/debug/libexample_container.so \
+     --container_process ./target/debug/libexample_container_increment.so -1 -d
+```
+
+On macOS the extension is `.dylib`.
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz --container ./container/example_container_python.py \
+     --container_process ./container/example_container_python_increment.py -l python -1 -d
+```
+
+Run it in a terminal where the venv from chapter 1 is activated.
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz --container ./build/plugins/libexample_container_cpp.so \
+     --container_process ./build/plugins/libexample_container_cpp_increment.so -l cpp -1 -d
+```
+
+On macOS the extension is `.dylib`.
+
+</TabItem>
+</Tabs>
+
+With `-1`, juiz creates one instance from the loaded Container type and binds one ContainerProcess instance to it.
+As in chapter 1, instance names are the type name followed by `0`: the Container is `example_container0` and the ContainerProcess is `example_container_increment0` (in Python and C++ the type names have a `_python` / `_cpp` suffix).
+The Container starts at 0, the argument's default value.
+
+## Call it from outside
+
+Leave `juiz` running and open another terminal. First, list the running ContainerProcesses.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/example_container_increment0::example_container_increment:example_container0"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0"]
+```
+
+</TabItem>
+</Tabs>
+
+A ContainerProcess ID has the form "instance name`::`type name`:`Container instance name", so the ID tells you which Container it is bound to.
+The list shows IDs in the `core://core/...` form, which points inside the broker itself. To call from outside, replace the beginning with `http://127.0.0.1:8000`, as in chapter 1.
+
+Call `increment` twice with the same argument.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+You passed the same `{"arg1": 5}`, but the first and second results differ.
+Unlike the Process in chapter 1, a ContainerProcess's result depends not only on its arguments but also on the Container's state.
+
+<Aside>
+Even if an argument has a default value, always pass it when calling. Calling `increment` with `'{}'` gives an error saying `arg1` was not found.
+</Aside>
+
+## Share a Container between two ContainerProcesses
+
+Next, read the value changed by `increment` with `get`.
+The command line can load only one ContainerProcess, so use the configuration file `example_container.conf`, which says "which ContainerProcesses to bind to which Container".
+Stop the running `juiz` with Ctrl+C, then restart it with the configuration file.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -f example_container.conf -d
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -f example_container.conf -d
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -f example_container.conf -d
+```
+
+</TabItem>
+</Tabs>
+
+The configuration file says the following.
+
+- Which files to load the Container type and the ContainerProcess types from
+- Create one Container instance, `container0`
+- Bind to `container0` an `increment` instance `increment0` and a `get` instance `get0`
+
+Chapter 3 covers how to write configuration files in detail. For now, just note the shape: "two ContainerProcesses hang off one Container".
+
+The list now shows two ContainerProcesses.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/increment0::example_container_increment:container0", "core://core/container_process/get0::example_container_get:container0"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/increment0::example_container_python_increment:container0", "core://core/container_process/get0::example_container_python_get:container0"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/increment0::example_container_cpp_increment:container0", "core://core/container_process/get0::example_container_cpp_get:container0"]
+```
+
+</TabItem>
+</Tabs>
+
+The order may change from run to run.
+
+Check the current value with `get`, call `increment` twice, then check the value with `get` again.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_python_get:container0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_python_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(15), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(20), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:container0" '{}' -p
+# => CapsulePtr((value:Value(20), option: []))
+```
+
+The C++ example's configuration file says `value: 10`, so the Container starts at 10.
+
+</TabItem>
+</Tabs>
+
+`get`, a different ContainerProcess, can read the value that `increment` changed. The two ContainerProcesses share the same Container.
+
+### Call it from a browser
+
+As in chapter 1, you can also call them from Swagger UI (`http://127.0.0.1:8000/docs/`).
+To call a ContainerProcess, open `PATCH /api/container_process/call` and enter the `core://core/...` ID shown by `juiz container-process list` as the identifier, unchanged.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+- identifier: `core://core/container_process/get0::example_container_get:container0`
+- Request body: `{}`
+
+</TabItem>
+<TabItem label="Python">
+
+- identifier: `core://core/container_process/get0::example_container_python_get:container0`
+- Request body: `{}`
+
+</TabItem>
+<TabItem label="C++">
+
+- identifier: `core://core/container_process/get0::example_container_cpp_get:container0`
+- Request body: `{}`
+
+</TabItem>
+</Tabs>
+
+## Try it yourself
+
+- Pass a negative number to `increment` (such as `{"arg1": -3}`) and confirm that the value goes down.
+- Stop `juiz` with Ctrl+C, start it again and call `get`. The value is back to the start. The state exists only inside the running Container.
+- Think about what a ContainerProcess that resets the value to 0 (`reset`) would look like. It only needs the Container as its argument, setting `value` to 0 and returning it. Running it requires adding it to the configuration file, so try it after reading chapter 3.
+
+## Summary
+
+- State goes in a Container. A Container only describes "what to remember" and contains no processing.
+- Only the ContainerProcesses bound to a Container read and write its state. A ContainerProcess receives the Container as its first argument.
+- One Container can have several ContainerProcesses with different roles. They share the same state.
+- A ContainerProcess's result depends on the Container's state as well as its arguments. Keeping idempotent Processes separate from state-handling ContainerProcesses makes it clear where state changes.
+
+In the next chapter you learn how to write the configuration file used in this chapter, and start the Process from chapter 1 and the Container from this chapter together from one configuration file. Move on to [Starting everything from a configuration file](/tutorial/config-file/).

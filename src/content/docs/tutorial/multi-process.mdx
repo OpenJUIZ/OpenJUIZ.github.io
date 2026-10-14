@@ -1,0 +1,501 @@
+---
+title: 6. Connecting separate processes
+description: Connect juiz instances started separately, using only commands and no configuration file. Learn that Processes connect by their ID (a URL), wherever they run.
+sidebar:
+  order: 6
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+In chapter 4 you wrote the talker and listener into one configuration file and connected them inside one `juiz`.
+In robots, the program that drives a camera and the program that processes its images are often started separately, or even run on different computers.
+In this chapter you start the talker and the listener in separate `juiz` instances in different terminals, and connect them with commands while they are running.
+
+<Aside type="tip" title="What you will learn">
+- You can call and connect Processes in separately started juiz instances by their ID (URL)
+- You can assemble a running system from commands, without writing a configuration file
+- Execution Contexts can also be started and stopped from outside by their ID
+</Aside>
+
+## Prepare the samples
+
+This chapter uses the same talker and listener as chapter 4. You can keep using the example repository you cloned and built in chapter 1.
+If you have not done that yet, follow [Prepare the samples in chapter 1](/tutorial/first-process/#prepare-the-samples).
+
+This chapter uses three terminals. Open each of them at the root of the example repository (for Python, activate the venv in every terminal).
+
+| Terminal | Role |
+| --- | --- |
+| 1 | `juiz` running the listener |
+| 2 | `juiz` running the talker |
+| 3 | Commands that connect and call |
+
+## Start the listener
+
+In terminal 1, start `juiz` with the listener loaded. As in chapter 1, `-1` creates one instance and `-d` keeps it running as a server.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz --process ./target/debug/liblistener.so -1 -d
+```
+
+On macOS the extension is `.dylib`.
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz --process ./process/listener_python.py -l python -1 -d
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz --process ./build/plugins/liblistener_cpp.so -l cpp -1 -d
+```
+
+On macOS the extension is `.dylib`.
+
+</TabItem>
+</Tabs>
+
+Nothing is printed after startup, because nothing runs the listener yet.
+From terminal 3, check the listener's ID.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener0::listener"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_python0::listener_python"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"]
+```
+
+</TabItem>
+</Tabs>
+
+This juiz listens on port 8000 with its HTTP broker.
+
+## Start the talker
+
+In terminal 2, start `juiz` with the talker loaded. This time add `-r 1.0`.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz --process ./target/debug/libtalker.so -1 -r 1.0 -d
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz --process ./process/talker_python.py -l python -1 -r 1.0 -d
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz --process ./build/plugins/libtalker_cpp.so -l cpp -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
+
+`-r` keeps running the instance created at startup at the given rate [Hz]. Terminal 2 prints only the talker's output, once a second.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```
+talker: Hello World
+talker: Hello World
+...
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```
+talker_python says "Hello, World!"
+talker_python says "Hello, World!"
+...
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```
+talker_cpp: Hello, Juiz!
+talker_cpp: Hello, Juiz!
+...
+```
+
+</TabItem>
+</Tabs>
+
+Port 8000 is taken by the juiz in terminal 1, so the second juiz automatically listens on the next port, 8001.
+The second juiz also tells the juiz on port 8000 "I am on port 8001" and registers itself as its subsystem.
+So when you query port 8000 from terminal 3, the list shows Processes from both juiz instances (the order may change from run to run).
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener0::listener", "http://127.0.0.1:8001/process/talker0::talker"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_python0::listener_python", "http://127.0.0.1:8001/process/talker_python0::talker_python"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_cpp0::listener_cpp", "http://127.0.0.1:8001/process/talker_cpp0::talker_cpp"]
+```
+
+</TabItem>
+</Tabs>
+
+The `http://127.0.0.1:8000` or `http://127.0.0.1:8001` part of the ID shows which juiz the Process lives in.
+To query one specific juiz, give its address with `-s` (without it, `http://127.0.0.1:8000` is queried). For example, `juiz -s http://127.0.0.1:8001 process list` returns only the talker.
+
+## Connect with a command
+
+In terminal 3, connect the talker's output to the listener's argument `arg1`.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker0::talker" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener0::listener"
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker_python0::talker_python" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener_python0::listener_python"
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker_cpp0::talker_cpp" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"
+```
+
+</TabItem>
+</Tabs>
+
+The arguments are, in order, the ID of the source (`source`), the argument name at the destination (`arg_name`), and the ID of the destination (`destination`). `-t push` means the same as `connection_type: Push` in chapter 4.
+You are giving on the command line exactly what you wrote in `connections` in the chapter 4 configuration file.
+
+As soon as you run it, the listener in terminal 1 starts printing.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```
+listener: Hello World
+listener: Hello World
+...
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```
+listener_python receives "Hello, World!"
+listener_python receives "Hello, World!"
+...
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```
+listener_cpp: Hello, Juiz!
+listener_cpp: Hello, Juiz!
+...
+```
+
+</TabItem>
+</Tabs>
+
+Processes in separately started juiz instances are now connected while running. The connection is held by the talker, the side that sends the values. You can confirm this by querying port 8001.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -s http://127.0.0.1:8001 connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker, arg=arg1, dst=ProcessIdentifier(http://127.0.0.1:8000/process/listener0::listener)]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -s http://127.0.0.1:8001 connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_python0::talker_python, arg=arg1, dst=ProcessIdentifier(http://127.0.0.1:8000/process/listener_python0::listener_python)]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -s http://127.0.0.1:8001 connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_cpp0::talker_cpp, arg=arg1, dst=ProcessIdentifier(http://127.0.0.1:8000/process/listener_cpp0::listener_cpp)]
+```
+
+</TabItem>
+</Tabs>
+
+The destination is `http://127.0.0.1:8000/...`. The talker's juiz knows the listener is in another juiz and delivers values to it over HTTP.
+The Process code has not changed at all since chapter 4. Whether they are in the same juiz or in different ones, Processes can be connected as long as you know their IDs.
+
+## Call it from outside
+
+call also works on a Process in any juiz, as long as you give its ID. From terminal 3, call the talker in the juiz on port 8001.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process call "http://127.0.0.1:8001/process/talker0::talker" '{}' -p
+# => CapsulePtr((value:Value("Hello World"), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process call "http://127.0.0.1:8001/process/talker_python0::talker_python" '{}' -p
+# => CapsulePtr((value:Value("Hello, World!"), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process call "http://127.0.0.1:8001/process/talker_cpp0::talker_cpp" '{}' -p
+# => CapsulePtr((value:Value("Hello, Juiz!"), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+`process call` reads `http://127.0.0.1:8001` from the ID and sends the request to that juiz. Commands that take an ID like this do not need `-s`.
+
+## Control an EC from outside
+
+`-r` is a shortcut for periodically running the instances created at startup; it does not create an Execution Context (EC).
+To run with an EC as in chapter 4, create the EC in a configuration file. Here you start with the EC stopped, then start and stop it from outside.
+
+First, stop the talker in terminal 2 with Ctrl+C. The listener stops printing too.
+Next, create a configuration file `talker_ec.conf` with only the talker and an EC, at the root of the example repository. It is chapter 4's `talker_listener.conf` without the listener and `connections`, and with `auto_start` set to `false`.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```yaml
+name: talker_ec
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker:
+      path: "./target/debug"
+processes:
+  - type_name: talker
+    name: talker0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker
+    auto_start: false
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```yaml
+name: talker_ec
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_python:
+      language: python
+      path: "./process"
+processes:
+  - type_name: talker_python
+    name: talker0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker_python
+    auto_start: false
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```yaml
+name: talker_ec
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_cpp:
+      language: "c++"
+      path: "./build/plugins"
+processes:
+  - type_name: talker_cpp
+    name: talker0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker_cpp
+    auto_start: false
+```
+
+</TabItem>
+</Tabs>
+
+In terminal 2, restart with this configuration file. It says `port: 8000`, but port 8000 is taken by the listener's juiz, so it again listens on 8001.
+
+```sh
+juiz -f talker_ec.conf -d
+```
+
+The EC is stopped, so nothing is printed.
+Restarting the talker also removed the connection (the talker held it). Connect again from terminal 3. Note that the instance name is now `talker0`.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker0::talker" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener0::listener"
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker0::talker_python" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener_python0::listener_python"
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker0::talker_cpp" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"
+```
+
+</TabItem>
+</Tabs>
+
+Even after connecting, nothing flows yet, because the EC is not running the talker. Look up the ID of the EC in the juiz on port 8001.
+
+```sh
+juiz -s http://127.0.0.1:8001 ec list
+# => ["http://127.0.0.1:8001/execution_context/ec0::main_loop_ec"]
+```
+
+Start the EC with this ID.
+
+```sh
+juiz -s http://127.0.0.1:8001 ec start "http://127.0.0.1:8001/execution_context/ec0::main_loop_ec"
+```
+
+The talker starts printing in terminal 2 and the listener in terminal 1, once a second. To stop it, use `ec stop`.
+
+```sh
+juiz -s http://127.0.0.1:8001 ec stop "http://127.0.0.1:8001/execution_context/ec0::main_loop_ec"
+```
+
+The output stops. Run `ec start` again and it starts moving again.
+
+<Aside type="caution">
+`juiz ec start` and `juiz ec stop` require juiz 0.0.13 or later. In 0.0.12 and earlier, they cannot find the EC of a running juiz and fail with an error.
+Also, in addition to the address in the EC's ID, give the juiz the EC lives in with `-s`.
+</Aside>
+
+## Try it yourself
+
+- Restart the talker with `-r 2.0` and connect again. The listener prints twice as often.
+- Swap the startup order: start the talker first (port 8000) and the listener second (port 8001). Only the port numbers in the IDs swap; you connect them the same way.
+- Change `rate` in `talker_ec.conf` or set `auto_start` to `true`, and see how the EC behaves differently.
+
+## Summary
+
+- Processes in separately started juiz instances can be addressed by an ID of the form `http://<host>:<port>/process/<instance name>::<type name>`. The second and later juiz instances listen on free ports (8001, 8002, …).
+- `juiz connection create` connects running Processes without a configuration file. The connection is held by the Process that sends the values.
+- `juiz process call` sends the request to the juiz the ID points to and returns the result.
+- `-r` is a shortcut for periodic execution. To use an EC, create it in a configuration file; you can start and stop it from outside with `juiz ec start` / `juiz ec stop`.
+- A Process's code does not know where it runs or what it is connected to. That is why the same Process works inside one juiz or across separate juiz instances.
+
+This is the end of the tutorial. When you know what you want to do, look it up in the [Guides](/guides/process/).

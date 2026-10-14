@@ -1,0 +1,56 @@
+---
+title: How this tutorial works
+description: Start from a tiny Process and learn state, configuration files, connections, packaging and distribution step by step.
+sidebar:
+  order: 0
+  label: Overview
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+This tutorial starts with a tiny Process that just adds 1 to its argument, and grows that example little by little to teach you how juiz thinks.
+Each chapter is built around running things yourself, so you can follow along with your hands on the keyboard.
+
+## Chapters
+
+<Steps>
+
+1. **[Your first Process](/tutorial/first-process/)**
+
+   Run a Process that adds 1 to its argument, call it from outside and get the result back. You learn that a Process is an idempotent function, and how to use it with call.
+
+2. **[Keeping state: Container and ContainerProcess](/tutorial/container/)**
+
+   Using a counter as the example, you learn a design where state lives in a Container and only ContainerProcesses touch it.
+
+3. **[Starting everything from a configuration file](/tutorial/config-file/)**
+
+   Start the Process and Container from the previous chapters with a single configuration file. You learn the difference between loading (plugins) and instantiating (processes / containers).
+
+4. **[Connecting Processes: connect and Execution Context](/tutorial/connect/)**
+
+   Connect a talker and a listener and run them periodically with an Execution Context. You learn connect, the other way to use a Process.
+
+5. **[Packaging as a Component](/tutorial/component/)**
+
+   Bundle several building blocks into one project. You learn that a Component is the unit of distribution.
+
+6. **[Connecting separate processes](/tutorial/multi-process/)**
+
+   Connect juiz instances started separately, using only commands and no configuration file. You learn that Processes connect by their ID (a URL), wherever they run.
+
+</Steps>
+
+## How to read each chapter
+
+- Each chapter starts with "What you will learn" and ends with a "Summary".
+- Code examples can be switched between Rust, Python and C++ with tabs. The language you pick is kept on every other page.
+- The code is the same as the files in the example repositories ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp)). Each chapter links to the corresponding files.
+- If you already know what you want to do, you can also look it up in the [Guides](/guides/process/).
+
+## Before you start
+
+Follow [Installation](/getting-started/install/) to install the `juiz` command and the package for the language you use.
+For Python you need `pyjuiz`; for C++ you need CMake and a compiler that supports C++17.
+
+When you are ready, move on to [Your first Process](/tutorial/first-process/).

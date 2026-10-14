@@ -1,0 +1,505 @@
+---
+title: "4. Connecting Processes: connect and Execution Context"
+description: Connect a talker and a listener and run them periodically with an Execution Context. Learn connect, the other way to use a Process.
+sidebar:
+  order: 4
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+So far you have used **call**: calling a Process from outside and getting the result back.
+Robots often need something else too: "as soon as a sensor value is read, pass it to the control Process", that is, keep feeding one Process's output into the next Process's input.
+In this chapter you connect a `talker` that outputs a string to a `listener` that prints the string it receives, and run them periodically.
+
+<Aside type="tip" title="What you will learn">
+- Connecting a Process's output to another Process's argument (**connect**)
+- When a Process runs is decided by an **Execution Context** (EC), not by the Process itself
+- The difference between call and running from an EC
+</Aside>
+
+## Prepare the samples
+
+Keep using the example repository you cloned and built in chapter 1. The talker and listener were built along with everything else in chapter 1.
+If you have not done that yet, follow [Prepare the samples in chapter 1](/tutorial/first-process/#prepare-the-samples).
+
+| Role | What it does |
+| --- | --- |
+| Process `talker` | Takes no arguments; prints and returns a fixed string |
+| Process `listener` | Prints the string received in the argument `arg1` |
+| Configuration file `talker_listener.conf` | Connects the two and runs them every second with an EC |
+
+## Read the Process code
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`process/talker/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/process/talker/src/lib.rs)
+
+```rust
+use juiz_sdk::prelude::*;
+
+/// Outputs a string.
+///
+/// Outputs the string "Hello World".
+#[juiz_process(description = "This is talker process.")]
+fn talker() -> JuizResult<Capsule> {
+    log::trace!("talker() called");
+    let string_value = "Hello World";
+    println!("talker: {:}", string_value);
+    return Ok(jvalue!(string_value).into());
+}
+```
+
+[`process/listener/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/process/listener/src/lib.rs)
+
+```rust
+use juiz_sdk::prelude::*;
+
+#[juiz_process(
+    description = "This is listener process."
+    arguments = {
+        default = {
+            arg1 = "Hello, Juiz!"
+        }
+        description = {
+            arg1 = "This message is printed."
+        }
+    }
+)]
+fn listener(arg1: String) -> JuizResult<Capsule> {
+    log::trace!("listener({:}) called", arg1);
+    println!("listener: {:}", arg1);
+    return Ok(jvalue!("Hello World").into());
+}
+```
+
+`arguments` in `#[juiz_process]` lets you write default values and descriptions for arguments.
+
+</TabItem>
+<TabItem label="Python">
+
+[`process/talker_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/process/talker_python.py)
+
+```python
+from juiz import juiz_process
+
+
+@juiz_process
+def talker_python() -> str:
+    """Outputs a string"""
+    print('talker_python says "Hello, World!"')
+    return "Hello, World!"
+```
+
+[`process/listener_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/process/listener_python.py)
+
+```python
+from juiz import juiz_process
+
+
+@juiz_process
+def listener_python(arg1: str = "Hello, Juiz!") -> str:
+    """Prints the received string"""
+    print(f'listener_python receives "{arg1}"')
+    return arg1
+```
+
+</TabItem>
+<TabItem label="C++">
+
+[`process/talker_cpp/talker_cpp.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/process/talker_cpp/talker_cpp.cpp)
+
+```cpp
+#include <iostream>
+#include "juiz/juiz.h"
+
+// A Process that outputs a string (no arguments)
+auto manifest() {
+    return ProcessManifest{"talker_cpp"}
+        .description("Outputs a message.");
+}
+
+std::optional<std::string> talker_cpp() {
+    std::cout << "talker_cpp: Hello, Juiz!" << std::endl;
+    return "Hello, Juiz!";
+}
+
+PROCESS_FACTORY(manifest, talker_cpp);
+```
+
+[`process/listener_cpp/listener_cpp.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/process/listener_cpp/listener_cpp.cpp)
+
+```cpp
+#include <iostream>
+#include "juiz/juiz.h"
+
+// A Process that prints the received string
+auto manifest() {
+    return ProcessManifest{"listener_cpp"}
+        .description("Prints the received message.")
+        .add_string_arg("arg1", "message to be printed", "Hello, Juiz!");
+}
+
+std::optional<std::string> listener_cpp(const std::string& arg1) {
+    std::cout << "listener_cpp: " << arg1 << std::endl;
+    return arg1;
+}
+
+PROCESS_FACTORY(manifest, listener_cpp);
+```
+
+</TabItem>
+</Tabs>
+
+Both are ordinary Processes, just like in chapter 1.
+`talker` does not know who receives its value, and `listener` does not know where its value comes from. Neither says anything about when it runs.
+How they are connected and when they run are all decided in the configuration file.
+
+## Read the configuration file
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`talker_listener.conf`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/talker_listener.conf)
+
+```yaml
+name: talker_listener
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker:
+      path: "./target/debug"
+    listener:
+      path: "./target/debug"
+processes:
+  - type_name: talker
+    name: talker0
+  - type_name: listener
+    name: listener0
+connections:
+  - name: con0
+    connection_type: Push
+    source: 
+      name: talker0
+      type_name: talker
+    destination:
+      name: listener0
+      type_name: listener
+    arg_name: arg1
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker
+    auto_start: true
+```
+
+</TabItem>
+<TabItem label="Python">
+
+[`talker_listener.conf`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/talker_listener.conf)
+
+```yaml
+name: talker_listener
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_python:
+      language: python
+      path: "./process"
+    listener_python:
+      language: python
+      path: "./process"
+processes:
+  - type_name: talker_python
+    name: talker0
+  - type_name: listener_python
+    name: listener0
+connections:
+  - name: con0
+    connection_type: Push
+    source:
+      name: talker0
+      type_name: talker_python
+    destination:
+      name: listener0
+      type_name: listener_python
+    arg_name: arg1
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker_python
+    auto_start: true
+```
+
+</TabItem>
+<TabItem label="C++">
+
+[`talker_listener.conf`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/talker_listener.conf)
+
+```yaml
+name: talker_listener
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_cpp:
+      language: "c++"
+      path: "./build/plugins"
+    listener_cpp:
+      language: "c++"
+      path: "./build/plugins"
+processes:
+  - type_name: talker_cpp
+    name: talker0
+  - type_name: listener_cpp
+    name: listener0
+connections:
+  - name: con0
+    connection_type: Push
+    source:
+      name: talker0
+      type_name: talker_cpp
+    destination:
+      name: listener0
+      type_name: listener_cpp
+    arg_name: arg1
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker_cpp
+    auto_start: true
+```
+
+</TabItem>
+</Tabs>
+
+`plugins` and `processes` are the same as in chapter 3 and create `talker0` and `listener0`. What is new is `connections` and `ecs`.
+
+### connections: connecting
+
+```yaml
+connections:
+  - name: con0
+    connection_type: Push
+    source:
+      name: talker0
+      ...
+    destination:
+      name: listener0
+      ...
+    arg_name: arg1
+```
+
+`connections` describes how Processes are connected.
+
+| Entry | Meaning |
+| --- | --- |
+| `source` | The Process that outputs the value (instance name and type name) |
+| `destination` | The Process that receives the value |
+| `arg_name` | Which argument of `destination` receives the value |
+| `connection_type` | `Push`: when `source` runs, its output is passed to `destination`, which runs immediately |
+
+In this example, the output of `talker0` is passed to the argument `arg1` of `listener0`.
+In juiz, this way of connecting one Process's output to another Process's input is called **connect**.
+
+### ecs: when to run
+
+```yaml
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        ...
+    auto_start: true
+```
+
+`ecs` describes **Execution Contexts** (ECs). An EC runs the Processes bound to it at set times.
+
+| Entry | Meaning |
+| --- | --- |
+| `type_name` | The kind of EC. `main_loop_ec` repeats execution at a fixed rate |
+| `rate` | Executions per second [Hz] |
+| `bind` | The Processes this EC runs |
+| `auto_start` | If `true`, the EC starts running as soon as juiz starts |
+
+The EC runs only `talker0`. `listener0` runs through the Push connection whenever `talker0` runs.
+
+## Run it
+
+Pass the configuration file with `-f`. The command is the same for every language.
+
+```sh
+juiz -f talker_listener.conf -d
+```
+
+Every second, the talker and the listener print in turn.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```
+talker: Hello World
+listener: Hello World
+talker: Hello World
+listener: Hello World
+talker: Hello World
+listener: Hello World
+...
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```
+talker_python says "Hello, World!"
+listener_python receives "Hello, World!"
+talker_python says "Hello, World!"
+listener_python receives "Hello, World!"
+talker_python says "Hello, World!"
+listener_python receives "Hello, World!"
+...
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```
+talker_cpp: Hello, Juiz!
+listener_cpp: Hello, Juiz!
+talker_cpp: Hello, Juiz!
+listener_cpp: Hello, Juiz!
+talker_cpp: Hello, Juiz!
+listener_cpp: Hello, Juiz!
+...
+```
+
+</TabItem>
+</Tabs>
+
+It continues until you stop it with Ctrl+C. You can see the listener receiving and printing the string the talker outputs.
+
+From another terminal, you can also list the connections and ECs.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker, arg=arg1, dst=ProcessIdentifier(core://core/process/listener0::listener)]
+juiz ec list
+# => ["http://127.0.0.1:8000/execution_context/ec0::main_loop_ec"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker_python, arg=arg1, dst=ProcessIdentifier(core://core/process/listener0::listener_python)]
+juiz ec list
+# => ["http://127.0.0.1:8000/execution_context/ec0::main_loop_ec"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker_cpp, arg=arg1, dst=ProcessIdentifier(core://core/process/listener0::listener_cpp)]
+juiz ec list
+# => ["http://127.0.0.1:8000/execution_context/ec0::main_loop_ec"]
+```
+
+</TabItem>
+</Tabs>
+
+## Compare with call
+
+With the EC stopped, call the talker from outside.
+Copy `talker_listener.conf` into a configuration file with `auto_start: false` and restart with it.
+
+```sh
+sed 's/auto_start: true/auto_start: false/' talker_listener.conf > talker_listener_stop.conf
+juiz -f talker_listener_stop.conf -d
+```
+
+This time nothing is printed after startup. The EC is not running, so nothing runs the Processes.
+From another terminal, call the talker and the listener.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/talker0::talker" '{}' -p
+# => CapsulePtr((value:Value("Hello World"), option: []))
+juiz process call "http://127.0.0.1:8000/process/listener0::listener" '{"arg1": "Hi"}' -p
+# => CapsulePtr((value:Value("Hello World"), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/talker0::talker_python" '{}' -p
+# => CapsulePtr((value:Value("Hello, World!"), option: []))
+juiz process call "http://127.0.0.1:8000/process/listener0::listener_python" '{"arg1": "Hi"}' -p
+# => CapsulePtr((value:Value("Hi"), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/talker0::talker_cpp" '{}' -p
+# => CapsulePtr((value:Value("Hello, Juiz!"), option: []))
+juiz process call "http://127.0.0.1:8000/process/listener0::listener_cpp" '{"arg1": "Hi"}' -p
+# => CapsulePtr((value:Value("Hi"), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+When you call the talker, the terminal running `juiz` shows only the talker's output; the listener prints nothing.
+call just "calls and returns the result"; it does not send that result down the connection. Values flow along connections only when an EC runs a Process.
+The listener, too, returns a result like any ordinary Process when you call it directly with an argument.
+
+So juiz has two ways to use a Process.
+
+- **call**: pass arguments from outside, call the Process, and get the result back. This is like a server and client.
+- **connect**: connect a Process's output to another Process's input and keep values flowing at times decided by an EC. This is close to dataflow robot middleware such as ROS.
+
+The same Process works either way. The Process's code does not need to know which way it is used.
+
+## Try it yourself
+
+- Change `rate` to `2.0`, restart, and confirm that the interval between outputs is halved.
+- Change the Process in `bind` from `talker0` to `listener0`. The listener keeps printing its default `Hello, Juiz!`, and the talker never runs. An EC runs only the Processes listed in `bind`, and a connection works only when its `source` runs.
+- Create two instances of `increment_process` from chapter 3 and connect the output of `inc0` to `arg1` of `inc1`. When `inc0` runs from the EC, `inc1` receives `inc0`'s result (its default value plus 1). With the Python example, you can confirm it from the printed output.
+
+## Summary
+
+- Writing entries in `connections` connects a Process's output to another Process's argument (connect). With `Push`, a value flows to `destination` every time `source` runs.
+- When a Process runs is decided by an Execution Context (EC), not by the Process itself. `main_loop_ec` runs the Processes in `bind` at the period set by `rate`.
+- call only returns the result and does not send values down connections. Values flow when an EC runs a Process.
+- The configuration file entries are also summarized in [the Configuration file guide](/guides/config/).
+
+In the next chapter you learn how to bundle the Processes and Containers you have written in separate files into one project for distribution. Move on to [Packaging as a Component](/tutorial/component/).

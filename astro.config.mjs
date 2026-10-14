@@ -4,6 +4,13 @@ import starlight from '@astrojs/starlight';
 
 export default defineConfig({
 	site: 'https://openjuiz.github.io',
+	// 英語版は以前 /en/ にあったので、古いリンクをルートへ転送する
+	redirects: {
+		'/en': '/',
+		'/en/getting-started/install': '/getting-started/install/',
+		'/en/getting-started/quickstart': '/getting-started/quickstart/',
+		'/en/concepts/overview': '/concepts/overview/',
+	},
 	integrations: [
 		starlight({
 			title: 'juiz',
