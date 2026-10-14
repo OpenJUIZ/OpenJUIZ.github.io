@@ -289,8 +289,127 @@ CONTAINER_PROCESS_FACTORY(ExampleContainer, manifest, example_container_cpp_get)
 
 ## 動かす
 
-ContainerProcess は Container に結びつけて作るので、「どの Container に、どの ContainerProcess を結びつけるか」を juiz に伝える必要があります。
-この章では、それを書いた設定ファイル `example_container.conf` を使って起動します。
+まずは第 1 章と同じように、ファイルを指定して `juiz` を起動します。
+Container は `--container`、ContainerProcess は `--container_process` で読み込みます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz --container ./target/debug/libexample_container.so \
+     --container_process ./target/debug/libexample_container_increment.so -1 -d
+```
+
+macOS では拡張子が `.dylib` になります。
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz --container ./container/example_container_python.py \
+     --container_process ./container/example_container_python_increment.py -l python -1 -d
+```
+
+第 1 章で作った venv を有効にしたターミナルで実行してください。
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz --container ./build/plugins/libexample_container_cpp.so \
+     --container_process ./build/plugins/libexample_container_cpp_increment.so -l cpp -1 -d
+```
+
+macOS では拡張子が `.dylib` になります。
+
+</TabItem>
+</Tabs>
+
+`-1` を付けると、読み込んだ Container の型からインスタンスを 1 つ作り、そこに ContainerProcess のインスタンスを 1 つ結びつけます。
+インスタンス名は第 1 章と同じく型名の後ろに `0` を付けた名前で、Container は `example_container0`、ContainerProcess は `example_container_increment0` になります(Python と C++ では型名に `_python` / `_cpp` が付きます)。
+Container は、引数の既定値どおり値 0 から始まります。
+
+## 外から呼び出す
+
+`juiz` を起動したまま、別のターミナルを開きます。まず、動いている ContainerProcess の一覧を見ます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/example_container_increment0::example_container_increment:example_container0"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0"]
+```
+
+</TabItem>
+</Tabs>
+
+ContainerProcess の ID は「インスタンス名`::`型名`:`Container のインスタンス名」の形をしていて、どの Container に結びついているかが ID からわかります。
+一覧には、ブローカー自身の中を指す `core://core/...` の形で表示されます。外から呼び出すときは、第 1 章と同じように先頭を `http://127.0.0.1:8000` に置き換えた ID を使います。
+
+`increment` を、同じ引数で 2 回呼び出してみましょう。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+同じ `{"arg1": 5}` を渡しているのに、1 回目と 2 回目で結果が違います。
+第 1 章の Process と違って、ContainerProcess の結果は引数だけでなく Container の状態にも左右されるからです。
+
+<Aside>
+引数に既定値があっても、呼び出すときは引数を省略せずに渡してください。`increment` を `'{}'` で呼び出すと、`arg1` が見つからないというエラーになります。
+</Aside>
+
+## 2 つの ContainerProcess で Container を共有する
+
+次は、`increment` が変えた値を `get` で読んでみます。
+コマンドラインからは ContainerProcess を 1 つしか読み込めないので、「どの Container に、どの ContainerProcess を結びつけるか」を書いた設定ファイル `example_container.conf` を使います。
+起動中の `juiz` を Ctrl+C で止めてから、設定ファイルを指定して起動し直します。
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -305,8 +424,6 @@ juiz -f example_container.conf -d
 ```sh
 juiz -f example_container.conf -d
 ```
-
-第 1 章で作った venv を有効にしたターミナルで実行してください。
 
 </TabItem>
 <TabItem label="C++">
@@ -326,9 +443,7 @@ juiz -f example_container.conf -d
 
 設定ファイルの書き方は、次の第 3 章で詳しく扱います。ここでは「1 つの Container に、2 つの ContainerProcess がぶら下がっている」という形だけ押さえておいてください。
 
-## 外から呼び出す
-
-`juiz` を起動したまま、別のターミナルを開きます。まず、動いている ContainerProcess の一覧を見ます。
+一覧を見ると、今度は ContainerProcess が 2 つあります。
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -358,8 +473,6 @@ juiz container-process list
 </Tabs>
 
 表示される順番は実行ごとに変わることがあります。
-ContainerProcess の ID は「インスタンス名`::`型名`:`Container のインスタンス名」の形をしていて、どの Container に結びついているかが ID からわかります。
-一覧には、ブローカー自身の中を指す `core://core/...` の形で表示されます。外から呼び出すときは、第 1 章と同じように先頭を `http://127.0.0.1:8000` に置き換えた ID を使います。
 
 `get` で今の値を見てから、`increment` を 2 回呼び出し、もう一度 `get` で値を見てみましょう。
 
@@ -410,13 +523,7 @@ C++ のサンプルの設定ファイルには `value: 10` と書いてあるの
 </TabItem>
 </Tabs>
 
-同じ `{"arg1": 5}` を渡しているのに、`increment` の結果は 1 回目と 2 回目で違います。
-第 1 章の Process と違って、ContainerProcess の結果は引数だけでなく Container の状態にも左右されるからです。
-そして、`increment` が変えた値を、別の ContainerProcess である `get` が読めています。2 つの ContainerProcess は、同じ Container を共有しています。
-
-<Aside>
-引数に既定値があっても、呼び出すときは引数を省略せずに渡してください。`increment` を `'{}'` で呼び出すと、`arg1` が見つからないというエラーになります。
-</Aside>
+`increment` が変えた値を、別の ContainerProcess である `get` が読めています。2 つの ContainerProcess は、同じ Container を共有しています。
 
 ### ブラウザから呼び出す
 
