@@ -458,10 +458,10 @@ juiz connection create -t push \
 </TabItem>
 </Tabs>
 
-つないでも、まだ何も流れません。EC が talker を実行していないからです。EC の ID を調べます。
+つないでも、まだ何も流れません。EC が talker を実行していないからです。8001 番の juiz にある EC の ID を調べます。
 
 ```sh
-juiz ec list
+juiz -s http://127.0.0.1:8001 ec list
 # => ["http://127.0.0.1:8001/execution_context/ec0::main_loop_ec"]
 ```
 
