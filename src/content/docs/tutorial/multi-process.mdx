@@ -1,0 +1,504 @@
+---
+title: 6. 別々のプロセスをつなぐ
+description: 別々に起動した juiz どうしを、設定ファイルなしでコマンドからつなぎます。Process が場所を問わず ID(URL)でつながることを学びます。
+sidebar:
+  order: 6
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+第 4 章では、talker と listener を 1 つの設定ファイルに書いて、1 つの `juiz` の中でつなぎました。
+ロボットでは、カメラを動かすプログラムと、画像を処理するプログラムを別々に起動したり、別々のコンピュータで動かしたりすることがよくあります。
+この章では、talker と listener を別々のターミナルの `juiz` で起動し、動いている最中にコマンドからつなぎます。
+
+<Aside type="tip" title="この章で学ぶこと">
+- 別々に起動した juiz の Process も、ID(URL)を指定すれば call も connect もできること
+- 設定ファイルを書かなくても、動いているシステムをコマンドから組み立てられること
+- Execution Context も、外から ID を指定して開始・停止できること
+</Aside>
+
+## サンプルを用意する
+
+第 4 章と同じ talker と listener を使います。サンプル集は、第 1 章でクローンしてビルドしたものをそのまま使えます。
+まだの場合は、[第 1 章の「サンプルを用意する」](/tutorial/first-process/#サンプルを用意する) の手順を済ませてください。
+
+この章ではターミナルを 3 つ使います。どれも、サンプル集のルートで開いておいてください(Python の場合は、どのターミナルでも venv を有効にしておきます)。
+
+| ターミナル | 役割 |
+| --- | --- |
+| 1 | listener を動かす `juiz` |
+| 2 | talker を動かす `juiz` |
+| 3 | つないだり呼び出したりするコマンドを打つ |
+
+## listener を起動する
+
+ターミナル 1 で、listener を読み込んだ `juiz` を起動します。第 1 章と同じく、`-1` でインスタンスを 1 つ作り、`-d` でサーバーとして動かし続けます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz --process ./target/debug/liblistener.so -1 -d
+```
+
+macOS では拡張子が `.dylib` になります。
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz --process ./process/listener_python.py -l python -1 -d
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz --process ./build/plugins/liblistener_cpp.so -l cpp -1 -d
+```
+
+macOS では拡張子が `.dylib` になります。
+
+</TabItem>
+</Tabs>
+
+起動しても何も表示されません。listener を実行する人がまだいないからです。
+ターミナル 3 から、listener の ID を確かめておきましょう。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener0::listener"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_python0::listener_python"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"]
+```
+
+</TabItem>
+</Tabs>
+
+この juiz は、HTTP ブローカーのポート 8000 番で待ち受けています。
+
+## talker を起動する
+
+ターミナル 2 で、talker を読み込んだ `juiz` を起動します。今度は `-r 1.0` を付けます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz --process ./target/debug/libtalker.so -1 -r 1.0 -d
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz --process ./process/talker_python.py -l python -1 -r 1.0 -d
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz --process ./build/plugins/libtalker_cpp.so -l cpp -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
+
+`-r` は、起動時に作ったインスタンスを、指定した周期 [Hz] で実行し続けるオプションです。ターミナル 2 には talker の表示だけが 1 秒ごとに出ます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```
+talker: Hello World
+talker: Hello World
+...
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```
+talker_python says "Hello, World!"
+talker_python says "Hello, World!"
+...
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```
+talker_cpp: Hello, Juiz!
+talker_cpp: Hello, Juiz!
+...
+```
+
+</TabItem>
+</Tabs>
+
+8000 番はターミナル 1 の juiz が使っているので、2 つ目の juiz は自動的に次の 8001 番で待ち受けます。
+コマンドの問い合わせ先は `-s` で指定します(指定しないと `http://127.0.0.1:8000` に問い合わせます)。ターミナル 3 から、8001 番の juiz にある Process を確かめましょう。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -s http://127.0.0.1:8001 process list
+# => ["http://127.0.0.1:8001/process/talker0::talker"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -s http://127.0.0.1:8001 process list
+# => ["http://127.0.0.1:8001/process/talker_python0::talker_python"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -s http://127.0.0.1:8001 process list
+# => ["http://127.0.0.1:8001/process/talker_cpp0::talker_cpp"]
+```
+
+</TabItem>
+</Tabs>
+
+ID の `http://127.0.0.1:8001` の部分が、その Process がどの juiz にいるかを表しています。
+
+<Aside type="caution">
+現在の juiz には、2 つ目の juiz を起動したあとに 8000 番の juiz へ `process list` や `connection list` などの一覧を問い合わせると、8000 番の juiz が応答しなくなる不具合があります([OpenJUIZ/juiz#55](https://github.com/OpenJUIZ/juiz/issues/55))。
+この章では、talker を起動したあとは `-s http://127.0.0.1:8001` を付けて 8001 番に問い合わせてください。固まってしまったら、両方の juiz を Ctrl+C で止めて、listener から起動し直してください。
+</Aside>
+
+## コマンドでつなぐ
+
+ターミナル 3 で、talker の出力を listener の引数 `arg1` につなぎます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker0::talker" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener0::listener"
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker_python0::talker_python" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener_python0::listener_python"
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker_cpp0::talker_cpp" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"
+```
+
+</TabItem>
+</Tabs>
+
+引数は、つなぐ元(`source`)の ID、つなぐ先の引数名(`arg_name`)、つなぐ先(`destination`)の ID の順です。`-t push` は、第 4 章の `connection_type: Push` と同じ意味です。
+第 4 章の設定ファイルの `connections` に書いた内容を、そのままコマンドで指定していることがわかります。
+
+実行したとたん、ターミナル 1 の listener が表示を始めます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```
+listener: Hello World
+listener: Hello World
+...
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```
+listener_python receives "Hello, World!"
+listener_python receives "Hello, World!"
+...
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```
+listener_cpp: Hello, Juiz!
+listener_cpp: Hello, Juiz!
+...
+```
+
+</TabItem>
+</Tabs>
+
+別々に起動した juiz の Process が、動いたままつながりました。つながりは、値を送り出す talker の側が持っています。8001 番に問い合わせると確かめられます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -s http://127.0.0.1:8001 connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker, arg=arg1, dst=ProcessIdentifier(http://127.0.0.1:8000/process/listener0::listener)]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -s http://127.0.0.1:8001 connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_python0::talker_python, arg=arg1, dst=ProcessIdentifier(http://127.0.0.1:8000/process/listener_python0::listener_python)]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -s http://127.0.0.1:8001 connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_cpp0::talker_cpp, arg=arg1, dst=ProcessIdentifier(http://127.0.0.1:8000/process/listener_cpp0::listener_cpp)]
+```
+
+</TabItem>
+</Tabs>
+
+つなぐ先が `http://127.0.0.1:8000/...` になっています。talker の juiz は、listener が別の juiz にいることを知っていて、HTTP で値を届けています。
+Process のコードは第 4 章から何も変えていません。同じ juiz の中にいても、別の juiz にいても、ID さえわかればつなげます。
+
+## 外から呼び出す
+
+call も、ID を指定すればどの juiz の Process にでも使えます。ターミナル 3 から、8001 番の juiz にいる talker を呼び出してみましょう。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process call "http://127.0.0.1:8001/process/talker0::talker" '{}' -p
+# => CapsulePtr((value:Value("Hello World"), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process call "http://127.0.0.1:8001/process/talker_python0::talker_python" '{}' -p
+# => CapsulePtr((value:Value("Hello, World!"), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process call "http://127.0.0.1:8001/process/talker_cpp0::talker_cpp" '{}' -p
+# => CapsulePtr((value:Value("Hello, Juiz!"), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+`process call` は、ID の `http://127.0.0.1:8001` を見て、その juiz に問い合わせます。このように ID を指定するコマンドには `-s` は要りません。
+
+## EC を外から操作する
+
+`-r` は、起動時に作ったインスタンスを手軽に周期実行するためのオプションで、Execution Context(EC)は作りません。
+第 4 章のように EC で動かしたいときは、設定ファイルで EC を作ります。ここでは、EC を止めた状態で起動しておき、あとから外から開始・停止してみます。
+
+まず、ターミナル 2 の talker を Ctrl+C で止めます。listener の表示も止まります。
+次に、talker と EC だけを書いた設定ファイル `talker_ec.conf` を、サンプル集のルートに作ります。第 4 章の `talker_listener.conf` から listener と `connections` を除き、`auto_start` を `false` にしたものです。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```yaml
+name: talker_ec
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker:
+      path: "./target/debug"
+processes:
+  - type_name: talker
+    name: talker0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker
+    auto_start: false
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```yaml
+name: talker_ec
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_python:
+      language: python
+      path: "./process"
+processes:
+  - type_name: talker_python
+    name: talker0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker_python
+    auto_start: false
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```yaml
+name: talker_ec
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_cpp:
+      language: "c++"
+      path: "./build/plugins"
+processes:
+  - type_name: talker_cpp
+    name: talker0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker_cpp
+    auto_start: false
+```
+
+</TabItem>
+</Tabs>
+
+ターミナル 2 で、この設定ファイルを使って起動し直します。`port: 8000` と書いてありますが、8000 番は listener の juiz が使っているので、やはり 8001 番で待ち受けます。
+
+```sh
+juiz -f talker_ec.conf -d
+```
+
+EC が止まっているので、何も表示されません。
+talker を起動し直したので、つながりも消えています(つながりは talker の側が持っていたからです)。ターミナル 3 から、もう一度つなぎます。インスタンス名が `talker0` になっていることに注意してください。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker0::talker" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener0::listener"
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker0::talker_python" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener_python0::listener_python"
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker0::talker_cpp" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"
+```
+
+</TabItem>
+</Tabs>
+
+つないでも、まだ何も流れません。EC が talker を実行していないからです。8001 番の juiz にある EC の ID を調べます。
+
+```sh
+juiz -s http://127.0.0.1:8001 ec list
+# => ["http://127.0.0.1:8001/execution_context/ec0::main_loop_ec"]
+```
+
+この ID を指定して、EC を開始します。
+
+```sh
+juiz -s http://127.0.0.1:8001 ec start "http://127.0.0.1:8001/execution_context/ec0::main_loop_ec"
+```
+
+ターミナル 2 に talker、ターミナル 1 に listener の表示が 1 秒ごとに出始めます。止めるときは `ec stop` です。
+
+```sh
+juiz -s http://127.0.0.1:8001 ec stop "http://127.0.0.1:8001/execution_context/ec0::main_loop_ec"
+```
+
+表示が止まります。もう一度 `ec start` すれば、また動き出します。
+
+<Aside type="caution">
+`juiz ec start` と `juiz ec stop` は、juiz 0.0.12 より後のリリースが必要です。0.0.12 では、起動中の juiz の EC を見つけられずにエラーになります([OpenJUIZ/juiz#50](https://github.com/OpenJUIZ/juiz/issues/50))。
+また、EC の ID に書かれたアドレスとは別に、`-s` でその EC がいる juiz を指定してください。
+</Aside>
+
+## やってみよう
+
+- talker の `-r` を `2.0` にして起動し直し、もう一度つないでみましょう。listener の表示の間隔が半分になります。
+- 起動する順番を入れ替えて、talker を先(8000 番)、listener を後(8001 番)に起動してみましょう。つなぐときの ID のポート番号が入れ替わるだけで、同じようにつなげます。
+- `talker_ec.conf` の `rate` を変えたり、`auto_start` を `true` にしたりして、EC の動き方の違いを確かめてみましょう。
+
+## まとめ
+
+- 別々に起動した juiz の Process も、`http://<ホスト>:<ポート>/process/<インスタンス名>::<型名>` という ID で指定できます。2 つ目以降の juiz は、空いているポート(8001, 8002, …)で待ち受けます。
+- `juiz connection create` で、動いている Process どうしを、設定ファイルなしでつなげます。つながりは値を送り出す側の Process が持っています。
+- `juiz process call` は、ID が指す juiz に問い合わせて結果を受け取ります。
+- `-r` は手軽に周期実行するためのオプションです。EC を使うときは設定ファイルで作り、`juiz ec start` / `juiz ec stop` で外から開始・停止できます。
+- Process のコードは、どこで動くのか、誰とつながるのかを知りません。だから同じ Process を、1 つの juiz の中でも、別々の juiz の間でも使えます。
+
+これでチュートリアルは終わりです。やりたいことが決まっているときは、[ガイド](/guides/process/) から逆引きで探してみてください。
