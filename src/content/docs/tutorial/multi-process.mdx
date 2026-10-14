@@ -155,41 +155,38 @@ talker_cpp: Hello, Juiz!
 </Tabs>
 
 8000 番はターミナル 1 の juiz が使っているので、2 つ目の juiz は自動的に次の 8001 番で待ち受けます。
-コマンドの問い合わせ先は `-s` で指定します(指定しないと `http://127.0.0.1:8000` に問い合わせます)。ターミナル 3 から、8001 番の juiz にある Process を確かめましょう。
+このとき 2 つ目の juiz は、8000 番の juiz に「8001 番にいる」と知らせ、そのサブシステムとして登録されます。
+そのため、ターミナル 3 から 8000 番に問い合わせると、両方の juiz の Process が一覧に出てきます(並び順は実行ごとに変わることがあります)。
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
 ```sh
-juiz -s http://127.0.0.1:8001 process list
-# => ["http://127.0.0.1:8001/process/talker0::talker"]
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener0::listener", "http://127.0.0.1:8001/process/talker0::talker"]
 ```
 
 </TabItem>
 <TabItem label="Python">
 
 ```sh
-juiz -s http://127.0.0.1:8001 process list
-# => ["http://127.0.0.1:8001/process/talker_python0::talker_python"]
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_python0::listener_python", "http://127.0.0.1:8001/process/talker_python0::talker_python"]
 ```
 
 </TabItem>
 <TabItem label="C++">
 
 ```sh
-juiz -s http://127.0.0.1:8001 process list
-# => ["http://127.0.0.1:8001/process/talker_cpp0::talker_cpp"]
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_cpp0::listener_cpp", "http://127.0.0.1:8001/process/talker_cpp0::talker_cpp"]
 ```
 
 </TabItem>
 </Tabs>
 
-ID の `http://127.0.0.1:8001` の部分が、その Process がどの juiz にいるかを表しています。
-
-<Aside type="caution">
-現在の juiz には、2 つ目の juiz を起動したあとに 8000 番の juiz へ `process list` や `connection list` などの一覧を問い合わせると、8000 番の juiz が応答しなくなる不具合があります([OpenJUIZ/juiz#55](https://github.com/OpenJUIZ/juiz/issues/55))。
-この章では、talker を起動したあとは `-s http://127.0.0.1:8001` を付けて 8001 番に問い合わせてください。固まってしまったら、両方の juiz を Ctrl+C で止めて、listener から起動し直してください。
-</Aside>
+ID の `http://127.0.0.1:8000` や `http://127.0.0.1:8001` の部分が、その Process がどの juiz にいるかを表しています。
+特定の juiz だけに問い合わせたいときは、`-s` で問い合わせ先を指定します(指定しないと `http://127.0.0.1:8000` に問い合わせます)。たとえば `juiz -s http://127.0.0.1:8001 process list` なら、talker だけが返ります。
 
 ## コマンドでつなぐ
 
@@ -461,10 +458,10 @@ juiz connection create -t push \
 </TabItem>
 </Tabs>
 
-つないでも、まだ何も流れません。EC が talker を実行していないからです。8001 番の juiz にある EC の ID を調べます。
+つないでも、まだ何も流れません。EC が talker を実行していないからです。EC の ID を調べます。
 
 ```sh
-juiz -s http://127.0.0.1:8001 ec list
+juiz ec list
 # => ["http://127.0.0.1:8001/execution_context/ec0::main_loop_ec"]
 ```
 
@@ -483,7 +480,7 @@ juiz -s http://127.0.0.1:8001 ec stop "http://127.0.0.1:8001/execution_context/e
 表示が止まります。もう一度 `ec start` すれば、また動き出します。
 
 <Aside type="caution">
-`juiz ec start` と `juiz ec stop` は、juiz 0.0.12 より後のリリースが必要です。0.0.12 では、起動中の juiz の EC を見つけられずにエラーになります([OpenJUIZ/juiz#50](https://github.com/OpenJUIZ/juiz/issues/50))。
+`juiz ec start` と `juiz ec stop` には、juiz 0.0.13 以降が必要です。0.0.12 以前では、起動中の juiz の EC を見つけられずにエラーになります。
 また、EC の ID に書かれたアドレスとは別に、`-s` でその EC がいる juiz を指定してください。
 </Aside>
 
