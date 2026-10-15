@@ -4,10 +4,17 @@ import starlight from '@astrojs/starlight';
 
 export default defineConfig({
 	site: 'https://openjuiz.github.io',
+	// 英語版は以前 /en/ にあったので、古いリンクをルートへ転送する
+	redirects: {
+		'/en': '/',
+		'/en/getting-started/install': '/getting-started/install/',
+		'/en/getting-started/quickstart': '/getting-started/quickstart/',
+		'/en/concepts/overview': '/concepts/overview/',
+	},
 	integrations: [
 		starlight({
 			title: 'juiz',
-			description: 'ロボットと IoT のための分散ミドルウェア',
+			description: 'Distributed middleware for robots and IoT',
 			logo: {
 				light: './src/assets/logo-light.svg',
 				dark: './src/assets/logo-dark.svg',
@@ -16,8 +23,8 @@ export default defineConfig({
 			},
 			defaultLocale: 'root',
 			locales: {
-				root: { label: '日本語', lang: 'ja' },
-				en: { label: 'English', lang: 'en' },
+				root: { label: 'English', lang: 'en' },
+				ja: { label: '日本語', lang: 'ja' },
 			},
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/OpenJUIZ/juiz' },
@@ -27,28 +34,28 @@ export default defineConfig({
 			},
 			sidebar: [
 				{
-					label: 'はじめに',
-					translations: { en: 'Getting Started' },
+					label: 'Getting Started',
+					translations: { ja: 'はじめに' },
 					items: [{ autogenerate: { directory: 'getting-started' } }],
 				},
 				{
-					label: 'チュートリアル',
-					translations: { en: 'Tutorial' },
+					label: 'Tutorial',
+					translations: { ja: 'チュートリアル' },
 					items: [{ autogenerate: { directory: 'tutorial' } }],
 				},
 				{
-					label: 'コンセプト',
-					translations: { en: 'Concepts' },
+					label: 'Concepts',
+					translations: { ja: 'コンセプト' },
 					items: [{ autogenerate: { directory: 'concepts' } }],
 				},
 				{
-					label: 'ガイド',
-					translations: { en: 'Guides' },
+					label: 'Guides',
+					translations: { ja: 'ガイド' },
 					items: [{ autogenerate: { directory: 'guides' } }],
 				},
 				{
-					label: 'リンク',
-					translations: { en: 'Links' },
+					label: 'Links',
+					translations: { ja: 'リンク' },
 					items: [
 						{ label: 'GitHub (juiz)', link: 'https://github.com/OpenJUIZ/juiz' },
 						{ label: 'juiz_sdk (docs.rs)', link: 'https://docs.rs/juiz_sdk' },

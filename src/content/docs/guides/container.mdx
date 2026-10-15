@@ -1,13 +1,13 @@
 ---
-title: Container を書く
-description: 状態を持つ Container と、その状態を読み書きする ContainerProcess を書きます。
+title: Writing a Container
+description: Write a Container that holds state, and ContainerProcesses that read and write that state.
 sidebar:
   order: 2
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-整数の値を一つ持つ Container と、その値に引数を足す ContainerProcess を例にします。
+This example is a Container that holds one integer, and a ContainerProcess that adds its argument to that value.
 
 ## Container
 
@@ -93,7 +93,7 @@ def example_container_python(initial_value: int = 0) -> PyContainer:
 
 ## ContainerProcess
 
-ContainerProcess は、最初の引数に Container を受け取る Process です。`container_type` で結びつける Container の型名を指定します。
+A ContainerProcess is a Process that receives the Container as its first argument. `container_type` gives the type name of the Container it is bound to.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -146,7 +146,7 @@ def example_container_python_get(container) -> int:
 </TabItem>
 </Tabs>
 
-## 単体で動かす
+## Running it on its own
 
 ```sh
 juiz --container ./target/debug/libexample_container.so \

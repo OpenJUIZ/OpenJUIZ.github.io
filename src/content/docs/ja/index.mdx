@@ -1,0 +1,45 @@
+---
+title: juiz
+description: ロボットと IoT 機器をネットワーク分散システムとして開発するためのミドルウェア
+template: splash
+hero:
+  tagline: ロボットと IoT 機器を、冪等な関数と状態のコンテナで組み立てるミドルウェア
+  actions:
+    - text: はじめる
+      link: /ja/getting-started/install/
+      icon: right-arrow
+    - text: GitHub
+      link: https://github.com/OpenJUIZ/juiz
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+JUIZ (ジュイス) は、カメラやロボット、モータやセンサなどのロボット要素を動かすソフトウェアを複数の言語で開発し、
+それらを結合して一つのソフトウェアサービスのように動作させるためのミドルウェアです。
+
+<CardGrid stagger>
+	<Card title="Process" icon="rocket">
+		入力（引数）と出力を持つ冪等な関数としてソフトウェアを書きます。
+	</Card>
+	<Card title="Container" icon="puzzle">
+		状態は Container に置き、ContainerProcess から読み書きします。状態と振る舞いを分けて設計できます。
+	</Card>
+	<Card title="connect と call" icon="random">
+		Process をつないでデータフローで動かすことも、外部から呼び出して結果を受け取ることもできます。
+	</Card>
+	<Card title="Rust・C++・Python" icon="seti:rust">
+		機能要素は 3 つの言語で書けます。HTTP+JSON と QUIC のブローカーを標準で備えています。
+	</Card>
+</CardGrid>
+
+## 3 行で試す
+
+```sh
+cargo install juiz_app
+git clone https://github.com/OpenJUIZ/juiz_examples_rust.git && cd juiz_examples_rust && cargo build
+juiz -f increment_process.conf -d
+```
+
+起動したらブラウザで http://127.0.0.1:8000/docs を開くと、Swagger UI から Process を呼び出せます。

@@ -12,9 +12,9 @@ npm run build    # ./dist に出力
 
 ## ページの追加
 
-- 日本語のページは `src/content/docs/` に、英語のページは `src/content/docs/en/` に Markdown (`.md` / `.mdx`) で置きます。
+- 英語のページ(サイトのトップ、既定の言語)は `src/content/docs/` に、日本語のページは `src/content/docs/ja/` に Markdown (`.md` / `.mdx`) で置きます。
 - サイドバーは `astro.config.mjs` の `sidebar` で、ディレクトリごとに自動生成しています。
-- 英語訳がないページは、日本語のページが表示されます。
+- 日本語訳がないページは、英語のページが表示されます。英語と日本語で同じパス(`/tutorial/...` と `/ja/tutorial/...`)にそろえてください。
 
 ## 公開
 

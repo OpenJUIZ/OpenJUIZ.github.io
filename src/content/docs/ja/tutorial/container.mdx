@@ -1,0 +1,567 @@
+---
+title: "2. 状態を持つ: Container と ContainerProcess"
+description: カウンタを題材に、状態を Container に置き、ContainerProcess だけがそれに触れる設計を学びます。
+sidebar:
+  order: 2
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+第 1 章の Process は、同じ引数を渡せばいつも同じ結果を返す冪等な関数でした。
+しかし、ロボットや IoT の部品を作っていると、カウンタの値やモータの現在位置、カメラの接続のように「覚えておきたいもの」が必ず出てきます。
+この章では、整数を 1 つ覚えておくカウンタを題材に、juiz で状態を扱う方法を学びます。
+
+<Aside type="tip" title="この章で学ぶこと">
+- 状態は **Container** に置き、Process には持たせないこと
+- 状態に触れるのは、Container に結びついた **ContainerProcess** だけであること
+- 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられること
+</Aside>
+
+## サンプルを用意する
+
+第 1 章でクローンしてビルドしたサンプル集をそのまま使います。Container のサンプルも、第 1 章のビルドで一緒にできあがっています。
+まだの場合は、[第 1 章の「サンプルを用意する」](/ja/tutorial/first-process/#サンプルを用意する) の手順を済ませてください。
+
+この章で使うファイルは次の 3 つです。
+
+| 役割 | 名前 |
+| --- | --- |
+| Container | カウンタの値を 1 つ持つ |
+| ContainerProcess `increment` | Container の値に `arg1` を足して、足した後の値を返す |
+| ContainerProcess `get` | Container の値をそのまま返す |
+
+## Container のコードを読む
+
+Container は、状態そのものです。値を入れておく入れ物と、それを作る関数だけを書きます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`container/example_container/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/container/example_container/src/lib.rs)
+
+```rust
+use juiz_sdk::prelude::*;
+
+#[repr(Rust)]
+pub struct ExampleContainer {
+    pub value: i64,
+}
+
+#[juiz_container]
+fn example_container(initial_value: i64) -> JuizResult<Box<ExampleContainer>> {
+    Ok(Box::new(ExampleContainer {
+        value: initial_value,
+    }))
+}
+```
+
+状態を入れておく構造体 `ExampleContainer` と、それを作る関数を書きます。
+`#[juiz_container]` を付けた関数が Container の作り方になり、関数名 `example_container` が Container の**型名**になります。
+
+ContainerProcess も `ExampleContainer` の定義を使うので、このクレートは `Cargo.toml` で `crate-type = ["cdylib", "rlib"]` として、共有ライブラリとしても Rust のライブラリとしても使えるようにしています。
+
+</TabItem>
+<TabItem label="Python">
+
+[`container/example_container_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/container/example_container_python.py)
+
+```python
+from juiz import juiz_container
+
+
+class PyContainer:
+    def __init__(self, value: int):
+        self.value = value
+
+
+@juiz_container
+def example_container_python(initial_value: int = 0) -> PyContainer:
+    """整数値を 1 つ保持する Container"""
+    return PyContainer(initial_value)
+```
+
+状態を入れておくクラス `PyContainer` と、そのオブジェクトを作って返す関数を書きます。
+`@juiz_container` を付けた関数が Container の作り方になり、関数名 `example_container_python` が Container の**型名**になります。
+
+</TabItem>
+<TabItem label="C++">
+
+[`container/example_container_cpp/example_container_cpp.h`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/container/example_container_cpp/example_container_cpp.h)
+
+```cpp
+#pragma once
+
+#include <cstdint>
+
+// Container が保持する状態
+// Container と、それを操作する ContainerProcess で共有する。
+class ExampleContainer {
+public:
+    int64_t value;
+    ExampleContainer(int64_t v) : value(v) {}
+};
+```
+
+[`container/example_container_cpp/example_container_cpp.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/container/example_container_cpp/example_container_cpp.cpp)
+
+```cpp
+#include "juiz/juiz.h"
+#include "example_container_cpp.h"
+
+// 整数値を 1 つ保持する Container
+auto manifest() {
+    return ContainerManifest("example_container_cpp")
+        .description("Holds an integer value.");
+}
+
+// 設定ファイルの containers に書いた項目 (value など) を受け取って Container を作る
+ExampleContainer* create_container(juiz::CapsuleMap args) {
+    int64_t initial_value = 0;
+    if (args.has("value")) {
+        initial_value = args.get_int("value");
+    }
+    return new ExampleContainer(initial_value);
+}
+
+CONTAINER_FACTORY(manifest, create_container);
+```
+
+状態を入れておくクラス `ExampleContainer` はヘッダに書き、ContainerProcess からも読み込めるようにします。
+`manifest()` で Container の**型名**を宣言し、`create_container` でオブジェクトを作って返します。最後に `CONTAINER_FACTORY` で公開します。
+
+</TabItem>
+</Tabs>
+
+Container には、値を変えたり読んだりする処理は書いていません。Container は「何を覚えておくか」だけを表します。
+
+## ContainerProcess のコードを読む
+
+状態を変えたり読んだりする処理は、ContainerProcess に書きます。
+ContainerProcess は、**最初の引数に Container を受け取る** Process です。どの Container と組になるかは、Container の型名で指定します。
+
+### increment: 値を足す
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`container/example_container_increment/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/container/example_container_increment/src/lib.rs)
+
+```rust
+use example_container::ExampleContainer;
+use juiz_sdk::prelude::*;
+
+#[juiz_container_process(
+    container_type = "example_container"
+    description = "Container Process for example_container. This process will add given value to container."
+    arguments = {
+        default = {
+            arg1 = 1
+        }
+    }
+)]
+fn example_container_increment(
+    container: &mut ContainerImpl<ExampleContainer>,
+    arg1: i64,
+) -> JuizResult<Capsule> {
+    container.value = container.value + arg1;
+    return Ok(jvalue!(container.value).into());
+}
+```
+
+`#[juiz_container_process]` の `container_type` に、結びつける Container の型名 `example_container` を書きます。
+最初の引数 `container` で Container を受け取り、`container.value` のように中の値を読み書きできます。2 番目以降の引数(`arg1`)は、第 1 章の Process と同じように呼び出すときに渡します。
+
+</TabItem>
+<TabItem label="Python">
+
+[`container/example_container_python_increment.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/container/example_container_python_increment.py)
+
+```python
+from juiz import juiz_container_process
+
+
+@juiz_container_process(container_type="example_container_python")
+def example_container_python_increment(container, arg1: int = 1) -> int:
+    """Container の値に arg1 を足して、足した後の値を返す"""
+    container.value = container.value + arg1
+    return container.value
+```
+
+`@juiz_container_process` の `container_type` に、結びつける Container の型名を書きます。
+最初の引数 `container` には、Container を作る関数が返した `PyContainer` のオブジェクトが渡されます。2 番目以降の引数(`arg1`)は、第 1 章の Process と同じように呼び出すときに渡します。
+
+</TabItem>
+<TabItem label="C++">
+
+[`container/example_container_cpp_increment/example_container_cpp_increment.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/container/example_container_cpp_increment/example_container_cpp_increment.cpp)
+
+```cpp
+#include "juiz/juiz.h"
+#include "example_container_cpp.h"
+
+// Container の値に arg1 を足して、足した後の値を返す ContainerProcess
+auto manifest() {
+    return ProcessManifest("example_container_cpp_increment")
+        .description("Adds arg1 to the value of the container.")
+        .container_type("example_container_cpp")
+        .add_int_arg("arg1", "value to be added", 1);
+}
+
+std::optional<int64_t> example_container_cpp_increment(ExampleContainer* container, int64_t arg1) {
+    container->value += arg1;
+    return container->value;
+}
+
+CONTAINER_PROCESS_FACTORY(ExampleContainer, manifest, example_container_cpp_increment);
+```
+
+`manifest()` の `.container_type()` に、結びつける Container の型名を書きます。
+関数は最初の引数で Container のポインタを受け取り、続けて `manifest()` で宣言した引数を受け取ります。
+公開には `PROCESS_FACTORY` ではなく `CONTAINER_PROCESS_FACTORY` を使い、Container のクラスも渡します。
+
+</TabItem>
+</Tabs>
+
+### get: 値を読む
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`container/example_container_get/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/container/example_container_get/src/lib.rs)
+
+```rust
+use example_container::ExampleContainer;
+use juiz_sdk::prelude::*;
+
+#[juiz_container_process(container_type = "example_container")]
+fn example_container_get(container: &mut ContainerImpl<ExampleContainer>) -> JuizResult<Capsule> {
+    println!("example_container_get() called");
+    return Ok(jvalue!(container.value).into());
+}
+```
+
+</TabItem>
+<TabItem label="Python">
+
+[`container/example_container_python_get.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/container/example_container_python_get.py)
+
+```python
+from juiz import juiz_container_process
+
+
+@juiz_container_process(container_type="example_container_python")
+def example_container_python_get(container) -> int:
+    """Container の値を返す"""
+    return container.value
+```
+
+</TabItem>
+<TabItem label="C++">
+
+[`container/example_container_cpp_get/example_container_cpp_get.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/container/example_container_cpp_get/example_container_cpp_get.cpp)
+
+```cpp
+#include "juiz/juiz.h"
+#include "example_container_cpp.h"
+
+// Container の値を返す ContainerProcess
+auto manifest() {
+    return ProcessManifest("example_container_cpp_get")
+        .description("Returns the value of the container.")
+        .container_type("example_container_cpp");
+}
+
+std::optional<int64_t> example_container_cpp_get(ExampleContainer* container) {
+    return container->value;
+}
+
+CONTAINER_PROCESS_FACTORY(ExampleContainer, manifest, example_container_cpp_get);
+```
+
+</TabItem>
+</Tabs>
+
+`get` は Container 以外の引数を持たず、値を返すだけです。
+
+こうして、状態(Container)と振る舞い(ContainerProcess)を別々に書きます。
+状態を変えたり読んだりできるのは、その Container に結びついた ContainerProcess だけです。
+「この値はどこで書き換わるのか」を知りたいときは、ContainerProcess を見ればよいことになります。
+
+## 動かす
+
+まずは第 1 章と同じように、ファイルを指定して `juiz` を起動します。
+Container は `--container`、ContainerProcess は `--container_process` で読み込みます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz --container ./target/debug/libexample_container.so \
+     --container_process ./target/debug/libexample_container_increment.so -1 -d
+```
+
+macOS では拡張子が `.dylib` になります。
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz --container ./container/example_container_python.py \
+     --container_process ./container/example_container_python_increment.py -l python -1 -d
+```
+
+第 1 章で作った venv を有効にしたターミナルで実行してください。
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz --container ./build/plugins/libexample_container_cpp.so \
+     --container_process ./build/plugins/libexample_container_cpp_increment.so -l cpp -1 -d
+```
+
+macOS では拡張子が `.dylib` になります。
+
+</TabItem>
+</Tabs>
+
+`-1` を付けると、読み込んだ Container の型からインスタンスを 1 つ作り、そこに ContainerProcess のインスタンスを 1 つ結びつけます。
+インスタンス名は第 1 章と同じく型名の後ろに `0` を付けた名前で、Container は `example_container0`、ContainerProcess は `example_container_increment0` になります(Python と C++ では型名に `_python` / `_cpp` が付きます)。
+Container は、引数の既定値どおり値 0 から始まります。
+
+## 外から呼び出す
+
+`juiz` を起動したまま、別のターミナルを開きます。まず、動いている ContainerProcess の一覧を見ます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/example_container_increment0::example_container_increment:example_container0"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0"]
+```
+
+</TabItem>
+</Tabs>
+
+ContainerProcess の ID は「インスタンス名`::`型名`:`Container のインスタンス名」の形をしていて、どの Container に結びついているかが ID からわかります。
+一覧には、ブローカー自身の中を指す `core://core/...` の形で表示されます。外から呼び出すときは、第 1 章と同じように先頭を `http://127.0.0.1:8000` に置き換えた ID を使います。
+
+`increment` を、同じ引数で 2 回呼び出してみましょう。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+同じ `{"arg1": 5}` を渡しているのに、1 回目と 2 回目で結果が違います。
+第 1 章の Process と違って、ContainerProcess の結果は引数だけでなく Container の状態にも左右されるからです。
+
+<Aside>
+引数に既定値があっても、呼び出すときは引数を省略せずに渡してください。`increment` を `'{}'` で呼び出すと、`arg1` が見つからないというエラーになります。
+</Aside>
+
+## 2 つの ContainerProcess で Container を共有する
+
+次は、`increment` が変えた値を `get` で読んでみます。
+コマンドラインからは ContainerProcess を 1 つしか読み込めないので、「どの Container に、どの ContainerProcess を結びつけるか」を書いた設定ファイル `example_container.conf` を使います。
+起動中の `juiz` を Ctrl+C で止めてから、設定ファイルを指定して起動し直します。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -f example_container.conf -d
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -f example_container.conf -d
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -f example_container.conf -d
+```
+
+</TabItem>
+</Tabs>
+
+設定ファイルには、次のことが書かれています。
+
+- Container の型と ContainerProcess の型を、どのファイルから読み込むか
+- Container のインスタンス `container0` を 1 つ作ること
+- `container0` に結びつけて、`increment` のインスタンス `increment0` と、`get` のインスタンス `get0` を作ること
+
+設定ファイルの書き方は、次の第 3 章で詳しく扱います。ここでは「1 つの Container に、2 つの ContainerProcess がぶら下がっている」という形だけ押さえておいてください。
+
+一覧を見ると、今度は ContainerProcess が 2 つあります。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/increment0::example_container_increment:container0", "core://core/container_process/get0::example_container_get:container0"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/increment0::example_container_python_increment:container0", "core://core/container_process/get0::example_container_python_get:container0"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz container-process list
+# => ["core://core/container_process/increment0::example_container_cpp_increment:container0", "core://core/container_process/get0::example_container_cpp_get:container0"]
+```
+
+</TabItem>
+</Tabs>
+
+表示される順番は実行ごとに変わることがあります。
+
+`get` で今の値を見てから、`increment` を 2 回呼び出し、もう一度 `get` で値を見てみましょう。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_python_get:container0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_python_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(15), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(20), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:container0" '{}' -p
+# => CapsulePtr((value:Value(20), option: []))
+```
+
+C++ のサンプルの設定ファイルには `value: 10` と書いてあるので、Container は 10 から始まります。
+
+</TabItem>
+</Tabs>
+
+`increment` が変えた値を、別の ContainerProcess である `get` が読めています。2 つの ContainerProcess は、同じ Container を共有しています。
+
+### ブラウザから呼び出す
+
+第 1 章と同じく、Swagger UI(`http://127.0.0.1:8000/docs/`)からも呼び出せます。
+ContainerProcess を呼び出すときは、`PATCH /api/container_process/call` を開いて、identifier に `juiz container-process list` で表示された `core://core/...` の ID をそのまま入力します。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+- identifier: `core://core/container_process/get0::example_container_get:container0`
+- Request body: `{}`
+
+</TabItem>
+<TabItem label="Python">
+
+- identifier: `core://core/container_process/get0::example_container_python_get:container0`
+- Request body: `{}`
+
+</TabItem>
+<TabItem label="C++">
+
+- identifier: `core://core/container_process/get0::example_container_cpp_get:container0`
+- Request body: `{}`
+
+</TabItem>
+</Tabs>
+
+## やってみよう
+
+- `increment` に負の数(`{"arg1": -3}` など)を渡して、値が減ることを確かめてみましょう。
+- `juiz` を Ctrl+C で止めてから起動し直し、`get` を呼び出してみましょう。値は最初に戻っています。状態は、動いている Container の中にだけあることがわかります。
+- 値を 0 に戻す ContainerProcess(`reset`)を書くとしたら、どんな関数になるか考えてみましょう。引数は Container だけで、`value` を 0 にして返せば十分です。動かすには設定ファイルに書き足す必要があるので、第 3 章を読んでから試してみてください。
+
+## まとめ
+
+- 状態は Container に置きます。Container には「何を覚えておくか」だけを書き、処理は書きません。
+- 状態を読み書きするのは、Container に結びついた ContainerProcess だけです。ContainerProcess は最初の引数で Container を受け取ります。
+- 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられます。それらは同じ状態を共有します。
+- ContainerProcess の結果は、引数だけでなく Container の状態にも左右されます。冪等な Process と、状態を扱う ContainerProcess を分けておくことで、状態がどこで変わるのかがはっきりします。
+
+次の章では、この章で使った設定ファイルの書き方を学び、第 1 章の Process とこの章の Container を 1 つの設定ファイルでまとめて起動します。[設定ファイルでまとめて起動する](/ja/tutorial/config-file/) に進みましょう。

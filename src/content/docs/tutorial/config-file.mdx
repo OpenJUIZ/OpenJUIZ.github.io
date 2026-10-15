@@ -1,32 +1,32 @@
 ---
-title: 3. 設定ファイルでまとめて起動する
-description: 第 1 章の Process と第 2 章の Container を 1 つの設定ファイルで起動し、読み込みと実体化の違いを学びます。
+title: 3. Starting everything from a configuration file
+description: Start the Process from chapter 1 and the Container from chapter 2 with one configuration file, and learn the difference between loading and instantiating.
 sidebar:
   order: 3
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-第 1 章では Process を、第 2 章では Container を、それぞれ別々に起動しました。
-実際のロボットでは、カメラやモータ、それを処理する Process など、たくさんの部品を一度に動かします。
-この章では、これまでの Process と Container を 1 つの設定ファイルに書いて、まとめて起動します。
+In chapter 1 you started a Process, and in chapter 2 a Container, each on its own.
+A real robot runs many parts at once: cameras, motors, and the Processes that handle their data.
+In this chapter you write the Process and Container so far into one configuration file and start them together.
 
-<Aside type="tip" title="この章で学ぶこと">
-- 設定ファイルには「何を読み込むか」(`plugins`)と「何を作るか」(`processes` / `containers`)を分けて書くこと
-- 1 つの型から、名前の違うインスタンスをいくつも作れること
-- Container の初期値のような、インスタンスごとの設定を設定ファイルで渡せること
+<Aside type="tip" title="What you will learn">
+- A configuration file separates "what to load" (`plugins`) from "what to create" (`processes` / `containers`)
+- One type can produce several instances with different names
+- Per-instance settings, such as a Container's initial value, can be passed in the configuration file
 </Aside>
 
-## サンプルを用意する
+## Prepare the samples
 
-第 1 章でクローンしてビルドしたサンプル集をそのまま使います。
-まだの場合は、[第 1 章の「サンプルを用意する」](/tutorial/first-process/#サンプルを用意する) の手順を済ませてください。
+Keep using the example repository you cloned and built in chapter 1.
+If you have not done that yet, follow [Prepare the samples in chapter 1](/tutorial/first-process/#prepare-the-samples).
 
-この章では、サンプル集のルートに `tutorial.conf` という設定ファイルを新しく作ります。
+In this chapter you create a new configuration file named `tutorial.conf` at the root of the example repository.
 
-## 設定ファイルを書く
+## Write the configuration file
 
-次の内容で `tutorial.conf` を作ってください。
+Create `tutorial.conf` with the following content.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -143,9 +143,9 @@ containers:
 </TabItem>
 </Tabs>
 
-設定ファイルは YAML で書きます。上から順に見ていきましょう。
+Configuration files are written in YAML. Let's go through it from the top.
 
-### name と option
+### name and option
 
 ```yaml
 name: tutorial
@@ -155,64 +155,64 @@ option:
     port: 8000
 ```
 
-`name` はこのシステムの名前です。
-`option` の `http_broker` は、これまで `-d` で立ち上げていた HTTP ブローカーの設定です。`port` で待ち受けるポートを変えられます。
+`name` is the name of this system.
+`http_broker` under `option` configures the HTTP broker you have been starting with `-d`. `port` changes the port it listens on.
 
-### plugins: 読み込む
+### plugins: loading
 
-`plugins` には、どのファイルから型を**読み込む**かを書きます。第 1 章の `--process`、第 2 章の `--container` / `--container_process` に当たる部分です。
+`plugins` says which files to **load** types from. It corresponds to `--process` in chapter 1 and `--container` / `--container_process` in chapter 2.
 
-- `process_factories` には Process の型を書きます。
-- `container_factories` には Container の型を書き、その下の `processes` に、その Container に結びつく ContainerProcess の型を書きます。
+- `process_factories` lists Process types.
+- `container_factories` lists Container types, and `processes` under each one lists the ContainerProcess types bound to that Container.
 
-キーには**型名**を書きます。juiz は `path` に書いたディレクトリから、型名に合ったファイルを探します。
+The keys are **type names**. juiz looks in the directory given by `path` for the file that matches the type name.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
-型名 `increment_process` なら、`./target/debug` の中の `libincrement_process.so`(macOS では `.dylib`)が読み込まれます。
-`language` を省略すると `rust` として扱われます。
+For the type name `increment_process`, juiz loads `libincrement_process.so` (`.dylib` on macOS) from `./target/debug`.
+If `language` is omitted, it is treated as `rust`.
 
 </TabItem>
 <TabItem label="Python">
 
-型名 `increment_process_python` なら、`./process` の中の `increment_process_python.py` が読み込まれます。
-`language: python` を必ず書いてください。ContainerProcess の言語は、親の Container と同じになります。
+For the type name `increment_process_python`, juiz loads `increment_process_python.py` from `./process`.
+Always write `language: python`. ContainerProcesses use the same language as their parent Container.
 
 </TabItem>
 <TabItem label="C++">
 
-型名 `increment_process_cpp` なら、`./build/plugins` の中の `libincrement_process_cpp.so`(macOS では `.dylib`)が読み込まれます。
-`language: "c++"` を必ず書いてください(コマンドラインの `-l cpp` とは書き方が違います)。ContainerProcess の言語は、親の Container と同じになります。
+For the type name `increment_process_cpp`, juiz loads `libincrement_process_cpp.so` (`.dylib` on macOS) from `./build/plugins`.
+Always write `language: "c++"` (note that this differs from `-l cpp` on the command line). ContainerProcesses use the same language as their parent Container.
 
 </TabItem>
 </Tabs>
 
-`plugins` に書くだけでは、まだ何も動きません。juiz が型(作り方)を覚えるだけです。
+Writing something in `plugins` does not run anything yet. juiz just learns the types (how to make them).
 
-### processes と containers: 作る
+### processes and containers: creating
 
-`processes` と `containers` には、読み込んだ型から**インスタンスを作る**ことを書きます。第 1 章・第 2 章の `-1` に当たる部分です。
+`processes` and `containers` say which **instances to create** from the loaded types. They correspond to `-1` in chapters 1 and 2.
 
-- `type_name` には `plugins` に書いた型名を、`name` には作るインスタンスの名前を書きます。
-- `processes` では、同じ型 `increment_process` から `inc0` と `inc1` の 2 つのインスタンスを作っています。
-- `containers` では、Container `counter0` を作り、その下の `processes` で、`counter0` に結びつく ContainerProcess `increment0` と `get0` を作っています。
+- `type_name` is a type name listed in `plugins`, and `name` is the name of the instance to create.
+- `processes` creates two instances, `inc0` and `inc1`, from the same type `increment_process`.
+- `containers` creates the Container `counter0`, and the `processes` under it create the ContainerProcesses `increment0` and `get0` bound to `counter0`.
 
-`-1` で作ったときは「型名 + `0`」という名前に決まっていましたが、設定ファイルでは好きな名前を付けられます。
+Instances created with `-1` were always named "type name + `0`", but in a configuration file you can choose any name.
 
-## 動かす
+## Run it
 
-設定ファイルを `-f` で渡して起動します。どの言語でも同じコマンドです。
+Pass the configuration file with `-f`. The command is the same for every language.
 
 ```sh
 juiz -f tutorial.conf -d
 ```
 
-Python の場合は、第 1 章で作った venv を有効にしたターミナルで実行してください。
+For Python, run it in a terminal where the venv from chapter 1 is activated.
 
-## 外から呼び出す
+## Call it from outside
 
-`juiz` を起動したまま別のターミナルを開き、Process の一覧を見てみます。
+Leave `juiz` running, open another terminal, and list the Processes.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -247,9 +247,9 @@ juiz container-process list
 </TabItem>
 </Tabs>
 
-表示される順番は実行ごとに変わることがあります。
-同じ型 `increment_process` のインスタンスが `inc0` と `inc1` の 2 つ、ID の「インスタンス名」の部分だけが違う形で並んでいます。
-それぞれを呼び出してみましょう。
+The order may change from run to run.
+There are two instances of the same type `increment_process`, `inc0` and `inc1`, whose IDs differ only in the instance name part.
+Call each of them.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -296,13 +296,13 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 </TabItem>
 </Tabs>
 
-第 1 章の Process と第 2 章の Container が、1 つの `juiz` の中で一緒に動いています。
-`inc0` と `inc1` は同じ型から作られた別々のインスタンスですが、Process は状態を持たないので、どちらを呼んでも同じ引数なら同じ結果になります。
+The Process from chapter 1 and the Container from chapter 2 now run together inside one `juiz`.
+`inc0` and `inc1` are separate instances created from the same type, but a Process has no state, so either one returns the same result for the same arguments.
 
-## Container に初期値を渡す
+## Pass an initial value to a Container
 
-`containers` の項目には、`type_name` と `name` のほかに、Container を作る関数に渡す値も書けます。
-カウンタを 3 から始めるように、`counter0` の項目に 1 行足してみましょう。
+Besides `type_name` and `name`, a `containers` entry can also hold values passed to the function that creates the Container.
+Add one line to the `counter0` entry so the counter starts at 3.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -315,7 +315,7 @@ containers:
     processes:
 ```
 
-`example_container` 関数の引数 `initial_value` に `3` が渡されます。
+`3` is passed to the `initial_value` parameter of the `example_container` function.
 
 </TabItem>
 <TabItem label="Python">
@@ -328,7 +328,7 @@ containers:
     processes:
 ```
 
-`example_container_python` 関数の引数 `initial_value` に `3` が渡されます。
+`3` is passed to the `initial_value` parameter of the `example_container_python` function.
 
 </TabItem>
 <TabItem label="C++">
@@ -341,13 +341,13 @@ containers:
     processes:
 ```
 
-`create_container` が受け取る `CapsuleMap` から、`args.get_int("value")` で `3` を取り出します。
-第 2 章で使った `example_container.conf` に `value: 10` と書かれていたのも、この仕組みです。
+`create_container` takes `3` out of the `CapsuleMap` it receives with `args.get_int("value")`.
+This is also why `example_container.conf` in chapter 2 said `value: 10`.
 
 </TabItem>
 </Tabs>
 
-`juiz` を Ctrl+C で止めて起動し直し、`get` を呼び出すと `3` が返ってきます。
+Stop `juiz` with Ctrl+C, start it again, and call `get`. It returns `3`.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -376,19 +376,19 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 </TabItem>
 </Tabs>
 
-コードを書き換えずに、設定ファイルだけで振る舞いの出発点を変えられました。
+You changed the starting point of the behavior with the configuration file alone, without touching the code.
 
-## やってみよう
+## Try it yourself
 
-- `processes` と `containers` を消して `plugins` だけ残した設定ファイルで起動し、`juiz process list` を見てみましょう。空のリスト `[]` が返ります。読み込んだだけでは、インスタンスは作られないことがわかります。
-- `containers` にもう 1 つ Container(たとえば `counter1`)と、それに結びつく `increment` / `get` を書き足してみましょう。`counter0` と `counter1` は別々の値を持ちます。ContainerProcess の ID には Container の名前が入るので、`increment0` のような名前は Container ごとに同じでもかまいません。
-- サンプル集の `decrement_process` を `plugins` と `processes` に書き足して、1 を引く Process も一緒に動かしてみましょう。
+- Remove `processes` and `containers`, keep only `plugins`, start `juiz` and run `juiz process list`. It returns an empty list `[]`. Loading alone does not create any instances.
+- Add another Container (for example `counter1`) to `containers`, with its own `increment` / `get`. `counter0` and `counter1` hold separate values. The Container name is part of a ContainerProcess ID, so names like `increment0` can be the same under each Container.
+- Add `decrement_process` from the example repository to `plugins` and `processes`, and run the Process that subtracts 1 alongside the others.
 
-## まとめ
+## Summary
 
-- 設定ファイルには、型を**読み込む** `plugins` と、そこから**インスタンスを作る** `processes` / `containers` を分けて書きます。
-- 1 つの型から、名前の違うインスタンスをいくつも作れます。インスタンスの名前は ID の一部になります。
-- Container の初期値のような、インスタンスごとの設定も設定ファイルで渡せます。
-- 設定ファイルの項目は、[ガイドの「設定ファイル」](/guides/config/) にまとめてあります。
+- A configuration file separates `plugins`, which **loads** types, from `processes` / `containers`, which **create instances** from them.
+- One type can produce several instances with different names. The instance name becomes part of the ID.
+- Per-instance settings, such as a Container's initial value, can also be passed in the configuration file.
+- The configuration file entries are summarized in [the Configuration file guide](/guides/config/).
 
-次の章では、設定ファイルに Process どうしのつながりと、Process を動かすタイミングを書き足します。[Process をつなぐ: connect と Execution Context](/tutorial/connect/) に進みましょう。
+In the next chapter you add connections between Processes, and when to run them, to the configuration file. Move on to [Connecting Processes: connect and Execution Context](/tutorial/connect/).

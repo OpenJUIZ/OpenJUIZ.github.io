@@ -1,38 +1,38 @@
 ---
-title: 6. 別々のプロセスをつなぐ
-description: 別々に起動した juiz どうしを、設定ファイルなしでコマンドからつなぎます。Process が場所を問わず ID(URL)でつながることを学びます。
+title: 6. Connecting separate processes
+description: Connect juiz instances started separately, using only commands and no configuration file. Learn that Processes connect by their ID (a URL), wherever they run.
 sidebar:
   order: 6
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-第 4 章では、talker と listener を 1 つの設定ファイルに書いて、1 つの `juiz` の中でつなぎました。
-ロボットでは、カメラを動かすプログラムと、画像を処理するプログラムを別々に起動したり、別々のコンピュータで動かしたりすることがよくあります。
-この章では、talker と listener を別々のターミナルの `juiz` で起動し、動いている最中にコマンドからつなぎます。
+In chapter 4 you wrote the talker and listener into one configuration file and connected them inside one `juiz`.
+In robots, the program that drives a camera and the program that processes its images are often started separately, or even run on different computers.
+In this chapter you start the talker and the listener in separate `juiz` instances in different terminals, and connect them with commands while they are running.
 
-<Aside type="tip" title="この章で学ぶこと">
-- 別々に起動した juiz の Process も、ID(URL)を指定すれば call も connect もできること
-- 設定ファイルを書かなくても、動いているシステムをコマンドから組み立てられること
-- Execution Context も、外から ID を指定して開始・停止できること
+<Aside type="tip" title="What you will learn">
+- You can call and connect Processes in separately started juiz instances by their ID (URL)
+- You can assemble a running system from commands, without writing a configuration file
+- Execution Contexts can also be started and stopped from outside by their ID
 </Aside>
 
-## サンプルを用意する
+## Prepare the samples
 
-第 4 章と同じ talker と listener を使います。サンプル集は、第 1 章でクローンしてビルドしたものをそのまま使えます。
-まだの場合は、[第 1 章の「サンプルを用意する」](/tutorial/first-process/#サンプルを用意する) の手順を済ませてください。
+This chapter uses the same talker and listener as chapter 4. You can keep using the example repository you cloned and built in chapter 1.
+If you have not done that yet, follow [Prepare the samples in chapter 1](/tutorial/first-process/#prepare-the-samples).
 
-この章ではターミナルを 3 つ使います。どれも、サンプル集のルートで開いておいてください(Python の場合は、どのターミナルでも venv を有効にしておきます)。
+This chapter uses three terminals. Open each of them at the root of the example repository (for Python, activate the venv in every terminal).
 
-| ターミナル | 役割 |
+| Terminal | Role |
 | --- | --- |
-| 1 | listener を動かす `juiz` |
-| 2 | talker を動かす `juiz` |
-| 3 | つないだり呼び出したりするコマンドを打つ |
+| 1 | `juiz` running the listener |
+| 2 | `juiz` running the talker |
+| 3 | Commands that connect and call |
 
-## listener を起動する
+## Start the listener
 
-ターミナル 1 で、listener を読み込んだ `juiz` を起動します。第 1 章と同じく、`-1` でインスタンスを 1 つ作り、`-d` でサーバーとして動かし続けます。
+In terminal 1, start `juiz` with the listener loaded. As in chapter 1, `-1` creates one instance and `-d` keeps it running as a server.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -41,7 +41,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 juiz --process ./target/debug/liblistener.so -1 -d
 ```
 
-macOS では拡張子が `.dylib` になります。
+On macOS the extension is `.dylib`.
 
 </TabItem>
 <TabItem label="Python">
@@ -57,13 +57,13 @@ juiz --process ./process/listener_python.py -l python -1 -d
 juiz --process ./build/plugins/liblistener_cpp.so -l cpp -1 -d
 ```
 
-macOS では拡張子が `.dylib` になります。
+On macOS the extension is `.dylib`.
 
 </TabItem>
 </Tabs>
 
-起動しても何も表示されません。listener を実行する人がまだいないからです。
-ターミナル 3 から、listener の ID を確かめておきましょう。
+Nothing is printed after startup, because nothing runs the listener yet.
+From terminal 3, check the listener's ID.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -92,11 +92,11 @@ juiz process list
 </TabItem>
 </Tabs>
 
-この juiz は、HTTP ブローカーのポート 8000 番で待ち受けています。
+This juiz listens on port 8000 with its HTTP broker.
 
-## talker を起動する
+## Start the talker
 
-ターミナル 2 で、talker を読み込んだ `juiz` を起動します。今度は `-r 1.0` を付けます。
+In terminal 2, start `juiz` with the talker loaded. This time add `-r 1.0`.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -122,7 +122,7 @@ juiz --process ./build/plugins/libtalker_cpp.so -l cpp -1 -r 1.0 -d
 </TabItem>
 </Tabs>
 
-`-r` は、起動時に作ったインスタンスを、指定した周期 [Hz] で実行し続けるオプションです。ターミナル 2 には talker の表示だけが 1 秒ごとに出ます。
+`-r` keeps running the instance created at startup at the given rate [Hz]. Terminal 2 prints only the talker's output, once a second.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -154,9 +154,9 @@ talker_cpp: Hello, Juiz!
 </TabItem>
 </Tabs>
 
-8000 番はターミナル 1 の juiz が使っているので、2 つ目の juiz は自動的に次の 8001 番で待ち受けます。
-このとき 2 つ目の juiz は、8000 番の juiz に「8001 番にいる」と知らせ、そのサブシステムとして登録されます。
-そのため、ターミナル 3 から 8000 番に問い合わせると、両方の juiz の Process が一覧に出てきます(並び順は実行ごとに変わることがあります)。
+Port 8000 is taken by the juiz in terminal 1, so the second juiz automatically listens on the next port, 8001.
+The second juiz also tells the juiz on port 8000 "I am on port 8001" and registers itself as its subsystem.
+So when you query port 8000 from terminal 3, the list shows Processes from both juiz instances (the order may change from run to run).
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -185,12 +185,12 @@ juiz process list
 </TabItem>
 </Tabs>
 
-ID の `http://127.0.0.1:8000` や `http://127.0.0.1:8001` の部分が、その Process がどの juiz にいるかを表しています。
-特定の juiz だけに問い合わせたいときは、`-s` で問い合わせ先を指定します(指定しないと `http://127.0.0.1:8000` に問い合わせます)。たとえば `juiz -s http://127.0.0.1:8001 process list` なら、talker だけが返ります。
+The `http://127.0.0.1:8000` or `http://127.0.0.1:8001` part of the ID shows which juiz the Process lives in.
+To query one specific juiz, give its address with `-s` (without it, `http://127.0.0.1:8000` is queried). For example, `juiz -s http://127.0.0.1:8001 process list` returns only the talker.
 
-## コマンドでつなぐ
+## Connect with a command
 
-ターミナル 3 で、talker の出力を listener の引数 `arg1` につなぎます。
+In terminal 3, connect the talker's output to the listener's argument `arg1`.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -225,10 +225,10 @@ juiz connection create -t push \
 </TabItem>
 </Tabs>
 
-引数は、つなぐ元(`source`)の ID、つなぐ先の引数名(`arg_name`)、つなぐ先(`destination`)の ID の順です。`-t push` は、第 4 章の `connection_type: Push` と同じ意味です。
-第 4 章の設定ファイルの `connections` に書いた内容を、そのままコマンドで指定していることがわかります。
+The arguments are, in order, the ID of the source (`source`), the argument name at the destination (`arg_name`), and the ID of the destination (`destination`). `-t push` means the same as `connection_type: Push` in chapter 4.
+You are giving on the command line exactly what you wrote in `connections` in the chapter 4 configuration file.
 
-実行したとたん、ターミナル 1 の listener が表示を始めます。
+As soon as you run it, the listener in terminal 1 starts printing.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -260,7 +260,7 @@ listener_cpp: Hello, Juiz!
 </TabItem>
 </Tabs>
 
-別々に起動した juiz の Process が、動いたままつながりました。つながりは、値を送り出す talker の側が持っています。8001 番に問い合わせると確かめられます。
+Processes in separately started juiz instances are now connected while running. The connection is held by the talker, the side that sends the values. You can confirm this by querying port 8001.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -289,12 +289,12 @@ juiz -s http://127.0.0.1:8001 connection list
 </TabItem>
 </Tabs>
 
-つなぐ先が `http://127.0.0.1:8000/...` になっています。talker の juiz は、listener が別の juiz にいることを知っていて、HTTP で値を届けています。
-Process のコードは第 4 章から何も変えていません。同じ juiz の中にいても、別の juiz にいても、ID さえわかればつなげます。
+The destination is `http://127.0.0.1:8000/...`. The talker's juiz knows the listener is in another juiz and delivers values to it over HTTP.
+The Process code has not changed at all since chapter 4. Whether they are in the same juiz or in different ones, Processes can be connected as long as you know their IDs.
 
-## 外から呼び出す
+## Call it from outside
 
-call も、ID を指定すればどの juiz の Process にでも使えます。ターミナル 3 から、8001 番の juiz にいる talker を呼び出してみましょう。
+call also works on a Process in any juiz, as long as you give its ID. From terminal 3, call the talker in the juiz on port 8001.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -323,15 +323,15 @@ juiz process call "http://127.0.0.1:8001/process/talker_cpp0::talker_cpp" '{}' -
 </TabItem>
 </Tabs>
 
-`process call` は、ID の `http://127.0.0.1:8001` を見て、その juiz に問い合わせます。このように ID を指定するコマンドには `-s` は要りません。
+`process call` reads `http://127.0.0.1:8001` from the ID and sends the request to that juiz. Commands that take an ID like this do not need `-s`.
 
-## EC を外から操作する
+## Control an EC from outside
 
-`-r` は、起動時に作ったインスタンスを手軽に周期実行するためのオプションで、Execution Context(EC)は作りません。
-第 4 章のように EC で動かしたいときは、設定ファイルで EC を作ります。ここでは、EC を止めた状態で起動しておき、あとから外から開始・停止してみます。
+`-r` is a shortcut for periodically running the instances created at startup; it does not create an Execution Context (EC).
+To run with an EC as in chapter 4, create the EC in a configuration file. Here you start with the EC stopped, then start and stop it from outside.
 
-まず、ターミナル 2 の talker を Ctrl+C で止めます。listener の表示も止まります。
-次に、talker と EC だけを書いた設定ファイル `talker_ec.conf` を、サンプル集のルートに作ります。第 4 章の `talker_listener.conf` から listener と `connections` を除き、`auto_start` を `false` にしたものです。
+First, stop the talker in terminal 2 with Ctrl+C. The listener stops printing too.
+Next, create a configuration file `talker_ec.conf` with only the talker and an EC, at the root of the example repository. It is chapter 4's `talker_listener.conf` without the listener and `connections`, and with `auto_start` set to `false`.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -416,14 +416,14 @@ ecs:
 </TabItem>
 </Tabs>
 
-ターミナル 2 で、この設定ファイルを使って起動し直します。`port: 8000` と書いてありますが、8000 番は listener の juiz が使っているので、やはり 8001 番で待ち受けます。
+In terminal 2, restart with this configuration file. It says `port: 8000`, but port 8000 is taken by the listener's juiz, so it again listens on 8001.
 
 ```sh
 juiz -f talker_ec.conf -d
 ```
 
-EC が止まっているので、何も表示されません。
-talker を起動し直したので、つながりも消えています(つながりは talker の側が持っていたからです)。ターミナル 3 から、もう一度つなぎます。インスタンス名が `talker0` になっていることに注意してください。
+The EC is stopped, so nothing is printed.
+Restarting the talker also removed the connection (the talker held it). Connect again from terminal 3. Note that the instance name is now `talker0`.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -458,44 +458,44 @@ juiz connection create -t push \
 </TabItem>
 </Tabs>
 
-つないでも、まだ何も流れません。EC が talker を実行していないからです。8001 番の juiz にある EC の ID を調べます。
+Even after connecting, nothing flows yet, because the EC is not running the talker. Look up the ID of the EC in the juiz on port 8001.
 
 ```sh
 juiz -s http://127.0.0.1:8001 ec list
 # => ["http://127.0.0.1:8001/execution_context/ec0::main_loop_ec"]
 ```
 
-この ID を指定して、EC を開始します。
+Start the EC with this ID.
 
 ```sh
 juiz -s http://127.0.0.1:8001 ec start "http://127.0.0.1:8001/execution_context/ec0::main_loop_ec"
 ```
 
-ターミナル 2 に talker、ターミナル 1 に listener の表示が 1 秒ごとに出始めます。止めるときは `ec stop` です。
+The talker starts printing in terminal 2 and the listener in terminal 1, once a second. To stop it, use `ec stop`.
 
 ```sh
 juiz -s http://127.0.0.1:8001 ec stop "http://127.0.0.1:8001/execution_context/ec0::main_loop_ec"
 ```
 
-表示が止まります。もう一度 `ec start` すれば、また動き出します。
+The output stops. Run `ec start` again and it starts moving again.
 
 <Aside type="caution">
-`juiz ec start` と `juiz ec stop` には、juiz 0.0.13 以降が必要です。0.0.12 以前では、起動中の juiz の EC を見つけられずにエラーになります。
-また、EC の ID に書かれたアドレスとは別に、`-s` でその EC がいる juiz を指定してください。
+`juiz ec start` and `juiz ec stop` require juiz 0.0.13 or later. In 0.0.12 and earlier, they cannot find the EC of a running juiz and fail with an error.
+Also, in addition to the address in the EC's ID, give the juiz the EC lives in with `-s`.
 </Aside>
 
-## やってみよう
+## Try it yourself
 
-- talker の `-r` を `2.0` にして起動し直し、もう一度つないでみましょう。listener の表示の間隔が半分になります。
-- 起動する順番を入れ替えて、talker を先(8000 番)、listener を後(8001 番)に起動してみましょう。つなぐときの ID のポート番号が入れ替わるだけで、同じようにつなげます。
-- `talker_ec.conf` の `rate` を変えたり、`auto_start` を `true` にしたりして、EC の動き方の違いを確かめてみましょう。
+- Restart the talker with `-r 2.0` and connect again. The listener prints twice as often.
+- Swap the startup order: start the talker first (port 8000) and the listener second (port 8001). Only the port numbers in the IDs swap; you connect them the same way.
+- Change `rate` in `talker_ec.conf` or set `auto_start` to `true`, and see how the EC behaves differently.
 
-## まとめ
+## Summary
 
-- 別々に起動した juiz の Process も、`http://<ホスト>:<ポート>/process/<インスタンス名>::<型名>` という ID で指定できます。2 つ目以降の juiz は、空いているポート(8001, 8002, …)で待ち受けます。
-- `juiz connection create` で、動いている Process どうしを、設定ファイルなしでつなげます。つながりは値を送り出す側の Process が持っています。
-- `juiz process call` は、ID が指す juiz に問い合わせて結果を受け取ります。
-- `-r` は手軽に周期実行するためのオプションです。EC を使うときは設定ファイルで作り、`juiz ec start` / `juiz ec stop` で外から開始・停止できます。
-- Process のコードは、どこで動くのか、誰とつながるのかを知りません。だから同じ Process を、1 つの juiz の中でも、別々の juiz の間でも使えます。
+- Processes in separately started juiz instances can be addressed by an ID of the form `http://<host>:<port>/process/<instance name>::<type name>`. The second and later juiz instances listen on free ports (8001, 8002, …).
+- `juiz connection create` connects running Processes without a configuration file. The connection is held by the Process that sends the values.
+- `juiz process call` sends the request to the juiz the ID points to and returns the result.
+- `-r` is a shortcut for periodic execution. To use an EC, create it in a configuration file; you can start and stop it from outside with `juiz ec start` / `juiz ec stop`.
+- A Process's code does not know where it runs or what it is connected to. That is why the same Process works inside one juiz or across separate juiz instances.
 
-これでチュートリアルは終わりです。やりたいことが決まっているときは、[ガイド](/guides/process/) から逆引きで探してみてください。
+This is the end of the tutorial. When you know what you want to do, look it up in the [Guides](/guides/process/).

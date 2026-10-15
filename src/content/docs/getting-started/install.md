@@ -1,32 +1,32 @@
 ---
-title: インストール
-description: juiz コマンドと、各言語で機能要素を書くためのパッケージをインストールします。
+title: Installation
+description: Install the juiz command and the packages for writing components in each language.
 sidebar:
   order: 1
 ---
 
-## 必要なもの
+## Requirements
 
-- Linux または macOS
-- Rust 1.81 以降（[rustup](https://rustup.rs/) でインストール）
-- Python で機能要素を書く場合: Python 3 と開発用ヘッダー（Ubuntu なら `sudo apt install python3-dev python3-venv`）
-- C++ で機能要素を書く場合: CMake と C++17 対応のコンパイラ
+- Linux or macOS
+- Rust 1.81 or later (install with [rustup](https://rustup.rs/))
+- For Python components: Python 3 with development headers (`sudo apt install python3-dev python3-venv` on Ubuntu)
+- For C++ components: CMake and a C++17 compiler
 
-## juiz コマンド
+## The juiz command
 
-crates.io で公開されている `juiz_app` をインストールします。
+Install `juiz_app` from crates.io.
 
 ```sh
 cargo install juiz_app
 ```
 
-`juiz` コマンドが `~/.cargo/bin` に入ります。
+The `juiz` command is installed into `~/.cargo/bin`.
 
-## 言語ごとのパッケージ
+## Language packages
 
 ### Rust
 
-機能要素は [juiz_sdk](https://crates.io/crates/juiz_sdk) クレートで書きます。`Cargo.toml` で共有ライブラリとしてビルドする設定にします。
+Write components with the [juiz_sdk](https://crates.io/crates/juiz_sdk) crate, built as a shared library.
 
 ```toml
 [lib]
@@ -38,7 +38,7 @@ juiz_sdk = "0.0.9"
 
 ### Python
 
-PyPI の [pyjuiz](https://pypi.org/project/pyjuiz/) を使います。`juiz` コマンドはビルド時に見つけた Python を組み込むので、同じ Python の環境にインストールしてください。
+Use [pyjuiz](https://pypi.org/project/pyjuiz/) from PyPI. The `juiz` command embeds the Python it found at build time, so install pyjuiz into that same Python.
 
 ```sh
 python3 -m venv .venv
@@ -48,11 +48,9 @@ pip install pyjuiz
 
 ### C++
 
-C++ 向けのヘッダー `juiz/juiz.h` は juiz リポジトリの `bindings/cppjuiz/include` にあります。
+The C++ header `juiz/juiz.h` lives in `bindings/cppjuiz/include` of the juiz repository.
 
-## ソースからビルドする
-
-開発版を使う場合はリポジトリをクローンしてビルドします。
+## Building from source
 
 ```sh
 git clone https://github.com/OpenJUIZ/juiz.git

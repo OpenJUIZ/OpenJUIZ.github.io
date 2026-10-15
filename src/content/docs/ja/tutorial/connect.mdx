@@ -1,0 +1,505 @@
+---
+title: "4. Process をつなぐ: connect と Execution Context"
+description: talker と listener をつなぎ、Execution Context で周期的に動かします。connect というもう一つの使い方を学びます。
+sidebar:
+  order: 4
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+ここまでは、外から Process を呼び出して結果を受け取る **call** という使い方をしてきました。
+ロボットでは、それとは別に「センサの値を読んだら、それをすぐ制御の Process に渡す」というように、Process の出力を次の Process の入力へ流し続けたい場面がよくあります。
+この章では、文字列を出す `talker` と、受け取った文字列を表示する `listener` をつないで、周期的に動かします。
+
+<Aside type="tip" title="この章で学ぶこと">
+- Process の出力を、別の Process の引数につなげること(**connect**)
+- Process をいつ実行するかは、Process 自身ではなく **Execution Context**(EC)が決めること
+- call と、EC による実行の違い
+</Aside>
+
+## サンプルを用意する
+
+第 1 章でクローンしてビルドしたサンプル集をそのまま使います。talker と listener も、第 1 章のビルドで一緒にできあがっています。
+まだの場合は、[第 1 章の「サンプルを用意する」](/ja/tutorial/first-process/#サンプルを用意する) の手順を済ませてください。
+
+| 役割 | 名前 |
+| --- | --- |
+| Process `talker` | 引数を持たず、決まった文字列を表示して返す |
+| Process `listener` | 引数 `arg1` で受け取った文字列を表示する |
+| 設定ファイル `talker_listener.conf` | 2 つをつないで、EC で 1 秒ごとに動かす |
+
+## Process のコードを読む
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`process/talker/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/process/talker/src/lib.rs)
+
+```rust
+use juiz_sdk::prelude::*;
+
+/// 文字列を出力します。
+///
+/// "Hello World" という文字列を出力します。
+#[juiz_process(description = "This is talker process.")]
+fn talker() -> JuizResult<Capsule> {
+    log::trace!("talker() called");
+    let string_value = "Hello World";
+    println!("talker: {:}", string_value);
+    return Ok(jvalue!(string_value).into());
+}
+```
+
+[`process/listener/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/process/listener/src/lib.rs)
+
+```rust
+use juiz_sdk::prelude::*;
+
+#[juiz_process(
+    description = "This is listener process."
+    arguments = {
+        default = {
+            arg1 = "Hello, Juiz!"
+        }
+        description = {
+            arg1 = "This message is printed."
+        }
+    }
+)]
+fn listener(arg1: String) -> JuizResult<Capsule> {
+    log::trace!("listener({:}) called", arg1);
+    println!("listener: {:}", arg1);
+    return Ok(jvalue!("Hello World").into());
+}
+```
+
+`#[juiz_process]` の `arguments` で、引数の既定値と説明を書けます。
+
+</TabItem>
+<TabItem label="Python">
+
+[`process/talker_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/process/talker_python.py)
+
+```python
+from juiz import juiz_process
+
+
+@juiz_process
+def talker_python() -> str:
+    """文字列を出力する"""
+    print('talker_python says "Hello, World!"')
+    return "Hello, World!"
+```
+
+[`process/listener_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/process/listener_python.py)
+
+```python
+from juiz import juiz_process
+
+
+@juiz_process
+def listener_python(arg1: str = "Hello, Juiz!") -> str:
+    """受け取った文字列を表示する"""
+    print(f'listener_python receives "{arg1}"')
+    return arg1
+```
+
+</TabItem>
+<TabItem label="C++">
+
+[`process/talker_cpp/talker_cpp.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/process/talker_cpp/talker_cpp.cpp)
+
+```cpp
+#include <iostream>
+#include "juiz/juiz.h"
+
+// 文字列を出力する Process (引数なし)
+auto manifest() {
+    return ProcessManifest{"talker_cpp"}
+        .description("Outputs a message.");
+}
+
+std::optional<std::string> talker_cpp() {
+    std::cout << "talker_cpp: Hello, Juiz!" << std::endl;
+    return "Hello, Juiz!";
+}
+
+PROCESS_FACTORY(manifest, talker_cpp);
+```
+
+[`process/listener_cpp/listener_cpp.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/process/listener_cpp/listener_cpp.cpp)
+
+```cpp
+#include <iostream>
+#include "juiz/juiz.h"
+
+// 受け取った文字列を表示する Process
+auto manifest() {
+    return ProcessManifest{"listener_cpp"}
+        .description("Prints the received message.")
+        .add_string_arg("arg1", "message to be printed", "Hello, Juiz!");
+}
+
+std::optional<std::string> listener_cpp(const std::string& arg1) {
+    std::cout << "listener_cpp: " << arg1 << std::endl;
+    return arg1;
+}
+
+PROCESS_FACTORY(manifest, listener_cpp);
+```
+
+</TabItem>
+</Tabs>
+
+どちらも、第 1 章と同じふつうの Process です。
+`talker` は誰に値を渡すのかを知りませんし、`listener` は誰から値が来るのかを知りません。いつ実行されるのかも、コードには書かれていません。
+つなぎ方と動かすタイミングは、すべて設定ファイルの側で決めます。
+
+## 設定ファイルを読む
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`talker_listener.conf`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/talker_listener.conf)
+
+```yaml
+name: talker_listener
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker:
+      path: "./target/debug"
+    listener:
+      path: "./target/debug"
+processes:
+  - type_name: talker
+    name: talker0
+  - type_name: listener
+    name: listener0
+connections:
+  - name: con0
+    connection_type: Push
+    source: 
+      name: talker0
+      type_name: talker
+    destination:
+      name: listener0
+      type_name: listener
+    arg_name: arg1
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker
+    auto_start: true
+```
+
+</TabItem>
+<TabItem label="Python">
+
+[`talker_listener.conf`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/talker_listener.conf)
+
+```yaml
+name: talker_listener
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_python:
+      language: python
+      path: "./process"
+    listener_python:
+      language: python
+      path: "./process"
+processes:
+  - type_name: talker_python
+    name: talker0
+  - type_name: listener_python
+    name: listener0
+connections:
+  - name: con0
+    connection_type: Push
+    source:
+      name: talker0
+      type_name: talker_python
+    destination:
+      name: listener0
+      type_name: listener_python
+    arg_name: arg1
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker_python
+    auto_start: true
+```
+
+</TabItem>
+<TabItem label="C++">
+
+[`talker_listener.conf`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/talker_listener.conf)
+
+```yaml
+name: talker_listener
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_cpp:
+      language: "c++"
+      path: "./build/plugins"
+    listener_cpp:
+      language: "c++"
+      path: "./build/plugins"
+processes:
+  - type_name: talker_cpp
+    name: talker0
+  - type_name: listener_cpp
+    name: listener0
+connections:
+  - name: con0
+    connection_type: Push
+    source:
+      name: talker0
+      type_name: talker_cpp
+    destination:
+      name: listener0
+      type_name: listener_cpp
+    arg_name: arg1
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker_cpp
+    auto_start: true
+```
+
+</TabItem>
+</Tabs>
+
+`plugins` と `processes` は第 3 章と同じで、`talker0` と `listener0` を作っています。新しく出てきたのは `connections` と `ecs` です。
+
+### connections: つなぐ
+
+```yaml
+connections:
+  - name: con0
+    connection_type: Push
+    source:
+      name: talker0
+      ...
+    destination:
+      name: listener0
+      ...
+    arg_name: arg1
+```
+
+`connections` には、Process どうしのつながりを書きます。
+
+| 項目 | 内容 |
+| --- | --- |
+| `source` | 値を出す側の Process(インスタンス名と型名) |
+| `destination` | 値を受け取る側の Process |
+| `arg_name` | `destination` のどの引数に値を渡すか |
+| `connection_type` | `Push` は、`source` が実行されたら、その出力を `destination` に渡してすぐ実行する |
+
+この例では、`talker0` の出力が `listener0` の引数 `arg1` に渡ります。
+このように Process の出力を別の Process の入力につなぐ使い方を、juiz では **connect** と呼びます。
+
+### ecs: いつ動かすか
+
+```yaml
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        ...
+    auto_start: true
+```
+
+`ecs` には **Execution Context**(EC)を書きます。EC は、結びつけた Process を決まったタイミングで実行する役目を持ちます。
+
+| 項目 | 内容 |
+| --- | --- |
+| `type_name` | EC の種類。`main_loop_ec` は、一定の周期で実行を繰り返す |
+| `rate` | 1 秒あたりの実行回数 [Hz] |
+| `bind` | この EC が実行する Process |
+| `auto_start` | `true` なら、起動と同時に EC を動かし始める |
+
+EC が実行するのは `talker0` だけです。`listener0` は、`talker0` が実行されたときに Push のつながりを通って実行されます。
+
+## 動かす
+
+設定ファイルを `-f` で渡して起動します。どの言語でも同じコマンドです。
+
+```sh
+juiz -f talker_listener.conf -d
+```
+
+1 秒ごとに、talker と listener が交互に表示されます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```
+talker: Hello World
+listener: Hello World
+talker: Hello World
+listener: Hello World
+talker: Hello World
+listener: Hello World
+...
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```
+talker_python says "Hello, World!"
+listener_python receives "Hello, World!"
+talker_python says "Hello, World!"
+listener_python receives "Hello, World!"
+talker_python says "Hello, World!"
+listener_python receives "Hello, World!"
+...
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```
+talker_cpp: Hello, Juiz!
+listener_cpp: Hello, Juiz!
+talker_cpp: Hello, Juiz!
+listener_cpp: Hello, Juiz!
+talker_cpp: Hello, Juiz!
+listener_cpp: Hello, Juiz!
+...
+```
+
+</TabItem>
+</Tabs>
+
+Ctrl+C で止めるまで続きます。talker が出した文字列を、listener が受け取って表示していることがわかります。
+
+別のターミナルから、つながりと EC の一覧も見られます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker, arg=arg1, dst=ProcessIdentifier(core://core/process/listener0::listener)]
+juiz ec list
+# => ["http://127.0.0.1:8000/execution_context/ec0::main_loop_ec"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker_python, arg=arg1, dst=ProcessIdentifier(core://core/process/listener0::listener_python)]
+juiz ec list
+# => ["http://127.0.0.1:8000/execution_context/ec0::main_loop_ec"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker_cpp, arg=arg1, dst=ProcessIdentifier(core://core/process/listener0::listener_cpp)]
+juiz ec list
+# => ["http://127.0.0.1:8000/execution_context/ec0::main_loop_ec"]
+```
+
+</TabItem>
+</Tabs>
+
+## call と比べる
+
+EC を止めた状態で、talker を外から call してみましょう。
+`talker_listener.conf` をコピーして `auto_start: false` に書き換えた設定ファイルを作り、それで起動し直します。
+
+```sh
+sed 's/auto_start: true/auto_start: false/' talker_listener.conf > talker_listener_stop.conf
+juiz -f talker_listener_stop.conf -d
+```
+
+今度は、起動しても何も表示されません。EC が動いていないので、誰も Process を実行しないからです。
+別のターミナルから talker と listener を call します。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/talker0::talker" '{}' -p
+# => CapsulePtr((value:Value("Hello World"), option: []))
+juiz process call "http://127.0.0.1:8000/process/listener0::listener" '{"arg1": "Hi"}' -p
+# => CapsulePtr((value:Value("Hello World"), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/talker0::talker_python" '{}' -p
+# => CapsulePtr((value:Value("Hello, World!"), option: []))
+juiz process call "http://127.0.0.1:8000/process/listener0::listener_python" '{"arg1": "Hi"}' -p
+# => CapsulePtr((value:Value("Hi"), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/talker0::talker_cpp" '{}' -p
+# => CapsulePtr((value:Value("Hello, Juiz!"), option: []))
+juiz process call "http://127.0.0.1:8000/process/listener0::listener_cpp" '{"arg1": "Hi"}' -p
+# => CapsulePtr((value:Value("Hi"), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+talker を call すると、`juiz` を起動したターミナルには talker の表示だけが出て、listener は何も表示しません。
+call は「呼び出して結果を受け取る」だけで、その結果をつながった先には流しません。つながりに沿って値が流れるのは、EC が Process を実行したときです。
+listener も、引数を渡して直接 call すれば、ふつうの Process として結果を返します。
+
+こうして juiz には、Process の使い方が 2 つあります。
+
+- **call**: 外から引数を渡して呼び出し、結果を受け取る。サーバー・クライアントのような使い方です。
+- **connect**: Process の出力を別の Process の入力につなぎ、EC が決めたタイミングで流し続ける。ROS のような、データを流すロボット用ミドルウェアに近い使い方です。
+
+同じ Process を、どちらの使い方でも使えます。Process のコードは、どちらで使われるのかを知る必要がありません。
+
+## やってみよう
+
+- `rate` を `2.0` に変えて起動し直し、表示の間隔が半分になることを確かめてみましょう。
+- `bind` の Process を `talker0` から `listener0` に変えてみましょう。listener は既定値の `Hello, Juiz!` を表示し続け、talker は一度も実行されません。EC が実行するのは `bind` に書いた Process だけで、つながりは `source` が実行されたときにしか働かないことがわかります。
+- 第 3 章の `increment_process` のインスタンスを 2 つ作り、`inc0` の出力を `inc1` の `arg1` につないでみましょう。`inc0` を EC で動かすと、`inc1` は `inc0` の結果(既定値に 1 を足した値)を受け取ります。Python のサンプルなら、表示で確かめられます。
+
+## まとめ
+
+- `connections` に書くと、Process の出力を別の Process の引数につなげます(connect)。`Push` では、`source` が実行されるたびに `destination` へ値が流れます。
+- Process をいつ実行するかは、Process 自身ではなく Execution Context(EC)が決めます。`main_loop_ec` は `rate` の周期で `bind` の Process を実行します。
+- call は結果を受け取るだけで、つながりには値を流しません。値が流れるのは EC が Process を実行したときです。
+- 設定ファイルの項目は、[ガイドの「設定ファイル」](/ja/guides/config/) にもまとめてあります。
+
+次の章では、これまで別々のファイルに書いてきた Process と Container を、1 つのプロジェクトにまとめて配布する方法を学びます。[Component にまとめて配布する](/ja/tutorial/component/) に進みましょう。

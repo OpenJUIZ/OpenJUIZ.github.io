@@ -1,0 +1,56 @@
+---
+title: チュートリアルの進め方
+description: 小さな Process から始めて、状態・設定ファイル・接続・配布・分散までを順に学びます。
+sidebar:
+  order: 0
+  label: 進め方
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+このチュートリアルでは、引数に 1 を足すだけの小さな Process から始めて、少しずつ題材を育てながら juiz の考え方を学びます。
+各章は「動かしてみる」ことを中心にしていて、手を動かしながら読み進められるようにしてあります。
+
+## 章の構成
+
+<Steps>
+
+1. **[はじめての Process](/ja/tutorial/first-process/)**
+
+   引数に 1 を足す Process を動かし、外から呼び出して結果を受け取ります。Process が冪等な関数であることと、call という使い方を学びます。
+
+2. **[状態を持つ: Container と ContainerProcess](/ja/tutorial/container/)**
+
+   カウンタを題材に、状態を Container に置き、ContainerProcess だけがそれに触れる設計を学びます。
+
+3. **[設定ファイルでまとめて起動する](/ja/tutorial/config-file/)**
+
+   これまでの Process と Container を 1 つの設定ファイルで起動します。読み込み(plugins)と実体化(processes / containers)の違いを学びます。
+
+4. **[Process をつなぐ: connect と Execution Context](/ja/tutorial/connect/)**
+
+   talker と listener をつなぎ、Execution Context で周期的に動かします。connect というもう一つの使い方を学びます。
+
+5. **[Component にまとめて配布する](/ja/tutorial/component/)**
+
+   複数の機能要素を 1 つのプロジェクトにまとめます。Component が配布の単位であることを学びます。
+
+6. **[別々のプロセスをつなぐ](/ja/tutorial/multi-process/)**
+
+   別々に起動した juiz どうしを、設定ファイルなしでコマンドからつなぎます。Process が場所を問わず ID(URL)でつながることを学びます。
+
+</Steps>
+
+## 各章の読み方
+
+- 章の最初に「この章で学ぶこと」、最後に「まとめ」があります。
+- コード例は Rust・Python・C++ のタブで切り替えられます。一度選んだ言語は、ほかのページでもそのまま保たれます。
+- コードはサンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp))のファイルと同じものです。各章に対応するファイルへのリンクを置いています。
+- やりたいことが決まっているときは、[ガイド](/ja/guides/process/) から逆引きで探すこともできます。
+
+## 準備
+
+[インストール](/ja/getting-started/install/) の手順で、`juiz` コマンドと、使う言語のパッケージを入れておいてください。
+Python で進める場合は `pyjuiz`、C++ で進める場合は CMake と C++17 対応のコンパイラが必要です。
+
+準備ができたら、[はじめての Process](/ja/tutorial/first-process/) に進みましょう。

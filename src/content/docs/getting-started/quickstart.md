@@ -1,14 +1,14 @@
 ---
-title: クイックスタート
-description: サンプルをビルドして、juiz で Process を動かします。
+title: Quick start
+description: Build the examples and run a Process with juiz.
 sidebar:
   order: 2
 ---
 
-Rust のサンプル集 [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust) を使って、Process を動かしてみます。
-先に [インストール](/getting-started/install/) で `juiz` コマンドを入れておいてください。
+This page runs a Process from the Rust examples, [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust).
+Install the `juiz` command first (see [Installation](/getting-started/install/)).
 
-## サンプルをビルドする
+## Build the examples
 
 ```sh
 git clone https://github.com/OpenJUIZ/juiz_examples_rust.git
@@ -16,27 +16,26 @@ cd juiz_examples_rust
 cargo build
 ```
 
-各サンプルは共有ライブラリとしてビルドされ、juiz がプラグインとして読み込みます。
-設定ファイルは `./target/debug` からプラグインを探すので、リポジトリのルートで `juiz` を実行します。
+Each example is built as a shared library that juiz loads as a plugin.
+The config files look for plugins in `./target/debug`, so run `juiz` from the repository root.
 
-## 起動する
+## Run
 
 ```sh
 juiz -f increment_process.conf -d
 ```
 
-`increment_process` は引数に 1 を足して返すだけの Process です。
-`-d` を付けると、HTTP ブローカーを 8000 番ポートで立ち上げて待機します（Ctrl+C で終了）。
+`increment_process` simply adds 1 to its argument. With `-d`, juiz starts an HTTP broker on port 8000 and waits (Ctrl+C to quit).
 
-## 呼び出す
+## Call it
 
-ブラウザで次の URL を開くと、Swagger UI から Process を呼び出して結果を確かめられます。
+Open this URL to call the Process from Swagger UI:
 
 ```
 http://127.0.0.1:8000/docs
 ```
 
-## ほかの言語のサンプル
+## Examples in other languages
 
 - Python: [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python)
 - C++: [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp)

@@ -1,38 +1,38 @@
 ---
-title: 5. Component にまとめて配布する
-description: Process・Container・ContainerProcess を 1 つのライブラリにまとめ、設定ファイル 1 行で読み込みます。Component が配布の単位であることを学びます。
+title: 5. Packaging as a Component
+description: Bundle Processes, Containers and ContainerProcesses into one library and load it with one line of configuration. Learn that a Component is the unit of distribution.
 sidebar:
   order: 5
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-ここまでは、Process も Container も ContainerProcess も、1 つの型ごとに別々のファイル(ライブラリ)として作ってきました。
-第 3 章の設定ファイルでも、`plugins` に型を 1 つずつ並べて、それぞれのファイルを読み込ませていました。
+So far you have built every Process, Container and ContainerProcess as a separate file (library), one per type.
+In the configuration file in chapter 3, you also listed the types in `plugins` one by one so each file was loaded.
 
-実際に「このカメラを動かす部品一式」を誰かに渡すときに、ファイルがばらばらだと不便です。
-この章では、Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を作り、設定ファイルから読み込みます。
+When you want to hand someone "the full set of parts for this camera", scattered files are inconvenient.
+In this chapter you build a **Component** that bundles Processes, Containers and ContainerProcesses into one library, and load it from a configuration file.
 
-<Aside type="tip" title="この章で学ぶこと">
-- Component は、複数の Process・Container・ContainerProcess を 1 つにまとめた**配布の単位**であること
-- Component の中の型は、これまでと同じ型名で、同じようにインスタンスを作れること
-- `plugins` の `components` には、型ではなく Component の名前を 1 つ書けばよいこと
+<Aside type="tip" title="What you will learn">
+- A Component is the **unit of distribution** that bundles several Processes, Containers and ContainerProcesses
+- Types inside a Component keep their type names, and you create instances from them the same way as before
+- `components` in `plugins` takes a single Component name instead of each type
 </Aside>
 
-## サンプルを用意する
+## Prepare the samples
 
-第 1 章でクローンしてビルドしたサンプル集をそのまま使います。Component のサンプルも、第 1 章のビルドで一緒にできあがっています。
-まだの場合は、[第 1 章の「サンプルを用意する」](/tutorial/first-process/#サンプルを用意する) の手順を済ませてください。
+Keep using the example repository you cloned and built in chapter 1. The Component example was built along with everything else in chapter 1.
+If you have not done that yet, follow [Prepare the samples in chapter 1](/tutorial/first-process/#prepare-the-samples).
 
-この章で使う Component には、次のものが入っています。どれも、これまでの章で作ったものと同じ働きです。
+The Component used in this chapter contains the following. Each works the same as what you built in the earlier chapters.
 
-| 種類 | 働き |
+| Kind | What it does |
 | --- | --- |
-| Process | 引数に 1 を足して返す(第 1 章の `increment_process` と同じ) |
-| Container | 整数値を 1 つ持つ(第 2 章のカウンタと同じ) |
-| ContainerProcess | Container の値を読む・変える |
+| Process | Adds 1 to its argument and returns it (same as `increment_process` in chapter 1) |
+| Container | Holds one integer (same as the counter in chapter 2) |
+| ContainerProcess | Reads or changes the Container's value |
 
-## Component のコードを読む
+## Read the Component code
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -109,12 +109,12 @@ juiz_component_manifest!(
 );
 ```
 
-関数の書き方は、これまでとほとんど同じです。違うのは 2 点だけです。
+The functions are written almost the same way as before. Only two things differ.
 
-- 属性マクロが `#[juiz_process]` → `#[juiz_component_process]`、`#[juiz_container]` → `#[juiz_component_container]`、`#[juiz_container_process]` → `#[juiz_component_container_process]` のように、`component` の付いたものに変わります。
-- 最後の `juiz_component_manifest!` で、この Component の名前と、中に入れる Process・Container・ContainerProcess を宣言します。ContainerProcess は、結びつく Container の下に並べます。
+- The attribute macros change to their `component` versions: `#[juiz_process]` → `#[juiz_component_process]`, `#[juiz_container]` → `#[juiz_component_container]`, and `#[juiz_container_process]` → `#[juiz_component_container_process]`.
+- The final `juiz_component_manifest!` declares the Component's name and the Processes, Containers and ContainerProcesses it contains. ContainerProcesses are listed under the Container they are bound to.
 
-Component 全体が 1 つのクレート([`Cargo.toml`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/component/example_component/Cargo.toml) の `crate-type = ["cdylib"]`)になり、`target/debug/libexample_component.so`(macOS では `.dylib`)という 1 つの共有ライブラリにビルドされます。
+The whole Component is one crate (`crate-type = ["cdylib"]` in [`Cargo.toml`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/component/example_component/Cargo.toml)), built into a single shared library, `target/debug/libexample_component.so` (`.dylib` on macOS).
 
 </TabItem>
 <TabItem label="Python">
@@ -127,7 +127,7 @@ from juiz import juiz_container, juiz_container_process, juiz_process
 
 @juiz_process
 def example_component_python_increment(arg1: int = 0) -> int:
-    """引数に 1 を足して返す"""
+    """Adds 1 to the argument and returns it"""
     return arg1 + 1
 
 
@@ -138,25 +138,25 @@ class IntegerContainer:
 
 @juiz_container
 def example_component_python_container(initial_value: int = 0) -> IntegerContainer:
-    """整数値を 1 つ保持する Container"""
+    """A Container that holds one integer"""
     return IntegerContainer(initial_value)
 
 
 @juiz_container_process(container_type="example_component_python_container")
 def example_component_python_container_set(container, value: int = 0) -> int:
-    """Container の値を設定する"""
+    """Sets the value of the Container"""
     container.value = value
     return container.value
 
 
 @juiz_container_process(container_type="example_component_python_container")
 def example_component_python_container_get(container) -> int:
-    """Container の値を返す"""
+    """Returns the value of the Container"""
     return container.value
 ```
 
-使っているデコレータは、第 1 章・第 2 章とまったく同じです。違うのは、それらを **1 つのファイルに並べた**ことだけです。
-Component として読み込むと、このファイルの中でデコレータを付けた関数が、まとめてこの Component の型になります。ファイル名 `example_component_python` が Component の名前です。
+The decorators are exactly the same as in chapters 1 and 2. The only difference is that they are **placed in one file**.
+When loaded as a Component, every decorated function in this file becomes a type of this Component. The file name `example_component_python` is the Component's name.
 
 </TabItem>
 <TabItem label="C++">
@@ -166,12 +166,12 @@ Component として読み込むと、このファイルの中でデコレータ�
 ```cpp
 #include "juiz/juiz.h"
 
-// 1 つのライブラリに Process・Container・ContainerProcess をまとめた Component
+// A Component that bundles a Process, a Container and ContainerProcesses into one library
 //
-// Component では各要素を COMPONENT_*_FACTORY で公開し、
-// 最後に component_manifest() でまとめて宣言する。
+// In a Component, each element is exported with COMPONENT_*_FACTORY,
+// and component_manifest() declares them all at the end.
 
-// Process: arg1 に 1 を足して返す
+// Process: adds 1 to arg1 and returns it
 static auto example_component_cpp_increment_manif =
     ProcessManifest("example_component_cpp_increment")
         .add_int_arg("arg1", "value to be incremented", 1);
@@ -180,7 +180,7 @@ std::optional<int64_t> example_component_cpp_increment(int64_t arg1) {
 }
 COMPONENT_PROCESS_FACTORY(example_component_cpp_increment_manif, example_component_cpp_increment);
 
-// Container: 整数値を 1 つ保持する
+// Container: holds one integer
 class ComponentContainer {
 public:
     int64_t value;
@@ -198,7 +198,7 @@ ComponentContainer* example_component_cpp_container(juiz::CapsuleMap args) {
 }
 COMPONENT_CONTAINER_FACTORY(example_component_cpp_container_manif, example_component_cpp_container);
 
-// ContainerProcess: Container の値を返す
+// ContainerProcess: returns the value of the Container
 static auto example_component_cpp_container_get_manif =
     ProcessManifest("example_component_cpp_container_get");
 std::optional<int64_t> example_component_cpp_container_get(ComponentContainer* container) {
@@ -206,7 +206,7 @@ std::optional<int64_t> example_component_cpp_container_get(ComponentContainer* c
 }
 COMPONENT_CONTAINER_PROCESS_FACTORY(ComponentContainer, example_component_cpp_container_get_manif, example_component_cpp_container_get);
 
-// ContainerProcess: Container の値に arg1 を足す
+// ContainerProcess: adds arg1 to the value of the Container
 static auto example_component_cpp_container_increment_manif =
     ProcessManifest("example_component_cpp_container_increment")
         .add_int_arg("arg1", "value to be added", 1);
@@ -216,7 +216,7 @@ std::optional<int64_t> example_component_cpp_container_increment(ComponentContai
 }
 COMPONENT_CONTAINER_PROCESS_FACTORY(ComponentContainer, example_component_cpp_container_increment_manif, example_component_cpp_container_increment);
 
-// Component 全体のマニフェスト
+// Manifest of the whole Component
 auto component_manifest() {
     return ComponentManifest("example_component_cpp")
         .add_process(example_component_cpp_increment_manifest())
@@ -227,27 +227,27 @@ auto component_manifest() {
 DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(component_manifest)
 ```
 
-1 つのライブラリにいくつもの型を入れるので、これまでとは書き方が少し変わります。
+Because one library holds several types, the code looks a little different from before.
 
-- 型ごとのマニフェストは、`manifest()` という同じ名前の関数ではなく、`example_component_cpp_increment_manif` のように型ごとに名前を付けた変数に置きます。
-- 公開には `PROCESS_FACTORY` などの代わりに、`COMPONENT_PROCESS_FACTORY`・`COMPONENT_CONTAINER_FACTORY`・`COMPONENT_CONTAINER_PROCESS_FACTORY` を使います。これらは、関数のほかに `<関数名>_manifest()` という関数も作ります。
-- 最後の `component_manifest()` で、Component の名前と、中に入れる型を宣言します。ContainerProcess は `add_container(...)` の中で、結びつく Container に `add_process` します。`DEFINE_COMPONENT_MANIFEST_ENTRY_POINT` で、これを juiz から読めるように公開します。
+- Each type's manifest goes in a variable named per type, such as `example_component_cpp_increment_manif`, instead of a function always called `manifest()`.
+- To export, use `COMPONENT_PROCESS_FACTORY`, `COMPONENT_CONTAINER_FACTORY` and `COMPONENT_CONTAINER_PROCESS_FACTORY` instead of `PROCESS_FACTORY` and friends. Besides the function itself, these also generate a function named `<function name>_manifest()`.
+- The final `component_manifest()` declares the Component's name and the types it contains. ContainerProcesses are added with `add_process` to the Container they are bound to, inside `add_container(...)`. `DEFINE_COMPONENT_MANIFEST_ENTRY_POINT` exports it so juiz can read it.
 
-ビルドは [`component/CMakeLists.txt`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/component/CMakeLists.txt) の 1 行です。
+The build is one line in [`component/CMakeLists.txt`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/component/CMakeLists.txt).
 
 ```cmake
 add_juiz_component(example_component_cpp SOURCES example_component_cpp/example_component_cpp.cpp)
 ```
 
-`build/plugins/libexample_component_cpp.so`(macOS では `.dylib`)という 1 つの共有ライブラリができます。
+This produces a single shared library, `build/plugins/libexample_component_cpp.so` (`.dylib` on macOS).
 
 </TabItem>
 </Tabs>
 
-これまで型ごとに分かれていたものが、Component では 1 つのライブラリ(Python では 1 つのファイル)に入っています。
-それぞれの Process や ContainerProcess の中身は、これまでと変わりません。Process は冪等な関数のまま、状態に触れるのは ContainerProcess だけ、という考え方もそのままです。
+What used to be split per type now lives in one library (one file in Python).
+The bodies of the Processes and ContainerProcesses are unchanged. Processes are still idempotent functions, and only ContainerProcesses touch state.
 
-## 設定ファイルを読む
+## Read the configuration file
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -343,9 +343,9 @@ containers:
 </TabItem>
 </Tabs>
 
-第 3 章の設定ファイルと比べてみましょう。
+Compare it with the configuration file from chapter 3.
 
-### plugins: Component を 1 つ書く
+### plugins: one Component entry
 
 ```yaml
 plugins:
@@ -354,50 +354,50 @@ plugins:
       path: "./target/debug"
 ```
 
-第 3 章では、`process_factories` と `container_factories` に型を 1 つずつ書き、ContainerProcess も Container の下に 1 つずつ書いていました。
-Component では、`components` に **Component の名前を 1 つ**書くだけです。キーの名前から読み込むファイルが決まるのは、第 3 章と同じです。
+In chapter 3 you listed types one by one in `process_factories` and `container_factories`, and each ContainerProcess under its Container.
+With a Component, you write **just one Component name** in `components`. As in chapter 3, the key determines which file is loaded.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
-Component 名 `example_component` なら、`./target/debug` の中の `libexample_component.so` が読み込まれます。
+For the Component name `example_component`, juiz loads `libexample_component.so` from `./target/debug`.
 
 </TabItem>
 <TabItem label="Python">
 
-Component 名 `example_component_python` なら、`./component` の中の `example_component_python.py` が読み込まれます。
+For the Component name `example_component_python`, juiz loads `example_component_python.py` from `./component`.
 
 </TabItem>
 <TabItem label="C++">
 
-Component 名 `example_component_cpp` なら、`./build/plugins` の中の `libexample_component_cpp.so` が読み込まれます。
+For the Component name `example_component_cpp`, juiz loads `libexample_component_cpp.so` from `./build/plugins`.
 
 </TabItem>
 </Tabs>
 
-この 1 行で、Component の中にある Process・Container・ContainerProcess の型が、すべて読み込まれます。
+That one entry loads every Process, Container and ContainerProcess type in the Component.
 
-### processes と containers: いつもどおり作る
+### processes and containers: created as usual
 
-`processes` と `containers` の書き方は、第 3 章とまったく同じです。`type_name` に Component の中の型名を書き、`name` にインスタンスの名前を書きます。
-Container の初期値を渡せるのも同じです(Python のサンプルでは省略していて、初期値 `0` から始まります)。
+`processes` and `containers` are written exactly as in chapter 3. Put a type name from the Component in `type_name` and the instance name in `name`.
+You can pass a Container's initial value the same way, too (the Python example omits it, so the value starts at `0`).
 
-型がどのファイルから来たのかは、インスタンスを作る側には関係ありません。
-Component は「型をまとめて配る」ためのもので、作ったインスタンスは、別々のファイルから読み込んだときと同じように動きます。
+Where a type came from does not matter to the side creating instances.
+A Component is for "distributing types together", and the instances you create behave exactly as if they had been loaded from separate files.
 
-## 動かす
+## Run it
 
-設定ファイルを `-f` で渡して起動します。どの言語でも同じコマンドです。
+Pass the configuration file with `-f`. The command is the same for every language.
 
 ```sh
 juiz -f example_component.conf -d
 ```
 
-Python の場合は、第 1 章で作った venv を有効にしたターミナルで実行してください。
+For Python, run it in a terminal where the venv from chapter 1 is activated.
 
-## 外から呼び出す
+## Call it from outside
 
-`juiz` を起動したまま別のターミナルを開き、一覧を見てみます。
+Leave `juiz` running, open another terminal, and look at the lists.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -438,8 +438,8 @@ juiz container-process list
 </TabItem>
 </Tabs>
 
-1 つのファイルから読み込んだ型で、Process・Container・ContainerProcess のインスタンスがそろってできています。ID の形も、これまでの章とまったく同じです。
-それぞれを呼び出してみましょう。
+Process, Container and ContainerProcess instances have all been created from types loaded from one file. The IDs look exactly like those in earlier chapters.
+Call each of them.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -486,24 +486,24 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 </TabItem>
 </Tabs>
 
-Process は引数に 1 を足して返し、ContainerProcess は Container の値を変えたり読んだりします。
-呼び出す側から見ると、第 1 章〜第 3 章で別々のファイルから作ったものと区別がつきません。
+The Process adds 1 to its argument and returns it, and the ContainerProcesses change or read the Container's value.
+From the caller's point of view, they are indistinguishable from what you built from separate files in chapters 1 to 3.
 
-## Component は配布の単位
+## A Component is the unit of distribution
 
-ここまでで見たように、Component にまとめても、Process や Container の働きや使い方は何も変わりません。変わるのは**ファイルの束ね方**だけです。
+As you have seen, bundling into a Component changes nothing about how Processes and Containers work or how you use them. Only **how the files are bundled** changes.
 
-- **作る人**は、関連する Process・Container・ContainerProcess を 1 つのプロジェクトで書き、1 つのライブラリとして配れます。たとえばカメラなら、カメラを開いて持っておく Container、画像を読む ContainerProcess、画像を変換する Process を 1 つの Component にできます。
-- **使う人**は、`plugins` の `components` に 1 行書くだけで、中の型を全部使えるようになります。どの型を何個作るかは、これまでどおり `processes` と `containers` で自由に決められます。
+- **Authors** can write related Processes, Containers and ContainerProcesses in one project and distribute them as one library. For a camera, for example, a Container that opens and holds the camera, a ContainerProcess that reads images, and a Process that converts images can all be one Component.
+- **Users** write one line in `components` under `plugins` to get every type inside. Which types to instantiate, and how many, is still decided freely with `processes` and `containers`.
 
-つまり、Process・Container・ContainerProcess が「動かすときの単位」であるのに対して、Component は「配るときの単位」です。
+In other words, Processes, Containers and ContainerProcesses are "units for running", while a Component is the "unit for distributing".
 
-## やってみよう
+## Try it yourself
 
-- `processes` に `example_component_increment`(Python なら `example_component_python_increment`、C++ なら `example_component_cpp_increment`)のインスタンスをもう 1 つ書き足してみましょう。Component から読み込んだ型からも、第 3 章と同じように、いくつでもインスタンスを作れます。
-- `containers` にもう 1 つ Container(たとえば `container1`)と、それに結びつく ContainerProcess を書き足してみましょう。`container0` と `container1` は別々の値を持ちます。
-- 第 4 章の `connections` と `ecs` を書き足して、1 つ目の Process の出力を、書き足した 2 つ目の Process の `arg1` につないでみましょう。Component から読み込んだ型かどうかに関係なく、同じようにつなげます。`plugins` には `components` と `process_factories` を並べて書けるので、第 3 章の `increment_process` のような別ファイルの Process とつなぐこともできます。
-- 設定ファイルを使わずに、コマンドラインから Component を読み込むこともできます。`-1` を付けると、Component の中のすべての型から、インスタンスを 1 つずつ作ります(名前は第 1 章と同じく「型名 + `0`」になります)。起動時に `ERROR` の行がいくつか表示されますが、そのまま動きます。
+- Add another instance of `example_component_increment` (`example_component_python_increment` in Python, `example_component_cpp_increment` in C++) to `processes`. As in chapter 3, you can create any number of instances from types loaded from a Component.
+- Add another Container (for example `container1`) and its ContainerProcesses to `containers`. `container0` and `container1` hold separate values.
+- Add `connections` and `ecs` from chapter 4 and connect the first Process's output to `arg1` of the second Process you added. Types from a Component connect the same way as any other. `plugins` can list `components` and `process_factories` side by side, so you can also connect to a Process from a separate file, such as `increment_process` from chapter 3.
+- You can also load a Component from the command line without a configuration file. With `-1`, juiz creates one instance of every type in the Component (named "type name + `0`" as in chapter 1). Some `ERROR` lines are printed at startup, but it works anyway.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -529,10 +529,10 @@ juiz --component ./build/plugins/libexample_component_cpp.so -l cpp -1 -d
 </TabItem>
 </Tabs>
 
-## まとめ
+## Summary
 
-- Component は、複数の Process・Container・ContainerProcess を 1 つのライブラリ(Python では 1 つのファイル)にまとめたものです。
-- 設定ファイルでは、`plugins` の `components` に Component の名前を 1 つ書くだけで、中の型がすべて読み込まれます。
-- インスタンスの作り方、ID、呼び出し方、つなぎ方は、別々のファイルから読み込んだときと同じです。Component は動かし方を変えるものではなく、**配布の単位**です。
+- A Component bundles several Processes, Containers and ContainerProcesses into one library (one file in Python).
+- In a configuration file, writing one Component name in `components` under `plugins` loads every type inside it.
+- Creating instances, IDs, calling and connecting all work the same as when types are loaded from separate files. A Component does not change how things run; it is the **unit of distribution**.
 
-次の章では、別々に起動した juiz どうしを、設定ファイルなしでコマンドからつなぎます。[別々のプロセスをつなぐ](/tutorial/multi-process/) に進みましょう。
+In the next chapter you connect juiz instances started separately, using only commands and no configuration file. Move on to [Connecting separate processes](/tutorial/multi-process/).

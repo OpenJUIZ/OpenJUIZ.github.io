@@ -1,13 +1,13 @@
 ---
-title: Process を書く
-description: 引数に 1 を足して返す Process を Rust、C++、Python で書きます。
+title: Writing a Process
+description: Write a Process that adds 1 to its argument in Rust, C++ and Python.
 sidebar:
   order: 1
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-引数に 1 を足して返すだけの Process を例にします。関数（または manifest）の名前が Process の型名になります。
+This example is a Process that just adds 1 to its argument and returns it. The name of the function (or manifest) becomes the Process's type name.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -22,8 +22,8 @@ fn increment_process(arg1: i64) -> JuizResult<Capsule> {
 }
 ```
 
-`#[juiz_process]` マクロを付けた関数が Process の本体になります。
-引数は複数使えて、`i64`、`f64`、`bool`、`String`、`Value`、`Vec<Value>` などを受け取れます。引数の名前がそのままパラメータ名になります。
+A function marked with the `#[juiz_process]` macro becomes the body of the Process.
+It can take several arguments, of types such as `i64`, `f64`, `bool`, `String`, `Value` and `Vec<Value>`. Parameter names become the argument names as is.
 
 </TabItem>
 <TabItem label="C++">
@@ -45,7 +45,7 @@ std::optional<int64_t> increment_process(juiz::CapsuleMap cm) {
 PROCESS_FACTORY(manifest, increment_process);
 ```
 
-C++ では manifest（型名と引数の定義）を自分で書き、`PROCESS_FACTORY` で公開します。
+In C++ you write the manifest (the type name and argument definitions) yourself and export it with `PROCESS_FACTORY`.
 
 </TabItem>
 <TabItem label="Python">
@@ -58,20 +58,20 @@ def increment_process(arg1: int = 1) -> int:
     return arg1 + 1
 ```
 
-`@juiz_process` デコレータを付けるだけで Process になります。独自のデータ型は dataclass で定義し、出力では `asdict` で dict に変換して返します。
+Just add the `@juiz_process` decorator to make it a Process. Define your own data types as dataclasses, and convert outputs to dicts with `asdict` before returning them.
 
 </TabItem>
 </Tabs>
 
-## 単体で動かす
+## Running it on its own
 
-ビルドしたファイルを `--process` で指定し、`-e` で実体化して実行します。
+Give the built file with `--process`, and instantiate and run it with `-e`.
 
 ```sh
 juiz --process target/debug/libincrement_process.so -l rust -e -1 -d
 ```
 
-- `-l` は言語（`rust` / `cpp` / `python`、既定は `rust`）
-- `-e` はロードした Process を一つ実体化し、既定の引数で実行
-- `-1` はロードしたモジュールごとにインスタンスを一つ作成
-- `-d` は実行後に HTTP ブローカーを立てて待機
+- `-l` is the language (`rust` / `cpp` / `python`, default `rust`)
+- `-e` instantiates one loaded Process and runs it with its default arguments
+- `-1` creates one instance per loaded module
+- `-d` starts the HTTP broker after running and keeps waiting

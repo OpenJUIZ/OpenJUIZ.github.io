@@ -1,11 +1,11 @@
 ---
 title: juiz
-description: ロボットと IoT 機器をネットワーク分散システムとして開発するためのミドルウェア
+description: Middleware for building robots and IoT devices as networked distributed systems
 template: splash
 hero:
-  tagline: ロボットと IoT 機器を、冪等な関数と状態のコンテナで組み立てるミドルウェア
+  tagline: Middleware that builds robots and IoT devices from idempotent functions and state containers
   actions:
-    - text: はじめる
+    - text: Get started
       link: /getting-started/install/
       icon: right-arrow
     - text: GitHub
@@ -16,25 +16,25 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-JUIZ (ジュイス) は、カメラやロボット、モータやセンサなどのロボット要素を動かすソフトウェアを複数の言語で開発し、
-それらを結合して一つのソフトウェアサービスのように動作させるためのミドルウェアです。
+JUIZ lets you write software that drives cameras, robots, motors and sensors in several languages,
+then combine those pieces so they run together as a single software service.
 
 <CardGrid stagger>
 	<Card title="Process" icon="rocket">
-		入力（引数）と出力を持つ冪等な関数としてソフトウェアを書きます。
+		Write software as idempotent functions with inputs (arguments) and outputs.
 	</Card>
 	<Card title="Container" icon="puzzle">
-		状態は Container に置き、ContainerProcess から読み書きします。状態と振る舞いを分けて設計できます。
+		Keep state in a Container and read or write it through ContainerProcesses, so state and behavior stay separate.
 	</Card>
-	<Card title="connect と call" icon="random">
-		Process をつないでデータフローで動かすことも、外部から呼び出して結果を受け取ることもできます。
+	<Card title="connect and call" icon="random">
+		Wire Processes together as a dataflow, or call them from outside and get the result back.
 	</Card>
-	<Card title="Rust・C++・Python" icon="seti:rust">
-		機能要素は 3 つの言語で書けます。HTTP+JSON と QUIC のブローカーを標準で備えています。
+	<Card title="Rust, C++, Python" icon="seti:rust">
+		Write components in three languages. HTTP+JSON and QUIC brokers are built in.
 	</Card>
 </CardGrid>
 
-## 3 行で試す
+## Try it in three lines
 
 ```sh
 cargo install juiz_app
@@ -42,4 +42,4 @@ git clone https://github.com/OpenJUIZ/juiz_examples_rust.git && cd juiz_examples
 juiz -f increment_process.conf -d
 ```
 
-起動したらブラウザで http://127.0.0.1:8000/docs を開くと、Swagger UI から Process を呼び出せます。
+Then open http://127.0.0.1:8000/docs in your browser to call the Process from Swagger UI.

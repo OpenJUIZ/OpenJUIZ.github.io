@@ -1,24 +1,24 @@
 ---
-title: 1. はじめての Process
-description: 引数に 1 を足す Process を動かし、外から呼び出して結果を受け取ります。
+title: 1. Your first Process
+description: Run a Process that adds 1 to its argument, call it from outside and get the result back.
 sidebar:
   order: 1
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-最初の章では、引数に 1 を足して返すだけの Process を動かします。
-書いたコードは短い関数ひとつですが、juiz はそれを読み込んで、ネットワーク越しに呼び出せる部品にしてくれます。
+In this first chapter you run a Process that just adds 1 to its argument and returns it.
+The code you write is a single short function, but juiz loads it and turns it into a building block you can call over the network.
 
-<Aside type="tip" title="この章で学ぶこと">
-- Process は、引数を受け取って結果を返す冪等な関数であること
-- Process には「型名」と「インスタンス名」があること
-- 外から Process を呼び出して結果を受け取る使い方(call)
+<Aside type="tip" title="What you will learn">
+- A Process is an idempotent function that takes arguments and returns a result
+- A Process has a "type name" and an "instance name"
+- How to call a Process from outside and get the result back (call)
 </Aside>
 
-## サンプルを用意する
+## Prepare the samples
 
-サンプル集をクローンしてビルドします。以降のコマンドは、すべてクローンしたリポジトリのルートで実行します。
+Clone and build the example repository. All later commands are run from the root of the cloned repository.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -29,7 +29,7 @@ cd juiz_examples_rust
 cargo build
 ```
 
-各サンプルは共有ライブラリとして `target/debug` にビルドされます。
+Each example is built as a shared library in `target/debug`.
 
 </TabItem>
 <TabItem label="Python">
@@ -42,8 +42,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Python はビルドの必要はありません。`juiz` コマンドに組み込まれた Python がファイルを直接読み込みます。
-以降の手順は、この venv を有効にしたターミナルで実行してください。
+Python needs no build step. The Python interpreter embedded in the `juiz` command loads the files directly.
+Run the following steps in a terminal where this venv is activated.
 
 </TabItem>
 <TabItem label="C++">
@@ -55,15 +55,15 @@ cmake -S . -B build
 cmake --build build
 ```
 
-C++ 用のヘッダと `libjuiz_sdk` は CMake が juiz のリポジトリから取得してビルドします。初回は少し時間がかかります。
-各サンプルは共有ライブラリとして `build/plugins` にビルドされます。
+CMake fetches the C++ headers and `libjuiz_sdk` from the juiz repository and builds them. The first build takes a while.
+Each example is built as a shared library in `build/plugins`.
 
 </TabItem>
 </Tabs>
 
-## Process のコードを読む
+## Read the Process code
 
-引数 `arg1` に 1 を足して返す Process です。
+This Process adds 1 to the argument `arg1` and returns it.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -80,10 +80,10 @@ fn increment_process(arg1: i64) -> JuizResult<Capsule> {
 }
 ```
 
-`#[juiz_process]` を付けた関数が Process になります。関数名 `increment_process` が Process の**型名**、引数名 `arg1` がそのまま引数の名前になります。
-戻り値は `jvalue!` で値を作り、`Capsule` に変換して返します。
+A function marked with `#[juiz_process]` becomes a Process. The function name `increment_process` is the Process's **type name**, and the parameter name `arg1` becomes the argument name as is.
+The return value is created with `jvalue!` and converted into a `Capsule`.
 
-このクレートは `Cargo.toml` で共有ライブラリ(`crate-type = ["cdylib"]`)としてビルドする設定になっています。
+The crate's `Cargo.toml` builds it as a shared library (`crate-type = ["cdylib"]`).
 
 </TabItem>
 <TabItem label="Python">
@@ -96,15 +96,15 @@ from juiz import juiz_process
 
 @juiz_process
 def increment_process_python(arg1: int = 0) -> int:
-    """引数に 1 を足して返す"""
+    """Adds 1 to the argument and returns it"""
     print(f"increment_process_python: {arg1} -> {arg1 + 1}")
     return arg1 + 1
 ```
 
-`@juiz_process` を付けた関数が Process になります。関数名 `increment_process_python` が Process の**型名**です。
-引数の名前・型・既定値は型ヒントと既定値から、出力の型は戻り値の型ヒント(`-> int`)から juiz が読み取ります。戻り値の型ヒントは省略できません。
+A function decorated with `@juiz_process` becomes a Process. The function name `increment_process_python` is the Process's **type name**.
+juiz reads the argument names, types and defaults from the type hints and default values, and the output type from the return type hint (`-> int`). The return type hint is required.
 
-ファイル名と関数名をそろえておくと、juiz はファイル名から関数を見つけられます。
+If the file name matches the function name, juiz can find the function from the file name.
 
 </TabItem>
 <TabItem label="C++">
@@ -114,10 +114,10 @@ def increment_process_python(arg1: int = 0) -> int:
 ```cpp
 #include "juiz/juiz.h"
 
-// 引数 arg1 に 1 を足して返す Process
+// A Process that adds 1 to the argument arg1 and returns it
 //
-// manifest() で Process の名前と引数 (名前・説明・既定値) を宣言し、
-// PROCESS_FACTORY で juiz から呼び出せる関数として公開する。
+// manifest() declares the Process name and its arguments (name, description, default),
+// and PROCESS_FACTORY exports it as a function juiz can call.
 auto manifest() {
     return ProcessManifest{"increment_process_cpp"}
         .description("Adds 1 to arg1.")
@@ -131,20 +131,20 @@ std::optional<int64_t> increment_process_cpp(int64_t arg1) {
 PROCESS_FACTORY(manifest, increment_process_cpp);
 ```
 
-C++ では、Process の**型名**と引数(名前・説明・既定値)を `manifest()` に自分で書きます。
-関数の引数は `manifest()` で宣言した順に渡されます。値を返せないときは `std::nullopt` を返すとエラーになります。
-最後に `PROCESS_FACTORY` で、juiz から読み込めるように公開します。
+In C++ you write the Process's **type name** and its arguments (name, description, default) yourself in `manifest()`.
+The function receives the arguments in the order they are declared in `manifest()`. Returning `std::nullopt` when there is no value results in an error.
+Finally, `PROCESS_FACTORY` exports the function so juiz can load it.
 
 </TabItem>
 </Tabs>
 
-どの言語でも、Process は「引数を受け取って結果を返すだけ」の関数です。
-外部の状態を読み書きしないので、同じ引数を渡せばいつも同じ結果が返ります(冪等)。
-この性質のおかげで、Process はテストしやすく、あとでつないだり別のマシンに置いたりしても振る舞いが変わりません。
+In every language, a Process is just a function that takes arguments and returns a result.
+It does not read or write any outside state, so the same arguments always give the same result (it is idempotent).
+Thanks to this, a Process is easy to test, and its behavior does not change when you later connect it to others or move it to another machine.
 
-## 動かす
+## Run it
 
-`--process` でファイルを指定して `juiz` を起動します。
+Start `juiz` with the file given by `--process`.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -153,7 +153,7 @@ C++ では、Process の**型名**と引数(名前・説明・既定値)を `man
 juiz --process ./target/debug/libincrement_process.so -e -1 -d
 ```
 
-macOS では拡張子が `.dylib` になります(`./target/debug/libincrement_process.dylib`)。
+On macOS the extension is `.dylib` (`./target/debug/libincrement_process.dylib`).
 
 </TabItem>
 <TabItem label="Python">
@@ -162,7 +162,7 @@ macOS では拡張子が `.dylib` になります(`./target/debug/libincrement_p
 juiz --process ./process/increment_process_python.py -l python -e -1 -d
 ```
 
-`-e` で一度実行されるので、既定値の `arg1 = 0` で呼ばれたことが表示されます。
+`-e` runs it once, so you can see it was called with the default `arg1 = 0`.
 
 ```
 increment_process_python: 0 -> 1
@@ -175,30 +175,30 @@ increment_process_python: 0 -> 1
 juiz --process ./build/plugins/libincrement_process_cpp.so -l cpp -e -1 -d
 ```
 
-macOS では拡張子が `.dylib` になります。
+On macOS the extension is `.dylib`.
 
 </TabItem>
 </Tabs>
 
-オプションの意味は次のとおりです。
+The options mean the following.
 
-| オプション | 意味 |
+| Option | Meaning |
 | --- | --- |
-| `--process <パス>` | Process のファイルを読み込む |
-| `-l <言語>` | ファイルの言語(`rust` / `python` / `cpp`、既定は `rust`) |
-| `-1` | 読み込んだ Process から、インスタンスを 1 つ作る |
-| `-e` | 作ったインスタンスを、既定の引数で 1 回実行する |
-| `-d` | HTTP ブローカーを 8000 番ポートで立ち上げて待機する(Ctrl+C で終了) |
+| `--process <path>` | Load a Process file |
+| `-l <language>` | Language of the file (`rust` / `python` / `cpp`, default `rust`) |
+| `-1` | Create one instance from the loaded Process |
+| `-e` | Run the created instance once with its default arguments |
+| `-d` | Start the HTTP broker on port 8000 and keep running (exit with Ctrl+C) |
 
-ここで「読み込む」と「インスタンスを作る」が分かれていることに注目してください。
-ファイルを読み込むと、juiz は Process の**型**(作り方)を覚えます。`-1` を付けると、その型から**インスタンス**を 1 つ作ります。
-インスタンス名は、型名の後ろに `0` を付けた名前(`increment_process0` など)になります。
-同じ型から、名前の違うインスタンスをいくつも作ることもできます(第 3 章で扱います)。
+Notice that "loading" and "creating an instance" are separate steps.
+When juiz loads a file, it learns the Process's **type** (how to make it). With `-1`, it creates one **instance** from that type.
+The instance name is the type name followed by `0` (for example `increment_process0`).
+You can also create several instances with different names from the same type (covered in chapter 3).
 
-## 外から呼び出す
+## Call it from outside
 
-`juiz` を起動したまま、別のターミナルを開いて Process を呼び出してみます。
-まず、動いている Process の一覧を見ます。
+Leave `juiz` running, open another terminal, and call the Process.
+First, list the running Processes.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -227,10 +227,10 @@ juiz process list
 </TabItem>
 </Tabs>
 
-表示された URL が、この Process の **ID** です。
-`http://127.0.0.1:8000` は Process がいる場所(ブローカー)、`process/` の後ろは「インスタンス名`::`型名」を表しています。
+The URL shown is this Process's **ID**.
+`http://127.0.0.1:8000` is where the Process lives (its broker), and the part after `process/` means "instance name`::`type name".
 
-この ID と引数を指定して、Process を呼び出します(call)。引数は JSON で渡します。
+Call the Process with this ID and its arguments (call). Arguments are passed as JSON.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -248,7 +248,7 @@ juiz process call "http://127.0.0.1:8000/process/increment_process_python0::incr
 # => CapsulePtr((value:Value(4), option: []))
 ```
 
-`juiz` を起動したターミナルには `increment_process_python: 3 -> 4` と表示されます。
+The terminal running `juiz` prints `increment_process_python: 3 -> 4`.
 
 </TabItem>
 <TabItem label="C++">
@@ -261,18 +261,18 @@ juiz process call "http://127.0.0.1:8000/process/increment_process_cpp0::increme
 </TabItem>
 </Tabs>
 
-`3` を渡して `4` が返ってきました。`-p` は結果を表示するオプションです。
-何度呼び出しても、同じ引数なら同じ結果が返ることも確かめてみてください。
+You passed `3` and got `4` back. `-p` prints the result.
+Try calling it several times to confirm that the same arguments always give the same result.
 
-### ブラウザから呼び出す
+### Call it from a browser
 
-`-d` で立ち上げた HTTP ブローカーは、Swagger UI も提供しています。ブラウザで次の URL を開きます。
+The HTTP broker started with `-d` also serves Swagger UI. Open this URL in your browser.
 
 ```
 http://127.0.0.1:8000/docs/
 ```
 
-一覧から `PATCH /api/process/call` を開き、「Try it out」を押して次のように入力し、「Execute」を押すと結果が返ってきます。
+Open `PATCH /api/process/call` in the list, press "Try it out", enter the following, and press "Execute" to get the result.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -296,24 +296,24 @@ http://127.0.0.1:8000/docs/
 </Tabs>
 
 <Aside>
-Swagger UI で呼び出すときは、ブローカー自身の中にある Process を指す `core://core/...` という形の ID を使います。
+When calling from Swagger UI, use an ID of the form `core://core/...`, which points to a Process inside the broker itself.
 </Aside>
 
-`juiz` コマンドも Swagger UI も、HTTP で同じ API を呼んでいるだけです。
-つまり、HTTP を話せるプログラムなら、どの言語からでも Process を呼び出して結果を受け取れます。
-これが、juiz をサーバー・クライアントのように使う **call** という使い方です。
+Both the `juiz` command and Swagger UI simply call the same API over HTTP.
+In other words, any program that speaks HTTP, in any language, can call a Process and get the result back.
+This is **call**, the way of using juiz like a server and client.
 
-## やってみよう
+## Try it yourself
 
-Process の中身を変えて、もう一度動かしてみましょう。
-たとえば 1 を足す代わりに 2 倍にして返すように書き換え、ビルドし直して(Python はそのまま)`juiz` を起動し直すと、`{"arg1": 3}` に対して `6` が返ってくるはずです。
+Change what the Process does and run it again.
+For example, make it return double the argument instead of adding 1, rebuild it (Python needs no rebuild), and restart `juiz`. Calling it with `{"arg1": 3}` should now return `6`.
 
-1 を引く Process(`decrement_process`)もサンプル集に入っています。同じ手順で動かせます。
+The example repository also contains a Process that subtracts 1 (`decrement_process`). You can run it the same way.
 
-## まとめ
+## Summary
 
-- Process は、引数を受け取って結果を返すだけの冪等な関数です。Rust・Python・C++ のどれでも書けます。
-- juiz はファイルを読み込んで Process の**型**を覚え、そこから名前の付いた**インスタンス**を作ります。
-- 動いている Process には URL の形をした ID があり、ID と引数を指定して外から呼び出せます(call)。
+- A Process is an idempotent function that just takes arguments and returns a result. You can write it in Rust, Python or C++.
+- juiz loads a file to learn a Process **type**, then creates named **instances** from it.
+- A running Process has an ID shaped like a URL, and you can call it from outside with that ID and arguments (call).
 
-次の章では、カウンタを題材にして、状態を持つ部品の書き方を学びます。[状態を持つ: Container と ContainerProcess](/tutorial/container/) に進みましょう。
+In the next chapter you learn how to write a building block that keeps state, using a counter as the example. Move on to [Keeping state: Container and ContainerProcess](/tutorial/container/).

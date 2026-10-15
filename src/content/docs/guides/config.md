@@ -1,17 +1,17 @@
 ---
-title: 設定ファイル
-description: 複数の Process や Container を YAML の設定ファイルでまとめて読み込みます。
+title: Configuration file
+description: Load several Processes and Containers together with a YAML configuration file.
 sidebar:
   order: 3
 ---
 
-複数の機能要素をまとめて動かすときは、YAML 形式の設定ファイル（`.conf`）を書いて `-f` で渡します。
+To run several building blocks together, write a configuration file (`.conf`) in YAML and pass it with `-f`.
 
 ```sh
 juiz -f system.conf -d
 ```
 
-## 例
+## Example
 
 ```yaml
 name: "test_system"
@@ -45,16 +45,16 @@ processes:
     name: "inc0"
 ```
 
-## 各項目
+## Entries
 
-| 項目 | 内容 |
+| Entry | Meaning |
 |---|---|
-| `name` | システムの名前 |
-| `option` | 既定で動くモジュールの設定。`http_broker` の `start` を `true` にすると、`port` で指定したポートで HTTP ブローカーが起動します |
-| `plugins` | 読み込む共有ライブラリ（ファクトリー）の定義。`container_factories` は Container、`process_factories` は Process |
-| `containers` | 読み込んだ Container を実体化する定義と、その Container に結びつく ContainerProcess |
-| `processes` | 読み込んだ Process を実体化する定義 |
-| `connections` | Process の出力を別の Process の引数につなぐ定義。`source`・`destination`・`arg_name`・`connection_type`(`Push` など)を書く |
-| `ecs` | Execution Context の定義。`type_name`(`main_loop_ec` など)・`rate` [Hz]・`bind`(実行する Process)・`auto_start` を書く |
+| `name` | Name of the system |
+| `option` | Settings for modules that run by default. Setting `start` of `http_broker` to `true` starts the HTTP broker on the port given by `port` |
+| `plugins` | Shared libraries (factories) to load. `container_factories` for Containers, `process_factories` for Processes |
+| `containers` | Instances to create from the loaded Containers, and the ContainerProcesses bound to each Container |
+| `processes` | Instances to create from the loaded Processes |
+| `connections` | Connections from a Process's output to another Process's argument. Give `source`, `destination`, `arg_name` and `connection_type` (such as `Push`) |
+| `ecs` | Execution Contexts. Give `type_name` (such as `main_loop_ec`), `rate` [Hz], `bind` (the Processes to run) and `auto_start` |
 
-ファクトリーの共有ライブラリは「提供する型の名前 + 拡張子」で探されます。
+A factory's shared library is looked up by "the name of the type it provides + extension".

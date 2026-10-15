@@ -1,56 +1,56 @@
 ---
-title: チュートリアルの進め方
-description: 小さな Process から始めて、状態・設定ファイル・接続・配布・分散までを順に学びます。
+title: How this tutorial works
+description: Start from a tiny Process and learn state, configuration files, connections, packaging and distribution step by step.
 sidebar:
   order: 0
-  label: 進め方
+  label: Overview
 ---
 
 import { Steps } from '@astrojs/starlight/components';
 
-このチュートリアルでは、引数に 1 を足すだけの小さな Process から始めて、少しずつ題材を育てながら juiz の考え方を学びます。
-各章は「動かしてみる」ことを中心にしていて、手を動かしながら読み進められるようにしてあります。
+This tutorial starts with a tiny Process that just adds 1 to its argument, and grows that example little by little to teach you how juiz thinks.
+Each chapter is built around running things yourself, so you can follow along with your hands on the keyboard.
 
-## 章の構成
+## Chapters
 
 <Steps>
 
-1. **[はじめての Process](/tutorial/first-process/)**
+1. **[Your first Process](/tutorial/first-process/)**
 
-   引数に 1 を足す Process を動かし、外から呼び出して結果を受け取ります。Process が冪等な関数であることと、call という使い方を学びます。
+   Run a Process that adds 1 to its argument, call it from outside and get the result back. You learn that a Process is an idempotent function, and how to use it with call.
 
-2. **[状態を持つ: Container と ContainerProcess](/tutorial/container/)**
+2. **[Keeping state: Container and ContainerProcess](/tutorial/container/)**
 
-   カウンタを題材に、状態を Container に置き、ContainerProcess だけがそれに触れる設計を学びます。
+   Using a counter as the example, you learn a design where state lives in a Container and only ContainerProcesses touch it.
 
-3. **[設定ファイルでまとめて起動する](/tutorial/config-file/)**
+3. **[Starting everything from a configuration file](/tutorial/config-file/)**
 
-   これまでの Process と Container を 1 つの設定ファイルで起動します。読み込み(plugins)と実体化(processes / containers)の違いを学びます。
+   Start the Process and Container from the previous chapters with a single configuration file. You learn the difference between loading (plugins) and instantiating (processes / containers).
 
-4. **[Process をつなぐ: connect と Execution Context](/tutorial/connect/)**
+4. **[Connecting Processes: connect and Execution Context](/tutorial/connect/)**
 
-   talker と listener をつなぎ、Execution Context で周期的に動かします。connect というもう一つの使い方を学びます。
+   Connect a talker and a listener and run them periodically with an Execution Context. You learn connect, the other way to use a Process.
 
-5. **[Component にまとめて配布する](/tutorial/component/)**
+5. **[Packaging as a Component](/tutorial/component/)**
 
-   複数の機能要素を 1 つのプロジェクトにまとめます。Component が配布の単位であることを学びます。
+   Bundle several building blocks into one project. You learn that a Component is the unit of distribution.
 
-6. **[別々のプロセスをつなぐ](/tutorial/multi-process/)**
+6. **[Connecting separate processes](/tutorial/multi-process/)**
 
-   別々に起動した juiz どうしを、設定ファイルなしでコマンドからつなぎます。Process が場所を問わず ID(URL)でつながることを学びます。
+   Connect juiz instances started separately, using only commands and no configuration file. You learn that Processes connect by their ID (a URL), wherever they run.
 
 </Steps>
 
-## 各章の読み方
+## How to read each chapter
 
-- 章の最初に「この章で学ぶこと」、最後に「まとめ」があります。
-- コード例は Rust・Python・C++ のタブで切り替えられます。一度選んだ言語は、ほかのページでもそのまま保たれます。
-- コードはサンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp))のファイルと同じものです。各章に対応するファイルへのリンクを置いています。
-- やりたいことが決まっているときは、[ガイド](/guides/process/) から逆引きで探すこともできます。
+- Each chapter starts with "What you will learn" and ends with a "Summary".
+- Code examples can be switched between Rust, Python and C++ with tabs. The language you pick is kept on every other page.
+- The code is the same as the files in the example repositories ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp)). Each chapter links to the corresponding files.
+- If you already know what you want to do, you can also look it up in the [Guides](/guides/process/).
 
-## 準備
+## Before you start
 
-[インストール](/getting-started/install/) の手順で、`juiz` コマンドと、使う言語のパッケージを入れておいてください。
-Python で進める場合は `pyjuiz`、C++ で進める場合は CMake と C++17 対応のコンパイラが必要です。
+Follow [Installation](/getting-started/install/) to install the `juiz` command and the package for the language you use.
+For Python you need `pyjuiz`; for C++ you need CMake and a compiler that supports C++17.
 
-準備ができたら、[はじめての Process](/tutorial/first-process/) に進みましょう。
+When you are ready, move on to [Your first Process](/tutorial/first-process/).
