@@ -1,0 +1,370 @@
+---
+title: "7. 通信方式を選ぶ: QUIC ブローカー"
+description: 第 6 章の別プロセス接続を、HTTP ではなく QUIC ブローカーで行います。通信方式はブローカーとして差し替えられ、ID の先頭がそれを表すことを学びます。
+sidebar:
+  order: 7
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+第 6 章では、別々に起動した juiz どうしを HTTP ブローカーでつなぎました。
+juiz では、juiz どうしや外のプログラムとやりとりする通信の部分を **ブローカー** と呼び、プラグインとして差し替えられます。
+この章では、HTTP の代わりに QUIC ブローカーを使って、第 6 章と同じように talker と listener をつなぎます。
+
+<Aside type="tip" title="この章で学ぶこと">
+- 通信方式はブローカーとして選べ、Process のコードは変えずにすむこと
+- ID の先頭(`http://` や `qmp://`)が、どのブローカーを通るかを表すこと
+- 1 つの juiz が、複数のブローカーを同時に持てること
+</Aside>
+
+<Aside type="caution" title="juiz 0.0.14 以降が必要です">
+QUIC ブローカーを別々の juiz の間で使うには、juiz 0.0.14 以降が必要です。0.0.13 以前では、別のプロセスから QUIC ブローカーにつないでも呼び出しに応答しません。
+`juiz --version` ではなく、`cargo install juiz_app` で入れた版(`cargo install --list` で確認できます)を確かめてください。
+</Aside>
+
+## QUIC ブローカーとは
+
+QUIC は、UDP の上で動く通信方式で、暗号化された 1 つの接続の中で複数のやりとりを並行して行えます。
+juiz の QUIC ブローカーは、QUIC の上でデータを MessagePack で送ります。ブローカーの種類名は `qmp`(QUIC + MessagePack)です。
+
+HTTP ブローカーと比べると、次のような違いがあります。
+
+| | HTTP ブローカー | QUIC ブローカー |
+| --- | --- | --- |
+| 種類名(ID の先頭) | `http` | `qmp` |
+| ポート | 8000(TCP、使用中なら 8001, 8002, …) | 設定ファイルで指定(UDP、使用中なら起動に失敗) |
+| データの形式 | JSON | MessagePack |
+| 外のツールからの利用 | Swagger UI や curl から呼べる | juiz どうしで使う |
+| `juiz` への組み込み | 組み込み済み | プラグインとして読み込む |
+
+<Aside type="note">
+QUIC ブローカーは起動のたびに自己署名の証明書を作り、つなぐ側は証明書を検証しません。通信は暗号化されますが、相手が本物かどうかは確かめないので、信頼できるネットワークの中で使ってください。
+また、送れるのは数値や文字列などの値だけで、画像は送れません。
+</Aside>
+
+## QUIC ブローカーを用意する
+
+QUIC ブローカーは `juiz` コマンドには組み込まれていないプラグイン(`libqmp_broker.so`)で、crates.io にも公開されていません。juiz のソースからビルドします。
+サンプル集のルートで、サンプル集と同じ階層に juiz のソースをクローンし、QUIC ブローカーだけをビルドします。
+タグは、`cargo install juiz_app` で入れた版と合わせてください。
+
+```sh
+git clone --branch v0.0.14 https://github.com/OpenJUIZ/juiz.git ../juiz
+cargo build --release -p qmp_broker --manifest-path ../juiz/Cargo.toml
+```
+
+`../juiz/target/release/libqmp_broker.so` ができます(macOS では `libqmp_broker.dylib` です)。
+
+## 設定ファイルを用意する
+
+ブローカーは、設定ファイルの `plugins` の `broker_factories` で読み込み、`brokers` で実体化します。第 3 章の Process と同じく、読み込みと実体化が分かれています。
+サンプル集のルートに、次の 3 つのファイルを作ります。どの言語でも同じ内容です。
+
+listener 用の `listener_qmp.conf` は、QUIC ブローカーを UDP の 5000 番で待ち受けさせます。
+
+```yaml
+name: listener_qmp
+plugins:
+  broker_factories:
+    qmp_broker:
+      path: "../juiz/target/release"
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5000
+```
+
+talker 用の `talker_qmp.conf` は、名前とポート番号だけが違います。HTTP ブローカーと違って、QUIC ブローカーはポートが使用中でも自動ではずれず、juiz の起動に失敗します。juiz ごとに別の番号を書いてください。
+
+```yaml
+name: talker_qmp
+plugins:
+  broker_factories:
+    qmp_broker:
+      path: "../juiz/target/release"
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5001
+```
+
+`brokers` の `name` は必須ですが、何でもかまいません。
+
+最後に、ターミナル 3 で打つコマンドのための `juiz.conf` です。こちらは QUIC ブローカーを読み込むだけで、待ち受けはしません。
+`juiz` コマンドは、`-f` を付けないとカレントディレクトリの `juiz.conf` を読み込みます。`qmp://` の ID に問い合わせるには、コマンドの側でも QUIC ブローカーを読み込んでおく必要があります。
+
+```yaml
+name: juiz_cli
+plugins:
+  broker_factories:
+    qmp_broker:
+      path: "../juiz/target/release"
+```
+
+## listener を起動する
+
+第 6 章と同じく、ターミナルを 3 つ使います。どれも、サンプル集のルートで開いておいてください(Python の場合は、どのターミナルでも venv を有効にしておきます)。
+
+ターミナル 1 で、listener を起動します。第 6 章のコマンドに `-f listener_qmp.conf` を加えただけです。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -f listener_qmp.conf --process ./target/debug/liblistener.so -1 -d
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -f listener_qmp.conf --process ./process/listener_python.py -l python -1 -d
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -f listener_qmp.conf --process ./build/plugins/liblistener_cpp.so -l cpp -1 -d
+```
+
+</TabItem>
+</Tabs>
+
+ターミナル 3 から、`-s` に `qmp://` で始まるアドレスを指定して問い合わせます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -s qmp://127.0.0.1:5000 process list
+# => ["qmp://127.0.0.1:5000/process/listener0::listener"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -s qmp://127.0.0.1:5000 process list
+# => ["qmp://127.0.0.1:5000/process/listener_python0::listener_python"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -s qmp://127.0.0.1:5000 process list
+# => ["qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp"]
+```
+
+</TabItem>
+</Tabs>
+
+ID の先頭が `qmp://` になりました。この問い合わせは、QUIC ブローカーを通っています。
+
+`-d` を付けて起動した juiz は、HTTP ブローカーも必ず起動します。そのため、この juiz には HTTP の 8000 番からも、これまでどおり問い合わせられます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener0::listener"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_python0::listener_python"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"]
+```
+
+</TabItem>
+</Tabs>
+
+同じ listener に、`http://` と `qmp://` の 2 つの ID があります。1 つの juiz が 2 つのブローカーを持っていて、ID の先頭がどちらを通るかを表しています。
+
+## talker を起動する
+
+ターミナル 2 で、talker を起動します。こちらも、第 6 章のコマンドに `-f talker_qmp.conf` を加えただけです。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -f talker_qmp.conf --process ./target/debug/libtalker.so -1 -r 1.0 -d
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -f talker_qmp.conf --process ./process/talker_python.py -l python -1 -r 1.0 -d
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -f talker_qmp.conf --process ./build/plugins/libtalker_cpp.so -l cpp -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
+
+ターミナル 2 に、talker の表示が 1 秒ごとに出ます。ターミナル 3 から、5001 番に問い合わせて ID を確かめます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 process list
+# => ["qmp://127.0.0.1:5001/process/talker0::talker"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 process list
+# => ["qmp://127.0.0.1:5001/process/talker_python0::talker_python"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 process list
+# => ["qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp"]
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="note">
+第 6 章と同じく、2 つ目の juiz は 1 つ目の juiz にサブシステムとして登録されます。この登録は HTTP ブローカーで行われるので、ここで `juiz -s qmp://127.0.0.1:5000 process list` と問い合わせると、talker は `http://127.0.0.1:8001/...` の ID で一覧に出てきます。
+</Aside>
+
+## QUIC でつなぐ
+
+ターミナル 3 で、talker の出力を listener の引数 `arg1` につなぎます。第 6 章のコマンドの ID を、`qmp://` の ID に変えるだけです。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz connection create -t push \
+  "qmp://127.0.0.1:5001/process/talker0::talker" \
+  arg1 \
+  "qmp://127.0.0.1:5000/process/listener0::listener"
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz connection create -t push \
+  "qmp://127.0.0.1:5001/process/talker_python0::talker_python" \
+  arg1 \
+  "qmp://127.0.0.1:5000/process/listener_python0::listener_python"
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz connection create -t push \
+  "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" \
+  arg1 \
+  "qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp"
+```
+
+</TabItem>
+</Tabs>
+
+ターミナル 1 の listener が表示を始めます。つながりを持っている talker の側に問い合わせると、つなぐ先が `qmp://` になっていることがわかります。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker, arg=arg1, dst=ProcessIdentifier(qmp://127.0.0.1:5000/process/listener0::listener)]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_python0::talker_python, arg=arg1, dst=ProcessIdentifier(qmp://127.0.0.1:5000/process/listener_python0::listener_python)]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_cpp0::talker_cpp, arg=arg1, dst=ProcessIdentifier(qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp)]
+```
+
+</TabItem>
+</Tabs>
+
+talker の juiz は、つなぐ先の ID が `qmp://` で始まるのを見て、listener に QUIC で値を届けています。
+
+## QUIC で呼び出す
+
+call も同じです。`qmp://` の ID を指定すると、QUIC ブローカーを通って呼び出します。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process call "qmp://127.0.0.1:5001/process/talker0::talker" '{}' -p
+# => CapsulePtr((value:Value("Hello World"), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process call "qmp://127.0.0.1:5001/process/talker_python0::talker_python" '{}' -p
+# => CapsulePtr((value:Value("Hello, World!"), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process call "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" '{}' -p
+# => CapsulePtr((value:Value("Hello, Juiz!"), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+## やってみよう
+
+- 第 6 章の `talker_ec.conf` に、`talker_qmp.conf` と同じ `broker_factories` と `brokers` を書き足して起動してみましょう。`juiz -s qmp://127.0.0.1:5001 ec list` で EC の ID を調べ、`juiz -s qmp://127.0.0.1:5001 ec start <ID>` で開始できます。
+- つなぐ先だけを `http://127.0.0.1:8000/...` の ID に変えてつないでみましょう。listener は 1 つの juiz の中で両方のブローカーを持っているので、どちらの ID でも値が届きます。
+- ターミナル 3 の `juiz.conf` を別の名前に変えてから `juiz -s qmp://127.0.0.1:5000 process list` を打ってみましょう。QUIC ブローカーが読み込まれていないので、`Factory(qmp) can not be found.` というエラーになります。
+
+## まとめ
+
+- juiz の通信の部分はブローカーで、HTTP ブローカーのほかに QUIC ブローカー(`qmp`)を選べます。ブローカーは設定ファイルの `broker_factories` で読み込み、`brokers` で実体化します。
+- ID の先頭(`http://` や `qmp://`)が、どのブローカーを通るかを表します。`juiz connection create` や `juiz process call` は、ID を変えるだけで QUIC を使います。
+- 1 つの juiz は複数のブローカーを同時に持てます。同じ Process に、ブローカーごとの ID があります。
+- `qmp://` の ID を扱うコマンドの側でも、QUIC ブローカーを読み込んでおく必要があります。
+- Process のコードは、どのブローカーで呼ばれるのかを知りません。だから通信方式を変えても、Process はそのまま使えます。
+
+これでチュートリアルは終わりです。やりたいことが決まっているときは、[ガイド](/ja/guides/process/) から逆引きで探してみてください。
