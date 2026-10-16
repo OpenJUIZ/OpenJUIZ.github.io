@@ -1,0 +1,370 @@
+---
+title: "7. Choosing a transport: the QUIC broker"
+description: Connect separate juiz instances as in chapter 6, but over the QUIC broker instead of HTTP. Learn that the transport is a broker you can swap, and that the start of an ID tells which one is used.
+sidebar:
+  order: 7
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+In chapter 6 you connected separately started juiz instances through the HTTP broker.
+In juiz, the part that talks to other juiz instances and outside programs is called a **broker**, and brokers are plugins you can swap.
+In this chapter you connect the talker and the listener as in chapter 6, but through the QUIC broker instead of HTTP.
+
+<Aside type="tip" title="What you will learn">
+- The transport is chosen as a broker, without changing the Process code
+- The start of an ID (`http://` or `qmp://`) tells which broker the request goes through
+- One juiz can run several brokers at the same time
+</Aside>
+
+<Aside type="caution" title="Requires juiz 0.0.14 or later">
+Using the QUIC broker between separate juiz instances requires juiz 0.0.14 or later. With 0.0.13 and earlier, a QUIC broker does not answer calls coming from another process.
+Check the version you installed with `cargo install juiz_app` using `cargo install --list`, not `juiz --version`.
+</Aside>
+
+## What is the QUIC broker?
+
+QUIC is a transport that runs over UDP and carries several exchanges in parallel inside one encrypted connection.
+The juiz QUIC broker sends data over QUIC encoded as MessagePack. Its broker type name is `qmp` (QUIC + MessagePack).
+
+Compared with the HTTP broker:
+
+| | HTTP broker | QUIC broker |
+| --- | --- | --- |
+| Type name (start of the ID) | `http` | `qmp` |
+| Port | 8000 (TCP; 8001, 8002, … if in use) | Set in the configuration file (UDP; startup fails if in use) |
+| Data format | JSON | MessagePack |
+| Use from outside tools | Callable from Swagger UI or curl | Used between juiz instances |
+| Included in `juiz` | Built in | Loaded as a plugin |
+
+<Aside type="note">
+The QUIC broker creates a self-signed certificate each time it starts, and the connecting side does not verify certificates. Traffic is encrypted, but the peer's identity is not checked, so use it inside a network you trust.
+It can only send values such as numbers and strings; it cannot send images.
+</Aside>
+
+## Prepare the QUIC broker
+
+The QUIC broker is a plugin (`libqmp_broker.so`) that is not built into the `juiz` command and is not published on crates.io. You build it from the juiz source.
+From the root of the example repository, clone the juiz source next to the example repository and build only the QUIC broker.
+Use the tag that matches the version you installed with `cargo install juiz_app`.
+
+```sh
+git clone --branch v0.0.14 https://github.com/OpenJUIZ/juiz.git ../juiz
+cargo build --release -p qmp_broker --manifest-path ../juiz/Cargo.toml
+```
+
+This produces `../juiz/target/release/libqmp_broker.so` (`libqmp_broker.dylib` on macOS).
+
+## Prepare the configuration files
+
+A broker is loaded under `broker_factories` in `plugins` and instantiated under `brokers`. As with Processes in chapter 3, loading and instantiating are separate.
+Create the following three files at the root of the example repository. They are the same for every language.
+
+`listener_qmp.conf`, for the listener, makes the QUIC broker listen on UDP port 5000.
+
+```yaml
+name: listener_qmp
+plugins:
+  broker_factories:
+    qmp_broker:
+      path: "../juiz/target/release"
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5000
+```
+
+`talker_qmp.conf`, for the talker, differs only in its name and port. Unlike the HTTP broker, the QUIC broker does not move to another port when its port is in use; juiz fails to start instead. Give each juiz its own port number.
+
+```yaml
+name: talker_qmp
+plugins:
+  broker_factories:
+    qmp_broker:
+      path: "../juiz/target/release"
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5001
+```
+
+The `name` under `brokers` is required, but any name will do.
+
+Finally, `juiz.conf` is for the commands you type in terminal 3. It only loads the QUIC broker and does not listen.
+Without `-f`, the `juiz` command reads `juiz.conf` in the current directory. To send requests to `qmp://` IDs, the command side also needs the QUIC broker loaded.
+
+```yaml
+name: juiz_cli
+plugins:
+  broker_factories:
+    qmp_broker:
+      path: "../juiz/target/release"
+```
+
+## Start the listener
+
+As in chapter 6, this chapter uses three terminals. Open each of them at the root of the example repository (for Python, activate the venv in every terminal).
+
+In terminal 1, start the listener. It is the chapter 6 command with `-f listener_qmp.conf` added.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -f listener_qmp.conf --process ./target/debug/liblistener.so -1 -d
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -f listener_qmp.conf --process ./process/listener_python.py -l python -1 -d
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -f listener_qmp.conf --process ./build/plugins/liblistener_cpp.so -l cpp -1 -d
+```
+
+</TabItem>
+</Tabs>
+
+From terminal 3, pass an address starting with `qmp://` to `-s`.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -s qmp://127.0.0.1:5000 process list
+# => ["qmp://127.0.0.1:5000/process/listener0::listener"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -s qmp://127.0.0.1:5000 process list
+# => ["qmp://127.0.0.1:5000/process/listener_python0::listener_python"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -s qmp://127.0.0.1:5000 process list
+# => ["qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp"]
+```
+
+</TabItem>
+</Tabs>
+
+The ID now starts with `qmp://`. This request went through the QUIC broker.
+
+A juiz started with `-d` always starts the HTTP broker as well. So you can still query this juiz over HTTP on port 8000, as before.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener0::listener"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_python0::listener_python"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"]
+```
+
+</TabItem>
+</Tabs>
+
+The same listener has two IDs, one starting with `http://` and one with `qmp://`. One juiz runs two brokers, and the start of the ID tells which one a request goes through.
+
+## Start the talker
+
+In terminal 2, start the talker. Again, it is the chapter 6 command with `-f talker_qmp.conf` added.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -f talker_qmp.conf --process ./target/debug/libtalker.so -1 -r 1.0 -d
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -f talker_qmp.conf --process ./process/talker_python.py -l python -1 -r 1.0 -d
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -f talker_qmp.conf --process ./build/plugins/libtalker_cpp.so -l cpp -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
+
+Terminal 2 prints the talker's output every second. From terminal 3, query port 5001 to check its ID.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 process list
+# => ["qmp://127.0.0.1:5001/process/talker0::talker"]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 process list
+# => ["qmp://127.0.0.1:5001/process/talker_python0::talker_python"]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 process list
+# => ["qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp"]
+```
+
+</TabItem>
+</Tabs>
+
+<Aside type="note">
+As in chapter 6, the second juiz registers itself as a subsystem of the first one. This registration goes through the HTTP broker, so if you run `juiz -s qmp://127.0.0.1:5000 process list` now, the talker appears with an `http://127.0.0.1:8001/...` ID.
+</Aside>
+
+## Connect over QUIC
+
+In terminal 3, connect the talker's output to the listener's argument `arg1`. Just replace the IDs in the chapter 6 command with `qmp://` IDs.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz connection create -t push \
+  "qmp://127.0.0.1:5001/process/talker0::talker" \
+  arg1 \
+  "qmp://127.0.0.1:5000/process/listener0::listener"
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz connection create -t push \
+  "qmp://127.0.0.1:5001/process/talker_python0::talker_python" \
+  arg1 \
+  "qmp://127.0.0.1:5000/process/listener_python0::listener_python"
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz connection create -t push \
+  "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" \
+  arg1 \
+  "qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp"
+```
+
+</TabItem>
+</Tabs>
+
+The listener in terminal 1 starts printing. Ask the talker side, which holds the connection, and you can see that the destination is a `qmp://` ID.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker, arg=arg1, dst=ProcessIdentifier(qmp://127.0.0.1:5000/process/listener0::listener)]
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_python0::talker_python, arg=arg1, dst=ProcessIdentifier(qmp://127.0.0.1:5000/process/listener_python0::listener_python)]
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 connection list
+# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_cpp0::talker_cpp, arg=arg1, dst=ProcessIdentifier(qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp)]
+```
+
+</TabItem>
+</Tabs>
+
+The talker's juiz sees that the destination ID starts with `qmp://` and delivers the values to the listener over QUIC.
+
+## Call over QUIC
+
+Calls work the same way. With a `qmp://` ID, the call goes through the QUIC broker.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process call "qmp://127.0.0.1:5001/process/talker0::talker" '{}' -p
+# => CapsulePtr((value:Value("Hello World"), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process call "qmp://127.0.0.1:5001/process/talker_python0::talker_python" '{}' -p
+# => CapsulePtr((value:Value("Hello, World!"), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process call "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" '{}' -p
+# => CapsulePtr((value:Value("Hello, Juiz!"), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+## Try it yourself
+
+- Add the same `broker_factories` and `brokers` as in `talker_qmp.conf` to `talker_ec.conf` from chapter 6 and start it. Find the EC's ID with `juiz -s qmp://127.0.0.1:5001 ec list`, and start it with `juiz -s qmp://127.0.0.1:5001 ec start <ID>`.
+- Connect again with only the destination changed to the `http://127.0.0.1:8000/...` ID. The listener's juiz runs both brokers, so the values arrive through either ID.
+- Rename `juiz.conf` in terminal 3 and run `juiz -s qmp://127.0.0.1:5000 process list`. The QUIC broker is not loaded, so you get the error `Factory(qmp) can not be found.`
+
+## Summary
+
+- The communication part of juiz is a broker. Besides the HTTP broker, you can choose the QUIC broker (`qmp`). A broker is loaded under `broker_factories` in the configuration file and instantiated under `brokers`.
+- The start of an ID (`http://` or `qmp://`) tells which broker a request goes through. `juiz connection create` and `juiz process call` use QUIC just by changing the ID.
+- One juiz can run several brokers at the same time. The same Process has one ID per broker.
+- Commands that handle `qmp://` IDs also need the QUIC broker loaded.
+- A Process's code does not know which broker calls it. That is why the Process works unchanged when you change the transport.
+
+This is the end of the tutorial. When you know what you want to do, look it up in the [Guides](/guides/process/).
