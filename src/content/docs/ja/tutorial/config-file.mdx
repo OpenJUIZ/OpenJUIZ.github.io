@@ -15,6 +15,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 - 設定ファイルには「何を読み込むか」(`plugins`)と「何を作るか」(`processes` / `containers`)を分けて書くこと
 - 1 つの型から、名前の違うインスタンスをいくつも作れること
 - Container の初期値のような、インスタンスごとの設定を設定ファイルで渡せること
+- `p_apply` で Process の引数に初期値を与えられること
 </Aside>
 
 ## サンプルを用意する
@@ -378,6 +379,154 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 
 コードを書き換えずに、設定ファイルだけで振る舞いの出発点を変えられました。
 
+## Process の引数に初期値を渡す: p_apply
+
+Container だけでなく、Process の引数にも設定ファイルで値を与えられます。
+`processes` の項目と、`containers` の中の `processes` の項目に `p_apply` を書き、引数の名前と値を並べます。
+
+<Aside type="caution" title="juiz 0.0.15 以降が必要です">
+`p_apply` は juiz 0.0.15 以降で使えます。0.0.14 以前では、書いても値は渡されません。
+</Aside>
+
+`inc0` の `arg1` を 10 に、`increment0` の `arg1` を 5 にしてみましょう。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```yaml ins={4-5,14-15}
+processes:
+  - type_name: increment_process
+    name: inc0
+    p_apply:
+      arg1: 10
+  - type_name: increment_process
+    name: inc1
+containers:
+  - type_name: example_container
+    name: counter0
+    initial_value: 3
+    processes:
+      - type_name: example_container_increment
+        name: increment0
+        p_apply:
+          arg1: 5
+      - type_name: example_container_get
+        name: get0
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```yaml ins={4-5,14-15}
+processes:
+  - type_name: increment_process_python
+    name: inc0
+    p_apply:
+      arg1: 10
+  - type_name: increment_process_python
+    name: inc1
+containers:
+  - type_name: example_container_python
+    name: counter0
+    initial_value: 3
+    processes:
+      - type_name: example_container_python_increment
+        name: increment0
+        p_apply:
+          arg1: 5
+      - type_name: example_container_python_get
+        name: get0
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```yaml ins={4-5,14-15}
+processes:
+  - type_name: increment_process_cpp
+    name: inc0
+    p_apply:
+      arg1: 10
+  - type_name: increment_process_cpp
+    name: inc1
+containers:
+  - type_name: example_container_cpp
+    name: counter0
+    value: 3
+    processes:
+      - type_name: example_container_cpp_increment
+        name: increment0
+        p_apply:
+          arg1: 5
+      - type_name: example_container_cpp_get
+        name: get0
+```
+
+</TabItem>
+</Tabs>
+
+`p_apply` の値は、インスタンスを作った直後にその引数へ入り、初期値になります。
+この値が使われるのは、引数を渡さずに Process を**実行(execute)**したときです。次の章で使う Execution Context は、この方法で Process を動かします。
+これまで使ってきた call は、呼び出すたびに引数を全部渡すので、`p_apply` の値は使われません。
+
+`juiz` を起動し直し、HTTP API の `execute` で引数を渡さずに実行してみましょう。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_python" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_python_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_cpp" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_cpp_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+</Tabs>
+
+`inc0` は `arg1` の 10 に 1 を足して `11` を返します。`p_apply` を書いていない `inc1` を同じように実行すると、引数の既定値 0 が使われて `1` が返ります。
+`increment0` は、初期値 3 のカウンタに 5 を足して `8` を返します。
+
+`p_apply` に Process が持っていない引数の名前を書くと、`juiz` は起動時にエラーで止まります。
+たとえば `arg1` を `arg10` と書き間違えると、次のようなエラーになります。
+
+```text
+Error:setup_objects() failed in setup in system.rs
+
+Caused by:
+    0: setup_processes(...) in setup_objects() in setup_objects.rs
+    1: p_apply(arg_name='arg10', value=10)
+    2: Can not find Process::Inlet(arg10)
+```
+
+書き間違いに、動かしてから気づくのではなく、起動したときに気づけます。
+
 ## やってみよう
 
 - `processes` と `containers` を消して `plugins` だけ残した設定ファイルで起動し、`juiz process list` を見てみましょう。空のリスト `[]` が返ります。読み込んだだけでは、インスタンスは作られないことがわかります。
@@ -389,6 +538,7 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 - 設定ファイルには、型を**読み込む** `plugins` と、そこから**インスタンスを作る** `processes` / `containers` を分けて書きます。
 - 1 つの型から、名前の違うインスタンスをいくつも作れます。インスタンスの名前は ID の一部になります。
 - Container の初期値のような、インスタンスごとの設定も設定ファイルで渡せます。
+- `p_apply` で Process の引数に初期値を与えられます。この値は、引数を渡さずに実行したとき(Execution Context から動かしたときなど)に使われます。
 - 設定ファイルの項目は、[ガイドの「設定ファイル」](/ja/guides/config/) にまとめてあります。
 
 次の章では、設定ファイルに Process どうしのつながりと、Process を動かすタイミングを書き足します。[Process をつなぐ: connect と Execution Context](/ja/tutorial/connect/) に進みましょう。

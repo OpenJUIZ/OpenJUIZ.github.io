@@ -52,9 +52,24 @@ processes:
 | `name` | システムの名前 |
 | `option` | 既定で動くモジュールの設定。`http_broker` の `start` を `true` にすると、`port` で指定したポートで HTTP ブローカーが起動します |
 | `plugins` | 読み込む共有ライブラリ（ファクトリー）の定義。`container_factories` は Container、`process_factories` は Process |
-| `containers` | 読み込んだ Container を実体化する定義と、その Container に結びつく ContainerProcess |
-| `processes` | 読み込んだ Process を実体化する定義 |
+| `containers` | 読み込んだ Container を実体化する定義と、その Container に結びつく ContainerProcess。ContainerProcess の項目には `p_apply` を書ける |
+| `processes` | 読み込んだ Process を実体化する定義。`p_apply` を書ける |
 | `connections` | Process の出力を別の Process の引数につなぐ定義。`source`・`destination`・`arg_name`・`connection_type`(`Push` など)を書く |
 | `ecs` | Execution Context の定義。`type_name`(`main_loop_ec` など)・`rate` [Hz]・`bind`(実行する Process)・`auto_start` を書く |
 
 ファクトリーの共有ライブラリは「提供する型の名前 + 拡張子」で探されます。
+
+## 引数の初期値 (p_apply)
+
+`processes` の項目と、`containers` の中の `processes` の項目には、`p_apply` でインスタンスの引数に初期値を与えられます(juiz 0.0.15 以降)。
+
+```yaml
+processes:
+  - type_name: "increment_process"
+    name: "inc0"
+    p_apply:
+      arg1: 10
+```
+
+この値は、引数を渡さずに Process を実行したとき(Execution Context から動かしたときなど)に使われます。引数を渡す call では、渡した値が使われます。`connections` で値が届くと上書きされます。
+Process が持っていない引数の名前を書くと、`juiz` は起動時にエラーで止まります。

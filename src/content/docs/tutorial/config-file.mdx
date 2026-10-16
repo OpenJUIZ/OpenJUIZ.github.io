@@ -15,6 +15,7 @@ In this chapter you write the Process and Container so far into one configuratio
 - A configuration file separates "what to load" (`plugins`) from "what to create" (`processes` / `containers`)
 - One type can produce several instances with different names
 - Per-instance settings, such as a Container's initial value, can be passed in the configuration file
+- `p_apply` gives initial values to a Process's arguments
 </Aside>
 
 ## Prepare the samples
@@ -378,6 +379,154 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 
 You changed the starting point of the behavior with the configuration file alone, without touching the code.
 
+## Give a Process's arguments initial values: p_apply
+
+Not only Containers: you can also give values to a Process's arguments in the configuration file.
+Write `p_apply` in a `processes` entry, or in a `processes` entry inside `containers`, and list argument names and values under it.
+
+<Aside type="caution" title="Requires juiz 0.0.15 or later">
+`p_apply` requires juiz 0.0.15 or later. In 0.0.14 and earlier, the values are not passed even if you write them.
+</Aside>
+
+Set `arg1` of `inc0` to 10 and `arg1` of `increment0` to 5.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```yaml ins={4-5,14-15}
+processes:
+  - type_name: increment_process
+    name: inc0
+    p_apply:
+      arg1: 10
+  - type_name: increment_process
+    name: inc1
+containers:
+  - type_name: example_container
+    name: counter0
+    initial_value: 3
+    processes:
+      - type_name: example_container_increment
+        name: increment0
+        p_apply:
+          arg1: 5
+      - type_name: example_container_get
+        name: get0
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```yaml ins={4-5,14-15}
+processes:
+  - type_name: increment_process_python
+    name: inc0
+    p_apply:
+      arg1: 10
+  - type_name: increment_process_python
+    name: inc1
+containers:
+  - type_name: example_container_python
+    name: counter0
+    initial_value: 3
+    processes:
+      - type_name: example_container_python_increment
+        name: increment0
+        p_apply:
+          arg1: 5
+      - type_name: example_container_python_get
+        name: get0
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```yaml ins={4-5,14-15}
+processes:
+  - type_name: increment_process_cpp
+    name: inc0
+    p_apply:
+      arg1: 10
+  - type_name: increment_process_cpp
+    name: inc1
+containers:
+  - type_name: example_container_cpp
+    name: counter0
+    value: 3
+    processes:
+      - type_name: example_container_cpp_increment
+        name: increment0
+        p_apply:
+          arg1: 5
+      - type_name: example_container_cpp_get
+        name: get0
+```
+
+</TabItem>
+</Tabs>
+
+A `p_apply` value goes into the argument right after the instance is created and becomes its initial value.
+The value is used when the Process is **executed** without arguments. The Execution Context you use in the next chapter runs Processes this way.
+The call you have used so far passes all arguments every time, so `p_apply` values are not used there.
+
+Restart `juiz` and execute them without arguments through `execute` in the HTTP API.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_python" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_python_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_cpp" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_cpp_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+</Tabs>
+
+`inc0` adds 1 to the 10 in `arg1` and returns `11`. If you execute `inc1`, which has no `p_apply`, the same way, the argument's default value 0 is used and it returns `1`.
+`increment0` adds 5 to the counter that started at 3 and returns `8`.
+
+If `p_apply` names an argument the Process does not have, `juiz` stops with an error at startup.
+For example, if you mistype `arg1` as `arg10`, you get an error like this:
+
+```text
+Error:setup_objects() failed in setup in system.rs
+
+Caused by:
+    0: setup_processes(...) in setup_objects() in setup_objects.rs
+    1: p_apply(arg_name='arg10', value=10)
+    2: Can not find Process::Inlet(arg10)
+```
+
+You notice the typo when `juiz` starts, not later while it is running.
+
 ## Try it yourself
 
 - Remove `processes` and `containers`, keep only `plugins`, start `juiz` and run `juiz process list`. It returns an empty list `[]`. Loading alone does not create any instances.
@@ -389,6 +538,7 @@ You changed the starting point of the behavior with the configuration file alone
 - A configuration file separates `plugins`, which **loads** types, from `processes` / `containers`, which **create instances** from them.
 - One type can produce several instances with different names. The instance name becomes part of the ID.
 - Per-instance settings, such as a Container's initial value, can also be passed in the configuration file.
+- `p_apply` gives initial values to a Process's arguments. They are used when the Process is executed without arguments, for example from an Execution Context.
 - The configuration file entries are summarized in [the Configuration file guide](/guides/config/).
 
 In the next chapter you add connections between Processes, and when to run them, to the configuration file. Move on to [Connecting Processes: connect and Execution Context](/tutorial/connect/).
