@@ -79,7 +79,7 @@ juiz_sdk の版は、`cargo install juiz_app` で入れた `juiz` と合わせ�
 crate-type = ["cdylib"]
 
 [dependencies]
-juiz_sdk = "0.0.16"
+juiz_sdk = "0.0.17"
 ```
 
 ### Python

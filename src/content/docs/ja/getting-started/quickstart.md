@@ -36,6 +36,8 @@ juiz -f increment_process.conf -d
 http://127.0.0.1:8000/docs
 ```
 
+Swagger UI は juiz 0.0.17 以降で使えます。0.0.16 以前では http://127.0.0.1:8000/api-docs/openapi.json で OpenAPI 定義だけを取得できます。
+
 ## ほかの言語のサンプル
 
 - Python: [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python)

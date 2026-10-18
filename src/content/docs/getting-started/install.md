@@ -79,7 +79,7 @@ Use the same juiz_sdk version as the `juiz` you installed with `cargo install ju
 crate-type = ["cdylib"]
 
 [dependencies]
-juiz_sdk = "0.0.16"
+juiz_sdk = "0.0.17"
 ```
 
 ### Python
