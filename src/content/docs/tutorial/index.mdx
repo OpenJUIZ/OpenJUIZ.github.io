@@ -55,6 +55,7 @@ Each chapter is built around running things yourself, so you can follow along wi
 ## Before you start
 
 Follow [Installation](/getting-started/install/) to install the `juiz` command and the package for the language you use.
-For Python you need `pyjuiz`; for C++ you need CMake and a compiler that supports C++17.
+If you use only Python, `pip install juiz-cli` gives you both the `juiz` command and `pyjuiz`, with no Rust toolchain needed (chapter 1 installs it from the example repository's `requirements.txt`).
+For Rust or C++, install the `juiz` command with `cargo install juiz_app`. C++ also needs CMake and a compiler that supports C++17.
 
 When you are ready, move on to [Your first Process](/tutorial/first-process/).

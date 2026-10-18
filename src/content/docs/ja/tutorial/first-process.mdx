@@ -38,12 +38,17 @@ cargo build
 git clone https://github.com/OpenJUIZ/juiz_examples_python.git
 cd juiz_examples_python
 python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+source .venv/bin/activate        # Windows では .venv\Scripts\activate
+pip install -r requirements.txt  # juiz-cli が入る
 ```
 
-Python はビルドの必要はありません。`juiz` コマンドに組み込まれた Python がファイルを直接読み込みます。
+`requirements.txt` には [juiz-cli](https://pypi.org/project/juiz-cli/) が書いてあり、`juiz` コマンドと `pyjuiz` が venv に入ります。Rust のツールチェーンは要りません。
+Python はビルドの必要もありません。`juiz` コマンドが Python のファイルを直接読み込みます。
 以降の手順は、この venv を有効にしたターミナルで実行してください。
+
+<Aside type="note">
+`cargo install juiz_app` で入れた `juiz` を使う場合は、`requirements.txt` の代わりに `pip install pyjuiz==0.0.16` だけを入れてください(`juiz` の版と合わせます)。両方入れると `juiz` コマンドが 2 つになります。詳しくは [インストール](/ja/getting-started/install/) を見てください。
+</Aside>
 
 </TabItem>
 <TabItem label="C++">

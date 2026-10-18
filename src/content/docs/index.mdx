@@ -34,12 +34,22 @@ then combine those pieces so they run together as a single software service.
 	</Card>
 </CardGrid>
 
-## Try it in three lines
+## Try it
+
+With Python 3.10 or later, `pip install` is all you need (no Rust toolchain).
 
 ```sh
-cargo install juiz_app
-git clone https://github.com/OpenJUIZ/juiz_examples_rust.git && cd juiz_examples_rust && cargo build
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git && cd juiz_examples_python
+python3 -m venv .venv && source .venv/bin/activate
+pip install juiz-cli
 juiz -f increment_process.conf -d
 ```
 
-Then open http://127.0.0.1:8000/docs in your browser to call the Process from Swagger UI.
+In another terminal, activate the same venv and call the Process.
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_python" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+To write in Rust or C++, install `juiz` with `cargo install juiz_app`. See [Installation](/getting-started/install/) for details.

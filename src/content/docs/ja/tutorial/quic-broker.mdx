@@ -22,6 +22,11 @@ QUIC ブローカーを別々の juiz の間で使うには、juiz 0.0.14 以降
 `juiz --version` ではなく、`cargo install juiz_app` で入れた版(`cargo install --list` で確認できます)を確かめてください。
 </Aside>
 
+<Aside type="caution" title="この章は cargo install juiz_app の juiz で進めます">
+QUIC ブローカーは手元でビルドする Rust のプラグインです。pip の `juiz-cli` で入れた `juiz` は CI のコンパイラでビルドしてあるため、手元でビルドしたプラグインとは組み合わせられません。
+Python で進めている場合も、この章は [インストール](/ja/getting-started/install/) の「Rust・C++ を使う場合」の手順で `cargo install juiz_app` の `juiz` を入れ、`juiz-cli` ではなく `pyjuiz` だけを入れた venv で実行してください。
+</Aside>
+
 ## QUIC ブローカーとは
 
 QUIC は、UDP の上で動く通信方式で、暗号化された 1 つの接続の中で複数のやりとりを並行して行えます。
