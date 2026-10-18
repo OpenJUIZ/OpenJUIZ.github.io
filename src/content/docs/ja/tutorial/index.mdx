@@ -55,6 +55,7 @@ import { Steps } from '@astrojs/starlight/components';
 ## 準備
 
 [インストール](/ja/getting-started/install/) の手順で、`juiz` コマンドと、使う言語のパッケージを入れておいてください。
-Python で進める場合は `pyjuiz`、C++ で進める場合は CMake と C++17 対応のコンパイラが必要です。
+Python だけで進める場合は `pip install juiz-cli` で `juiz` コマンドと `pyjuiz` がそろい、Rust のツールチェーンは要りません(第 1 章でサンプル集の `requirements.txt` から入れます)。
+Rust・C++ で進める場合は `cargo install juiz_app` で `juiz` コマンドを入れます。C++ ではさらに CMake と C++17 対応のコンパイラが必要です。
 
 準備ができたら、[はじめての Process](/ja/tutorial/first-process/) に進みましょう。

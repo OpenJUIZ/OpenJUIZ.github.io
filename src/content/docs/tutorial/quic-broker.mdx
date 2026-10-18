@@ -22,6 +22,11 @@ Using the QUIC broker between separate juiz instances requires juiz 0.0.14 or la
 Check the version you installed with `cargo install juiz_app` using `cargo install --list`, not `juiz --version`.
 </Aside>
 
+<Aside type="caution" title="Use the juiz from cargo install juiz_app for this chapter">
+The QUIC broker is a Rust plugin you build yourself. The `juiz` installed with pip (`juiz-cli`) is built with the juiz CI's compiler, so it cannot be combined with plugins you build locally.
+Even if you are following along in Python, install `juiz` with `cargo install juiz_app` as described under "Rust or C++" in [Installation](/getting-started/install/) for this chapter, and run it in a venv that has only `pyjuiz`, not `juiz-cli`.
+</Aside>
+
 ## What is the QUIC broker?
 
 QUIC is a transport that runs over UDP and carries several exchanges in parallel inside one encrypted connection.

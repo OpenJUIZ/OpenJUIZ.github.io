@@ -34,12 +34,22 @@ JUIZ (ジュイス) は、カメラやロボット、モータやセンサなど
 	</Card>
 </CardGrid>
 
-## 3 行で試す
+## すぐに試す
+
+Python 3.10 以降があれば、`pip install` だけで試せます(Rust のツールチェーンは要りません)。
 
 ```sh
-cargo install juiz_app
-git clone https://github.com/OpenJUIZ/juiz_examples_rust.git && cd juiz_examples_rust && cargo build
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git && cd juiz_examples_python
+python3 -m venv .venv && source .venv/bin/activate
+pip install juiz-cli
 juiz -f increment_process.conf -d
 ```
 
-起動したらブラウザで http://127.0.0.1:8000/docs を開くと、Swagger UI から Process を呼び出せます。
+別のターミナルで同じ venv を有効にして、Process を呼び出します。
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_python" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+Rust や C++ で書く場合は `cargo install juiz_app` で `juiz` を入れます。詳しくは [インストール](/ja/getting-started/install/) を見てください。
