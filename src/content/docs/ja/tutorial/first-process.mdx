@@ -47,7 +47,7 @@ Python はビルドの必要もありません。`juiz` コマンドが Python �
 以降の手順は、この venv を有効にしたターミナルで実行してください。
 
 <Aside type="note">
-`cargo install juiz_app` で入れた `juiz` を使う場合は、`requirements.txt` の代わりに `pip install pyjuiz==0.0.16` だけを入れてください(`juiz` の版と合わせます)。両方入れると `juiz` コマンドが 2 つになります。詳しくは [インストール](/ja/getting-started/install/) を見てください。
+`cargo install juiz_app` で入れた `juiz` を使う場合は、`requirements.txt` の代わりに `pip install pyjuiz==0.0.17` だけを入れてください(`juiz` の版と合わせます)。両方入れると `juiz` コマンドが 2 つになります。詳しくは [インストール](/ja/getting-started/install/) を見てください。
 </Aside>
 
 </TabItem>
@@ -276,6 +276,10 @@ juiz process call "http://127.0.0.1:8000/process/increment_process_cpp0::increme
 ```
 http://127.0.0.1:8000/docs/
 ```
+
+<Aside title="Swagger UI は juiz 0.0.17 以降">
+crates.io や PyPI から入れた juiz で Swagger UI が使えるのは 0.0.17 以降です。0.0.16 以前では `/docs/` は開けませんが、OpenAPI 定義は `http://127.0.0.1:8000/api-docs/openapi.json` で取得できます。
+</Aside>
 
 一覧から `PATCH /api/process/call` を開き、「Try it out」を押して次のように入力し、「Execute」を押すと結果が返ってきます。
 

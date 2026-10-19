@@ -35,6 +35,8 @@ Open this URL to call the Process from Swagger UI:
 http://127.0.0.1:8000/docs
 ```
 
+Swagger UI is available in juiz 0.0.17 and later. In 0.0.16 and earlier, only the OpenAPI definition is available at http://127.0.0.1:8000/api-docs/openapi.json.
+
 ## Examples in other languages
 
 - Python: [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python)

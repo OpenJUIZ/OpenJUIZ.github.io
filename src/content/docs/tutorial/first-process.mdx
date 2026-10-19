@@ -47,7 +47,7 @@ Python needs no build step either. The `juiz` command loads the Python files dir
 Run the following steps in a terminal where this venv is activated.
 
 <Aside type="note">
-If you use the `juiz` installed with `cargo install juiz_app`, install only `pip install pyjuiz==0.0.16` (matching your `juiz` version) instead of `requirements.txt`. Installing both gives you two `juiz` commands. See [Installation](/getting-started/install/) for details.
+If you use the `juiz` installed with `cargo install juiz_app`, install only `pip install pyjuiz==0.0.17` (matching your `juiz` version) instead of `requirements.txt`. Installing both gives you two `juiz` commands. See [Installation](/getting-started/install/) for details.
 </Aside>
 
 </TabItem>
@@ -276,6 +276,10 @@ The HTTP broker started with `-d` also serves Swagger UI. Open this URL in your 
 ```
 http://127.0.0.1:8000/docs/
 ```
+
+<Aside title="Swagger UI requires juiz 0.0.17 or later">
+With juiz installed from crates.io or PyPI, Swagger UI is available from 0.0.17. In 0.0.16 and earlier, `/docs/` does not open, but you can still get the OpenAPI definition at `http://127.0.0.1:8000/api-docs/openapi.json`.
+</Aside>
 
 Open `PATCH /api/process/call` in the list, press "Try it out", enter the following, and press "Execute" to get the result.
 
