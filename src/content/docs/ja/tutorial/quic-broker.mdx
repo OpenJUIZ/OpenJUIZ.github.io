@@ -8,7 +8,7 @@ sidebar:
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 第 6 章では、別々に起動した juiz どうしを HTTP ブローカーでつなぎました。
-juiz では、juiz どうしや外のプログラムとやりとりする通信の部分を **ブローカー** と呼び、プラグインとして差し替えられます。
+juiz では、juiz どうしや外のプログラムとやりとりする通信の部分を **ブローカー** と呼び、設定ファイルで選べます。
 この章では、HTTP の代わりに QUIC ブローカーを使って、第 6 章と同じように talker と listener をつなぎます。
 
 <Aside type="tip" title="この章で学ぶこと">
@@ -17,14 +17,9 @@ juiz では、juiz どうしや外のプログラムとやりとりする通信�
 - 1 つの juiz が、複数のブローカーを同時に持てること
 </Aside>
 
-<Aside type="caution" title="juiz 0.0.14 以降が必要です">
-QUIC ブローカーを別々の juiz の間で使うには、juiz 0.0.14 以降が必要です。0.0.13 以前では、別のプロセスから QUIC ブローカーにつないでも呼び出しに応答しません。
-`juiz --version` ではなく、`cargo install juiz_app` で入れた版(`cargo install --list` で確認できます)を確かめてください。
-</Aside>
-
-<Aside type="caution" title="この章は cargo install juiz_app の juiz で進めます">
-QUIC ブローカーは手元でビルドする Rust のプラグインです。pip の `juiz-cli` で入れた `juiz` は CI のコンパイラでビルドしてあるため、手元でビルドしたプラグインとは組み合わせられません。
-Python で進めている場合も、この章は [インストール](/ja/getting-started/install/) の「Rust・C++ を使う場合」の手順で `cargo install juiz_app` の `juiz` を入れ、`juiz-cli` ではなく `pyjuiz` だけを入れた venv で実行してください。
+<Aside type="caution" title="juiz 0.0.18 以降が必要です">
+QUIC ブローカーは juiz 0.0.18 から `juiz` コマンドに組み込まれています。`cargo install juiz_app` で入れた場合も、pip の `juiz-cli` で入れた場合も、そのまま使えます。
+`juiz --version` ではなく、`cargo install --list` や `pip show juiz-cli` で版を確かめてください。0.0.17 以前では、QUIC ブローカーを juiz のソースからビルドしてプラグインとして読み込む必要があります。
 </Aside>
 
 ## QUIC ブローカーとは
@@ -40,39 +35,22 @@ HTTP ブローカーと比べると、次のような違いがあります。
 | ポート | 8000(TCP、使用中なら 8001, 8002, …) | 設定ファイルで指定(UDP、使用中なら起動に失敗) |
 | データの形式 | JSON | MessagePack |
 | 外のツールからの利用 | Swagger UI や curl から呼べる | juiz どうしで使う |
-| `juiz` への組み込み | 組み込み済み | プラグインとして読み込む |
+| `juiz` への組み込み | 組み込み済み | 組み込み済み(0.0.18 以降) |
 
 <Aside type="note">
 QUIC ブローカーは起動のたびに自己署名の証明書を作り、つなぐ側は証明書を検証しません。通信は暗号化されますが、相手が本物かどうかは確かめないので、信頼できるネットワークの中で使ってください。
 また、送れるのは数値や文字列などの値だけで、画像は送れません。
 </Aside>
 
-## QUIC ブローカーを用意する
-
-QUIC ブローカーは `juiz` コマンドには組み込まれていないプラグイン(`libqmp_broker.so`)で、crates.io にも公開されていません。juiz のソースからビルドします。
-サンプル集のルートで、サンプル集と同じ階層に juiz のソースをクローンし、QUIC ブローカーだけをビルドします。
-タグは、`cargo install juiz_app` で入れた版と合わせてください。
-
-```sh
-git clone --branch v0.0.14 https://github.com/OpenJUIZ/juiz.git ../juiz
-cargo build --release -p qmp_broker --manifest-path ../juiz/Cargo.toml
-```
-
-`../juiz/target/release/libqmp_broker.so` ができます(macOS では `libqmp_broker.dylib` です)。
-
 ## 設定ファイルを用意する
 
-ブローカーは、設定ファイルの `plugins` の `broker_factories` で読み込み、`brokers` で実体化します。第 3 章の Process と同じく、読み込みと実体化が分かれています。
-サンプル集のルートに、次の 3 つのファイルを作ります。どの言語でも同じ内容です。
+QUIC ブローカーは `juiz` コマンドに組み込まれているので、設定ファイルの `brokers` に書くだけで実体化できます。
+サンプル集のルートに、次の 2 つのファイルを作ります。どの言語でも同じ内容です。
 
 listener 用の `listener_qmp.conf` は、QUIC ブローカーを UDP の 5000 番で待ち受けさせます。
 
 ```yaml
 name: listener_qmp
-plugins:
-  broker_factories:
-    qmp_broker:
-      path: "../juiz/target/release"
 brokers:
   - type_name: qmp
     name: qmp0
@@ -83,10 +61,6 @@ talker 用の `talker_qmp.conf` は、名前とポート番号だけが違いま
 
 ```yaml
 name: talker_qmp
-plugins:
-  broker_factories:
-    qmp_broker:
-      path: "../juiz/target/release"
 brokers:
   - type_name: qmp
     name: qmp0
@@ -95,16 +69,7 @@ brokers:
 
 `brokers` の `name` は必須ですが、何でもかまいません。
 
-最後に、ターミナル 3 で打つコマンドのための `juiz.conf` です。こちらは QUIC ブローカーを読み込むだけで、待ち受けはしません。
-`juiz` コマンドは、`-f` を付けないとカレントディレクトリの `juiz.conf` を読み込みます。`qmp://` の ID に問い合わせるには、コマンドの側でも QUIC ブローカーを読み込んでおく必要があります。
-
-```yaml
-name: juiz_cli
-plugins:
-  broker_factories:
-    qmp_broker:
-      path: "../juiz/target/release"
-```
+ターミナル 3 で打つコマンドの側も、`qmp://` の ID にはそのまま問い合わせられます。設定ファイルは要りません。
 
 ## listener を起動する
 
@@ -360,16 +325,15 @@ juiz process call "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" '{}' -p
 
 ## やってみよう
 
-- 第 6 章の `talker_ec.conf` に、`talker_qmp.conf` と同じ `broker_factories` と `brokers` を書き足して起動してみましょう。`juiz -s qmp://127.0.0.1:5001 ec list` で EC の ID を調べ、`juiz -s qmp://127.0.0.1:5001 ec start <ID>` で開始できます。
+- 第 6 章の `talker_ec.conf` に、`talker_qmp.conf` と同じ `brokers` を書き足して起動してみましょう。`juiz -s qmp://127.0.0.1:5001 ec list` で EC の ID を調べ、`juiz -s qmp://127.0.0.1:5001 ec start <ID>` で開始できます。
 - つなぐ先だけを `http://127.0.0.1:8000/...` の ID に変えてつないでみましょう。listener は 1 つの juiz の中で両方のブローカーを持っているので、どちらの ID でも値が届きます。
-- ターミナル 3 の `juiz.conf` を別の名前に変えてから `juiz -s qmp://127.0.0.1:5000 process list` を打ってみましょう。QUIC ブローカーが読み込まれていないので、`Factory(qmp) can not be found.` というエラーになります。
+- だれも待ち受けていないポートに `juiz -s qmp://127.0.0.1:5002 process list` と問い合わせてみましょう。QUIC は UDP なのでつながらないことがすぐにはわからず、しばらく待ってから `connecting to qmp broker '127.0.0.1:5002' (127.0.0.1:5002) timed out` というエラーになります。
 
 ## まとめ
 
-- juiz の通信の部分はブローカーで、HTTP ブローカーのほかに QUIC ブローカー(`qmp`)を選べます。ブローカーは設定ファイルの `broker_factories` で読み込み、`brokers` で実体化します。
+- juiz の通信の部分はブローカーで、HTTP ブローカーのほかに QUIC ブローカー(`qmp`)を選べます。どちらも `juiz` コマンドに組み込まれていて、設定ファイルの `brokers` で実体化します。
 - ID の先頭(`http://` や `qmp://`)が、どのブローカーを通るかを表します。`juiz connection create` や `juiz process call` は、ID を変えるだけで QUIC を使います。
 - 1 つの juiz は複数のブローカーを同時に持てます。同じ Process に、ブローカーごとの ID があります。
-- `qmp://` の ID を扱うコマンドの側でも、QUIC ブローカーを読み込んでおく必要があります。
 - Process のコードは、どのブローカーで呼ばれるのかを知りません。だから通信方式を変えても、Process はそのまま使えます。
 
 これでチュートリアルは終わりです。やりたいことが決まっているときは、[ガイド](/ja/guides/process/) から逆引きで探してみてください。
