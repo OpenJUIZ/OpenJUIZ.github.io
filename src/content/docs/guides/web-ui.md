@@ -95,7 +95,7 @@ The legend at the bottom left of the diagram also lists the line styles.
 When a second juiz is registered as a subsystem of the first, as in [Chapter 6: Connecting separate processes](/tutorial/multi-process/), the first juiz's web UI shows the second one as well.
 For example, start listener on port 8000 and talker on port 8001, connect talker → listener, and open `http://localhost:8000/ui/`:
 
-![Subsystem view: an arrow crosses the frames from talker0 in subsystem 127.0.0.1:8001 to listener0 in the main System](../../../assets/web-ui/subsystem.png)
+![Subsystem view: an arrow crosses the frames from talker0 in subsystem 127.0.0.1:8001 to listener0 in System localhost:8000](../../../assets/web-ui/subsystem.png)
 
 - In the tree, subsystems are nested under 副系 (Subsystem) of the System, with the Broker they are reached through (`http`, `qmp`, ...) next to the name. A subsystem whose contents cannot be fetched is marked 取得不可 (unavailable).
 - In the diagram, each System gets a dashed frame, but only when there are subsystems. Connections between Systems are arrows that cross the frames. Click a frame's title to select that System.
