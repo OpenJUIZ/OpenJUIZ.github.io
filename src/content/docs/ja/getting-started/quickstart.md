@@ -38,6 +38,14 @@ http://127.0.0.1:8000/docs
 
 Swagger UI は juiz 0.0.17 以降で使えます。0.0.16 以前では http://127.0.0.1:8000/api-docs/openapi.json で OpenAPI 定義だけを取得できます。
 
+## 管理画面で見る
+
+juiz 0.0.19 以降なら、ブラウザで次の URL を開くと、動いている Process や接続を管理画面で確かめられます。詳しくは [管理画面](/ja/guides/web-ui/) を見てください。
+
+```
+http://127.0.0.1:8000/ui/
+```
+
 ## ほかの言語のサンプル
 
 - Python: [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python)
