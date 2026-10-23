@@ -9,10 +9,12 @@ There are two ways to install the `juiz` command. Pick one based on the language
 
 | Languages | Install with | Rust toolchain |
 | --- | --- | --- |
-| Python only | `pip install juiz-cli` | Not needed |
-| Rust or C++ (Python can be mixed in) | `cargo install juiz_app` | Needed |
+| Python, C++, Haskell | `pip install juiz-cli` | Not needed |
+| Rust (Python, C++ and Haskell can be mixed in) | `cargo install juiz_app` | Needed |
 
-## Python only
+C++ and Haskell components work with either `juiz`. Install libjuiz_sdk of the same version as `juiz` (see [Language packages](#language-packages)).
+
+## Installing with pip
 
 Installing [juiz-cli](https://pypi.org/project/juiz-cli/) from PyPI gives you both the `juiz` command and [pyjuiz](https://pypi.org/project/pyjuiz/) (`import juiz`), the package you write Processes with. No Rust toolchain is needed.
 
@@ -32,10 +34,10 @@ The `juiz` command is installed into the venv. Run `juiz` from a terminal where 
 
 :::caution
 The `juiz` installed with pip is built by the juiz CI. It cannot load Rust plugins you build yourself (Processes written in Rust, the QUIC broker, and so on), because the compiler versions do not match.
-If you also write in Rust or C++, use `cargo install juiz_app` below.
+If you also write in Rust, use `cargo install juiz_app` below. C++ and Haskell plugins can be loaded.
 :::
 
-## Rust or C++
+## Installing with cargo
 
 Requirements:
 
@@ -86,9 +88,43 @@ juiz_sdk = "0.0.17"
 
 Write components with the decorators in [pyjuiz](https://pypi.org/project/pyjuiz/) (`from juiz import juiz_process` and so on). pyjuiz comes with `juiz-cli`. With `cargo install juiz_app`, install only pyjuiz as shown above.
 
+### C++ and Haskell: libjuiz_sdk
+
+C++ and Haskell components link to libjuiz_sdk, the shared library of C functions that pass values to and from juiz.
+[GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) has an archive with the library and the headers for each OS and CPU
+(Linux x86_64 and aarch64, macOS arm64 and x86_64). Install the **same version** as `juiz`.
+
+```sh
+juiz --version      # e.g. juiz 0.0.21
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.21
+```
+
+It is extracted to `~/.juiz/sdk/0.0.21`. `juiz` stops with an error when it loads a component built with a different version of libjuiz_sdk.
+
 ### C++
 
-The C++ header `juiz/juiz.h` lives in `bindings/cppjuiz/include` of the juiz repository.
+The C++ header `juiz/juiz.h` is in `cppjuiz/include` of the extracted directory (the same as `bindings/cppjuiz/include` in the juiz repository).
+Add `cjuiz/include` and `cppjuiz/include` to the include path and link to libjuiz_sdk in `lib`. pkg-config also works.
+
+```sh
+export PKG_CONFIG_PATH=$HOME/.juiz/sdk/0.0.21/lib/pkgconfig
+pkg-config --cflags --libs juiz_sdk
+```
+
+### Haskell
+
+Write components with [hsjuiz](https://hackage.haskell.org/package/hsjuiz) on Hackage. You need GHC 9.6 or later and cabal (Linux, macOS).
+Tell hsjuiz where libjuiz_sdk is in the `cabal.project` of your package.
+
+```txt
+packages: .
+
+package hsjuiz
+  extra-lib-dirs: /home/me/.juiz/sdk/0.0.21/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.21/lib
+```
+
+See the [hsjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) for how to write them.
 
 ## Building from source
 
