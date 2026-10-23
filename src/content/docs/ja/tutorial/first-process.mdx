@@ -234,6 +234,7 @@ juiz process list
 
 表示された URL が、この Process の **ID** です。
 `http://127.0.0.1:8000` は Process がいる場所(ブローカー)、`process/` の後ろは「インスタンス名`::`型名」を表しています。
+[ネームスペース](/ja/guides/namespace/)を使うと、インスタンス名の前に `robot1/` のようにネームスペースが入ります(`process/robot1/increment_process0::increment_process`)。使わなければ上のとおりです。
 
 この ID と引数を指定して、Process を呼び出します(call)。引数は JSON で渡します。
 

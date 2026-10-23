@@ -50,6 +50,7 @@ processes:
 | 項目 | 内容 |
 |---|---|
 | `name` | システムの名前 |
+| `namespace` | System 全体の既定のネームスペース。各要素にも書ける(→ [ネームスペース](/ja/guides/namespace/)、juiz 0.0.21 以降) |
 | `option` | 既定で動くモジュールの設定。`http_broker` の `start` を `true` にすると、`port` で指定したポートで HTTP ブローカーが起動します |
 | `plugins` | 読み込む共有ライブラリ（ファクトリー）の定義。`container_factories` は Container、`process_factories` は Process |
 | `containers` | 読み込んだ Container を実体化する定義と、その Container に結びつく ContainerProcess。ContainerProcess の項目には `p_apply` を書ける |
