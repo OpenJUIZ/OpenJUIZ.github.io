@@ -166,6 +166,25 @@ In the [web UI](/guides/web-ui/), namespaces appear as folders under each catego
 
 The IPC broker settings also have a key called `namespace`, but it is the name of the socket file (`/tmp/<namespace>`) and has nothing to do with the ID namespaces described here.
 
-## Example
+## Examples
 
-`namespace.conf` in [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust) places `talker0` and `listener0` in `robot1` and `robot2` and connects them with the Topic `chatter`.
+Every language's example repository has a `namespace.conf`. It places `talker0` and `listener0` in `robot1` and `robot2` and connects them with the Topic `chatter`; each `listener0` receives only the output of the `talker0` in its own namespace.
+The README also shows how to start the same configuration file twice with `--namespace robot1` and `--namespace robot2`.
+
+| Language | Repository | Type names |
+|---|---|---|
+| Rust | [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust) | `talker` / `listener` |
+| Python | [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) | `talker_python` / `listener_python` |
+| C++ | [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) | `talker_cpp` / `listener_cpp` |
+| Haskell | [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) | `talker_hs` / `listener_hs` |
+
+To prepare the examples, see [Tutorial chapter 1](/tutorial/first-process/#prepare-the-samples) for Rust, Python and C++, and the repository README for Haskell.
+
+```sh
+juiz -f namespace.conf -d
+# talker: Hello from robot1
+# listener: Hello from robot1
+# talker: Hello from robot2
+# listener: Hello from robot2
+# ...
+```

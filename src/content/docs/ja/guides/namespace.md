@@ -168,4 +168,23 @@ IPC ブローカーの設定にも `namespace` というキーがありますが
 
 ## サンプル
 
-[juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust) の `namespace.conf` は、`talker0` と `listener0` を `robot1` と `robot2` に置き、Topic `chatter` でつなぐ例です。
+どの言語のサンプルリポジトリにも `namespace.conf` があります。`talker0` と `listener0` を `robot1` と `robot2` に置き、Topic `chatter` でつなぐ例で、それぞれの `listener0` には同じネームスペースの `talker0` の出力だけが届きます。
+README には、同じ設定ファイルを `--namespace robot1` と `--namespace robot2` で 2 つ起動する例もあります。
+
+| 言語 | リポジトリ | 型の名前 |
+|---|---|---|
+| Rust | [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust) | `talker` / `listener` |
+| Python | [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) | `talker_python` / `listener_python` |
+| C++ | [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) | `talker_cpp` / `listener_cpp` |
+| Haskell | [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) | `talker_hs` / `listener_hs` |
+
+サンプルの用意のしかたは、Rust・Python・C++ は [チュートリアル第1章](/ja/tutorial/first-process/#サンプルを用意する)、Haskell はリポジトリの README を見てください。
+
+```sh
+juiz -f namespace.conf -d
+# talker: Hello from robot1
+# listener: Hello from robot1
+# talker: Hello from robot2
+# listener: Hello from robot2
+# ...
+```
