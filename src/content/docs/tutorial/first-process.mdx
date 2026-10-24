@@ -234,6 +234,7 @@ juiz process list
 
 The URL shown is this Process's **ID**.
 `http://127.0.0.1:8000` is where the Process lives (its broker), and the part after `process/` means "instance name`::`type name".
+If you use [namespaces](/guides/namespace/), the namespace comes before the instance name, like `robot1/` (`process/robot1/increment_process0::increment_process`). Without them the ID looks as above.
 
 Call the Process with this ID and its arguments (call). Arguments are passed as JSON.
 
