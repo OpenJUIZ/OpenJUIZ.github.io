@@ -55,6 +55,8 @@ processes:
 | `plugins` | 読み込む共有ライブラリ（ファクトリー）の定義。`container_factories` は Container、`process_factories` は Process |
 | `containers` | 読み込んだ Container を実体化する定義と、その Container に結びつく ContainerProcess。ContainerProcess の項目には `p_apply` を書ける |
 | `processes` | 読み込んだ Process を実体化する定義。`p_apply` を書ける |
+| `composites` | 既にある Process を組み合わせた型(Composite)の定義(→ [Composition](/ja/guides/composition/)、juiz 0.0.22 以降) |
+| `composite_containers` | 既存の Container への参照を束ねた CompositeContainer と、その上の CompositeContainerProcess(→ [Composition](/ja/guides/composition/)) |
 | `connections` | Process の出力を別の Process の引数につなぐ定義。`source`・`destination`・`arg_name`・`connection_type`(`Push` など)を書く |
 | `ecs` | Execution Context の定義。`type_name`(`main_loop_ec` など)・`rate` [Hz]・`bind`(実行する Process)・`auto_start` を書く |
 

@@ -55,6 +55,8 @@ processes:
 | `plugins` | Shared libraries (factories) to load. `container_factories` for Containers, `process_factories` for Processes |
 | `containers` | Instances to create from the loaded Containers, and the ContainerProcesses bound to each Container. A ContainerProcess entry can have `p_apply` |
 | `processes` | Instances to create from the loaded Processes. An entry can have `p_apply` |
+| `composites` | Definitions of types (Composites) that combine existing Processes (→ [Composition](/guides/composition/), juiz 0.0.22 or later) |
+| `composite_containers` | CompositeContainers that bundle references to existing Containers, and the CompositeContainerProcesses on them (→ [Composition](/guides/composition/)) |
 | `connections` | Connections from a Process's output to another Process's argument. Give `source`, `destination`, `arg_name` and `connection_type` (such as `Push`) |
 | `ecs` | Execution Contexts. Give `type_name` (such as `main_loop_ec`), `rate` [Hz], `bind` (the Processes to run) and `auto_start` |
 
