@@ -51,7 +51,7 @@ processes:
 |---|---|
 | `name` | Name of the system |
 | `namespace` | Default namespace for the whole System. It can also be set on each element (see [Namespaces](/guides/namespace/), juiz 0.0.21 or later) |
-| `option` | Settings for modules that run by default. Setting `start` of `http_broker` to `true` starts the HTTP broker on the port given by `port` |
+| `option` | Settings for modules that run by default. Setting `start` of `http_broker` to `true` starts the HTTP broker on the port given by `port`. `pythonpath` adds places that Python Processes `import` from (relative to the plugin's directory), and `type_check.on_call` turns on type checks on calls (→ [Data types](/guides/datatype/#type-checks), juiz 0.0.23 or later) |
 | `plugins` | Shared libraries (factories) to load. `container_factories` for Containers, `process_factories` for Processes |
 | `containers` | Instances to create from the loaded Containers, and the ContainerProcesses bound to each Container. A ContainerProcess entry can have `p_apply` |
 | `processes` | Instances to create from the loaded Processes. An entry can have `p_apply` |

@@ -1,0 +1,644 @@
+---
+title: "8. Data types: agreeing on a type across languages"
+description: Give named types to a Process's arguments and return value. Write the IDL, generate types for each language, use them in Processes, and connect Processes written in different languages with typed values.
+sidebar:
+  order: 8
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+So far, Processes have passed numbers, strings, and dictionaries (JSON-like values) as arguments and return values.
+That is easy, but you cannot tell which keys a dictionary has without reading the code, and nothing notices when you connect Processes that exchange dictionaries of different shapes.
+In this chapter you write the **data types** `Pose2D` (a pose on a plane) and `Twist2D` (a velocity) in the IDL and attach them to a Process's arguments and return value. Then you connect Processes written in different languages, keeping the values typed.
+
+<Aside type="tip" title="What you will learn">
+- Types are written in the IDL (JIDL), and `juiz idl` generates the types for each language
+- A type is a **contract**: the data that flows over the wire is still a dictionary
+- Types generated from the same IDL are the same type (same fingerprint) in every language, so they connect as they are
+- Connecting Processes whose types do not match fails at the moment you connect them
+- Typing is optional: typed Processes work together with untyped Processes and with dictionary calls from the CLI
+</Aside>
+
+<Aside type="caution" title="Requires juiz 0.0.23 or later">
+Data types are available from juiz 0.0.23. Use 0.0.23 or later for the `juiz` command (`juiz_app` or `juiz-cli`) and for pyjuiz.
+For example: `cargo install juiz_app --version 0.0.23 --locked` and `pip install pyjuiz==0.0.23`.
+</Aside>
+
+## Prepare the examples
+
+Update the examples you cloned in chapter 1 and build them again.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+cd juiz_examples_rust
+git pull
+cargo build
+pip install pyjuiz==0.0.23   # this chapter also runs Python Processes
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+cd juiz_examples_python
+git pull
+source .venv/bin/activate
+pip install -r requirements.txt  # installs juiz-cli 0.0.23
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+cd juiz_examples_cpp
+git pull
+cmake -S . -B build
+cmake --build build
+pip install pyjuiz==0.0.23   # this chapter also runs Python Processes
+```
+
+CMake also builds `juiz-idl`, the generator that makes the C++ types, from the juiz repository.
+
+</TabItem>
+</Tabs>
+
+This chapter uses these files:
+
+| Role | Name |
+| --- | --- |
+| Type definitions (IDL) | `types/geometry.jidl` |
+| Process `pose_move` (`pose_move` / `pose_move_python` / `pose_move_cpp` per language) | Returns the pose `pose` moved by the velocity `twist` for `dt` seconds |
+| Python Process `twist_python` | Outputs a velocity `Twist2D` |
+| Python Process `pose_print_python` | Prints the pose `Pose2D` it receives |
+| Configuration file `typed_pose.conf` | Connects the three with typed values |
+| Configuration file `typed_mismatch.conf` | An example of a connection whose types do not match |
+
+## Write the types in the IDL
+
+Types are written in **JIDL** (extension `.jidl`), juiz's IDL.
+[`types/geometry.jidl`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/types/geometry.jidl) has the same content in all four example repositories (Rust, Python, C++, and Haskell).
+
+```text
+namespace examples.geometry;
+
+/** A point on a plane [m] */
+record Point2D {
+  double x = 0.0;
+  double y = 0.0;
+}
+
+/** A pose on a plane */
+record Pose2D {
+  Point2D position = {"x": 0.0, "y": 0.0};
+  /** Heading [rad] */
+  double theta = 0.0;
+  /** Name of the coordinate frame */
+  string frame_id = "map";
+}
+
+/** A velocity on a plane */
+record Twist2D {
+  /** Forward speed [m/s] */
+  double linear = 0.0;
+  /** Turning speed [rad/s] */
+  double angular = 0.0;
+}
+
+/** Returns the pose moved from pose by the velocity twist for dt seconds */
+process Pose2D pose_move(Pose2D pose, Twist2D twist, double dt = 1.0);
+```
+
+(The file in the repositories has its comments in Japanese.)
+
+- `namespace` is the namespace of the types. The full name of the type is `examples.geometry.Pose2D` (this is not the same thing as an ID [namespace](/guides/namespace/)).
+- A `record` is a type made of fields. `= value` gives a default value, written as a dictionary (JSON) value.
+- `/** … */` is a description. It stays in the generated code and in the output of `juiz type show`.
+- `process` declares a Process's **signature** (the types of its arguments and return value). In Python, a client that calls the Process with typed values is generated from it.
+
+All the types and syntax are listed in the [Data types guide](/guides/datatype/).
+
+## Generate the types and use them in a Process
+
+Generate the types for your language from the JIDL and use them as arguments and return values.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+In Rust, `build.rs` generates the types on every build. [`process/pose_move/build.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/process/pose_move/build.rs)
+
+```rust
+fn main() {
+    juiz_idl::build::compile(&["../../types/geometry.jidl"]).unwrap();
+}
+```
+
+Add `juiz_idl` to `[build-dependencies]` in `Cargo.toml`.
+Load the generated types with `include!`. The namespace `examples.geometry` becomes the module `examples::geometry`.
+[`process/pose_move/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/process/pose_move/src/lib.rs)
+
+```rust
+use juiz_sdk::prelude::*;
+
+include!(concat!(env!("OUT_DIR"), "/juiz_idl.rs"));
+use examples::geometry::{Point2D, Pose2D, Twist2D};
+
+#[juiz_process(
+    description = "Moves the pose by the twist for dt seconds."
+    arguments = {
+        // Defaults of typed arguments are written as dictionaries. Every field of Pose2D and Twist2D has a default, so {} is enough
+        default = "{\"pose\": {}, \"twist\": {}, \"dt\": 1.0}"
+    }
+)]
+fn pose_move(pose: Pose2D, twist: Twist2D, dt: f64) -> JuizResult<Pose2D> {
+    let distance = twist.linear * dt;
+    let moved = Pose2D {
+        position: Point2D {
+            x: pose.position.x + distance * pose.theta.cos(),
+            y: pose.position.y + distance * pose.theta.sin(),
+        },
+        theta: pose.theta + twist.angular * dt,
+        frame_id: pose.frame_id,
+    };
+    Ok(moved)
+}
+```
+
+Just write the generated types as arguments and the return value, and `#[juiz_process]` puts the type information into the manifest.
+Arguments of the usual types such as `f64` and `String` (`dt` here) stay untyped, as before.
+
+</TabItem>
+<TabItem label="Python">
+
+In Python, `juiz idl -g python` generates a package of types.
+
+```sh
+juiz idl -g python -o gen types/geometry.jidl
+# creates gen/examples/__init__.py and gen/examples/geometry/__init__.py
+```
+
+The namespace `examples.geometry` becomes the package `examples.geometry`. The types are dataclasses; writing them in a Process's type hints makes it typed.
+[`process/pose_move_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/process/pose_move_python.py)
+
+```python
+import math
+
+from juiz import juiz_process
+from examples.geometry import Point2D, Pose2D, Twist2D
+
+
+@juiz_process
+def pose_move_python(pose: Pose2D = Pose2D(), twist: Twist2D = Twist2D(), dt: float = 1.0) -> Pose2D:
+    """Returns the pose moved from pose by the velocity twist for dt seconds"""
+    distance = twist.linear * dt
+    moved = Pose2D(position=Point2D(x=pose.position.x + distance * math.cos(pose.theta),
+                                    y=pose.position.y + distance * math.sin(pose.theta)),
+                   theta=pose.theta + twist.angular * dt,
+                   frame_id=pose.frame_id)
+    return moved
+```
+
+A value that arrives as a dictionary is turned into a `Pose2D` before the function is called. You can return the `Pose2D` as it is.
+Arguments with the usual type hints such as `float` and `str` (`dt` here) stay untyped, as before.
+
+</TabItem>
+<TabItem label="C++">
+
+In C++, the CMake function `juiz_generate_types()` generates headers during the build.
+[`process/CMakeLists.txt`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/process/CMakeLists.txt)
+
+```cmake
+add_juiz_process(pose_move_cpp SOURCES pose_move_cpp/pose_move_cpp.cpp)
+juiz_generate_types(pose_move_cpp IDL ${PROJECT_SOURCE_DIR}/types/geometry.jidl)
+```
+
+Include the generated headers through `juiz_idl.h`. The namespace `examples.geometry` becomes the C++ namespace `examples::geometry`.
+[`process/pose_move_cpp/pose_move_cpp.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/process/pose_move_cpp/pose_move_cpp.cpp)
+
+```cpp
+#include <cmath>
+
+#include "juiz/juiz.h"
+#include "juiz_idl.h"
+
+using examples::geometry::Point2D;
+using examples::geometry::Pose2D;
+using examples::geometry::Twist2D;
+
+auto manifest() {
+    return ProcessManifest{"pose_move_cpp"}
+        .description("Moves the pose by the twist for dt seconds.")
+        .add_typed_arg<Pose2D>("pose", "current pose", Pose2D{})
+        .add_typed_arg<Twist2D>("twist", "velocity", Twist2D{})
+        .add_float_arg("dt", "duration [s]", 1.0)
+        .returns<Pose2D>();
+}
+
+std::optional<Pose2D> pose_move_cpp(const Pose2D& pose, const Twist2D& twist, double dt) {
+    const double distance = twist.linear * dt;
+    Pose2D moved = pose;
+    moved.position = Point2D{pose.position.x + distance * std::cos(pose.theta),
+                             pose.position.y + distance * std::sin(pose.theta)};
+    moved.theta = pose.theta + twist.angular * dt;
+    return moved;
+}
+
+PROCESS_FACTORY(manifest, pose_move_cpp);
+```
+
+Typed arguments are written in the manifest with `add_typed_arg<T>`, and a typed return value with `returns<T>()`. Defaults can be values of the type (`Pose2D{}` has every field at its default).
+
+</TabItem>
+</Tabs>
+
+<Aside type="note" title="In Haskell">
+In Haskell too, you can use the types of the module generated by `juiz-idl -g haskell` (`Examples.Geometry`) directly as arguments and return values.
+See `process/PoseMove.hs` in [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell).
+</Aside>
+
+## Run the typed Processes
+
+First generate the Python types into `gen/`. The Rust and C++ examples also need this step, because the Processes that output the velocity and print the pose are written in Python.
+
+```sh
+juiz idl -g python -o gen types/geometry.jidl
+```
+
+The configuration file connects three Processes.
+
+```text
+twist0 (twist_python, outputs Twist2D) --Pull--> move0 (pose_move) --Push--> print0 (pose_print_python, prints Pose2D)
+```
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`typed_pose.conf`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/typed_pose.conf)
+
+```yaml
+name: typed_pose
+option:
+  http_broker:
+    start: true
+    port: 8000
+  # Where the Python types (gen/) are, seen from the Python plugins (./python)
+  pythonpath: ["../gen"]
+plugins:
+  process_factories:
+    pose_move:
+      path: "./target/debug"
+    twist_python:
+      language: python
+      path: "./python"
+    pose_print_python:
+      language: python
+      path: "./python"
+processes:
+  - type_name: twist_python
+    name: twist0
+  - type_name: pose_move
+    name: move0
+  - type_name: pose_print_python
+    name: print0
+connections:
+  - name: twist_to_move
+    connection_type: Pull
+    source:
+      name: twist0
+      type_name: twist_python
+    destination:
+      name: move0
+      type_name: pose_move
+    arg_name: twist
+  - name: move_to_print
+    connection_type: Push
+    source:
+      name: move0
+      type_name: pose_move
+    destination:
+      name: print0
+      type_name: pose_print_python
+    arg_name: pose
+```
+
+The Rust `pose_move` receives a `Twist2D` from a Python Process and passes a `Pose2D` to a Python Process.
+
+</TabItem>
+<TabItem label="Python">
+
+[`typed_pose.conf`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/typed_pose.conf)
+
+```yaml
+name: typed_pose
+option:
+  http_broker:
+    start: true
+    port: 8000
+  # Where the Python types (gen/) are, seen from the Python plugins (./process)
+  pythonpath: ["../gen"]
+plugins:
+  process_factories:
+    twist_python:
+      language: python
+      path: "./process"
+    pose_move_python:
+      language: python
+      path: "./process"
+    pose_print_python:
+      language: python
+      path: "./process"
+processes:
+  - type_name: twist_python
+    name: twist0
+  - type_name: pose_move_python
+    name: move0
+  - type_name: pose_print_python
+    name: print0
+connections:
+  - name: twist_to_move
+    connection_type: Pull
+    source:
+      name: twist0
+      type_name: twist_python
+    destination:
+      name: move0
+      type_name: pose_move_python
+    arg_name: twist
+  - name: move_to_print
+    connection_type: Push
+    source:
+      name: move0
+      type_name: pose_move_python
+    destination:
+      name: print0
+      type_name: pose_print_python
+    arg_name: pose
+```
+
+</TabItem>
+<TabItem label="C++">
+
+[`typed_pose.conf`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/typed_pose.conf)
+
+```yaml
+name: typed_pose
+option:
+  http_broker:
+    start: true
+    port: 8000
+  # Where the Python types (gen/) are, seen from the Python plugins (./python)
+  pythonpath: ["../gen"]
+plugins:
+  process_factories:
+    pose_move_cpp:
+      language: "c++"
+      path: "./build/plugins"
+    twist_python:
+      language: python
+      path: "./python"
+    pose_print_python:
+      language: python
+      path: "./python"
+processes:
+  - type_name: twist_python
+    name: twist0
+  - type_name: pose_move_cpp
+    name: move0
+  - type_name: pose_print_python
+    name: print0
+connections:
+  - name: twist_to_move
+    connection_type: Pull
+    source:
+      name: twist0
+      type_name: twist_python
+    destination:
+      name: move0
+      type_name: pose_move_cpp
+    arg_name: twist
+  - name: move_to_print
+    connection_type: Push
+    source:
+      name: move0
+      type_name: pose_move_cpp
+    destination:
+      name: print0
+      type_name: pose_print_python
+    arg_name: pose
+```
+
+The C++ `pose_move_cpp` receives a `Twist2D` from a Python Process and passes a `Pose2D` to a Python Process.
+
+</TabItem>
+</Tabs>
+
+`option.pythonpath` lets the Python Processes `import` the types in `gen/`.
+The Python Process that outputs the velocity just has `Twist2D` in its type hint.
+
+```python
+from juiz import juiz_process
+from examples.geometry import Twist2D
+
+
+@juiz_process
+def twist_python(linear: float = 0.5, angular: float = 0.0) -> Twist2D:
+    """Outputs a velocity (forward linear [m/s], turning angular [rad/s])"""
+    return Twist2D(linear=linear, angular=angular)
+```
+
+Start juiz.
+
+```sh
+juiz -f typed_pose.conf -d
+```
+
+From another terminal, execute `move0`. It pulls the velocity from `twist0`, moves, and sends the result to `print0`.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/move0::pose_move" -H "Content-Type: application/json" -d '{}'
+# => {"frame_id":"map","position":{"x":0.5,"y":0.0},"theta":0.0}
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/move0::pose_move_python" -H "Content-Type: application/json" -d '{}'
+# => {"frame_id":"map","position":{"x":0.5,"y":0.0},"theta":0.0}
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/move0::pose_move_cpp" -H "Content-Type: application/json" -d '{}'
+# => {"frame_id":"map","position":{"x":0.5,"y":0.0},"theta":0.0}
+```
+
+</TabItem>
+</Tabs>
+
+The terminal running `juiz` prints the received pose. It reached `print0` as a `Pose2D` value.
+
+```text
+pose_print_python receives Pose2D(x=0.50, y=0.00, theta=0.00, frame_id=map)
+```
+
+## Dictionaries still flow over the wire
+
+Typed Processes still exchange dictionaries over the wire, as before. A type is a **contract** that says "we exchange dictionaries of this shape".
+That is why the CLI and curl, which know nothing about the types, can call them with dictionaries. Fields you leave out take their default values.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/move0::pose_move" '{"pose": {"position": {"x": 1.0, "y": 2.0}}, "twist": {"linear": 1.0}, "dt": 2.0}' -p
+# => CapsulePtr((value:Value({"frame_id":"map","position":{"x":3.0,"y":2.0},"theta":0.0}), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/move0::pose_move_python" '{"pose": {"position": {"x": 1.0, "y": 2.0}}, "twist": {"linear": 1.0}, "dt": 2.0}' -p
+# => CapsulePtr((value:Value({"frame_id":"map","position":{"x":3.0,"y":2.0},"theta":0.0}), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/move0::pose_move_cpp" '{"pose": {"position": {"x": 1.0, "y": 2.0}}, "twist": {"linear": 1.0}, "dt": 2.0}' -p
+# => CapsulePtr((value:Value({"frame_id":"map","position":{"x":3.0,"y":2.0},"theta":0.0}), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+If you pass a dictionary that does not match the type (a string for `x`, for example), the function is not called. The `juiz` log shows where it does not match, as in `ValueDoesNotMatchTypeError: value does not match type double at 'pose.position.x'`.
+
+In Python, the JIDL `process pose_move(…)` also generates a client `PoseMoveClient` that calls the Process with typed values. It looks the Process up by name, so it calls `move0` the same way whichever language it is written in.
+[`scripts/pose_client.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/scripts/pose_client.py) (in the Python examples)
+
+```python
+from examples.geometry import Point2D, Pose2D, PoseMoveClient, Twist2D
+
+move = PoseMoveClient.connect("move0")
+moved = move(Pose2D(position=Point2D(x=1.0, y=2.0)), Twist2D(linear=1.0), dt=2.0)
+print(moved.position.x)   # 3.0 (the return value is a Pose2D too)
+```
+
+## The same type in every language
+
+`juiz type` shows the loaded types.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz type list --long
+# NAME                       KIND    SHORT_ID          USED_BY
+# examples.geometry.Point2D  record  Point2D@5649ab39  pose_move,pose_print_python
+# examples.geometry.Pose2D   record  Pose2D@123b8c15   pose_move,pose_print_python
+# examples.geometry.Twist2D  record  Twist2D@115b9e0f  pose_move,twist_python
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz type list --long
+# NAME                       KIND    SHORT_ID          USED_BY
+# examples.geometry.Point2D  record  Point2D@5649ab39  pose_move_python,pose_print_python
+# examples.geometry.Pose2D   record  Pose2D@123b8c15   pose_move_python,pose_print_python
+# examples.geometry.Twist2D  record  Twist2D@115b9e0f  pose_move_python,twist_python
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz type list --long
+# NAME                       KIND    SHORT_ID          USED_BY
+# examples.geometry.Point2D  record  Point2D@5649ab39  pose_move_cpp,pose_print_python
+# examples.geometry.Pose2D   record  Pose2D@123b8c15   pose_move_cpp,pose_print_python
+# examples.geometry.Twist2D  record  Twist2D@115b9e0f  pose_move_cpp,twist_python
+```
+
+</TabItem>
+</Tabs>
+
+The part after `@` is the first 8 digits of the type's **fingerprint**, a SHA-256 computed from the type's content (the names, types, and order of its fields, and its full name).
+Types generated from the same JIDL get the same fingerprint in every language. You can see that Processes in different languages use one and the same type.
+Types with the same fingerprint connect as they are, even across languages.
+
+`juiz type show` prints a type's definition as JIDL.
+
+```sh
+juiz type show examples.geometry.Pose2D
+# // examples.geometry.Pose2D@sha256:123b8c15…
+# // used by: …
+# namespace examples.geometry;
+#
+# /** … */
+# record Pose2D {
+#   Point2D position = {"x":0.0,"y":0.0};
+#   ...
+```
+
+In the web UI (`http://127.0.0.1:8000/ui`), a Process's properties show the argument types, and "Call" lets you call it with input fields that follow the types (→ [Web UI](/guides/web-ui/)).
+
+## Mismatched types do not connect
+
+`typed_mismatch.conf` tries to connect the `Twist2D` output of `twist0` to the argument `pose` (a `Pose2D`) of `move0`.
+
+```yaml
+connections:
+  - name: twist_to_pose
+    connection_type: Pull
+    source:
+      name: twist0
+      type_name: twist_python
+    destination:
+      name: move0
+      type_name: pose_move   # pose_move_python in Python, pose_move_cpp in C++
+    arg_name: pose
+```
+
+When you start it, juiz does not create the connection and exits with an error.
+
+```sh
+juiz -f typed_mismatch.conf -d
+# Error:setup_objects() failed in setup in system.rs
+# ...
+#     2: Type examples.geometry.Twist2D@sha256:115b9e0f… cannot be read as examples.geometry.Pose2D@sha256:123b8c15… at 'Pose2D': record name examples.geometry.Twist2D does not match examples.geometry.Pose2D (add an alias to read it)
+```
+
+With untyped dictionaries, this connection would be made, and you would only notice the wrong values after running it.
+Typed Processes are checked when you connect them. This applies not only to connections in a configuration file but also to connections made later with `juiz connection create`.
+
+<Aside type="note" title="Typing is optional">
+You choose whether to add types per Process and per argument. Untyped Processes work as before, and typed and untyped Processes can always be connected (types are checked only when both sides are typed).
+You can write dictionaries while prototyping and add types once the shape settles.
+</Aside>
+
+## Try it yourself
+
+- Call `move0` with `juiz process call` and leave out `"dt"`. With `call`, a missing argument does not take its default; you get an `ArgumentMissing` error. (When an EC or `execute` runs the Process, the default is used.)
+- Add a field with a default, `double lateral = 0.0;`, to `Twist2D` in `types/geometry.jidl` and regenerate the types. The fingerprint changes, but because the new field has a default, the old and new types can still read each other's values (the [Compatibility rules](/guides/datatype/#compatibility-rules) in the guide list which changes stay compatible).
+- Run `juiz idl -g json-schema -o schema types/geometry.jidl` to get JSON Schemas of the dictionary shapes. They are handy for telling programs that do not use juiz about your types.
+
+## Summary
+
+- Types are written in JIDL (`.jidl`), and `juiz idl` generates the types for each language (`juiz_idl` in `build.rs` for Rust, the CMake function `juiz_generate_types()` for C++).
+- Writing generated types as arguments and the return value makes a Process typed. Arguments of the usual types stay untyped.
+- A type is a contract; dictionaries still flow over the wire. The CLI and curl can call typed Processes with dictionaries.
+- Types generated from the same JIDL have the same fingerprint in every language and connect as they are. A connection between mismatched types is an error at connection time.
+- The IDL syntax, the compatibility rules, the standard types `juiz_std`, and how to distribute type packages are in the [Data types guide](/guides/datatype/).
+
+This is the end of the tutorial. When you know what you want to do, look it up in the [Guides](/guides/process/).

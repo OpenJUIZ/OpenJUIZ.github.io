@@ -1,0 +1,642 @@
+---
+title: "8. データ型: 型を決めて言語をまたいでつなぐ"
+description: Process の引数と戻り値に名前のついた型を付けます。IDL を書き、各言語の型を生成し、Process で使い、言語の違う Process どうしを型付きでつなぎます。
+sidebar:
+  order: 8
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+ここまでの Process は、引数と戻り値を数や文字列、辞書(JSON 相当の値)で受け渡してきました。
+これは手軽ですが、「この辞書にはどんなキーがあるのか」はコードを読まないとわかりませんし、形の違う辞書を渡してもつないだ時点では気づけません。
+この章では、平面上の姿勢 `Pose2D` と速度 `Twist2D` という**データ型**を IDL で書き、Process の引数と戻り値に付けます。そして、違う言語で書いた Process どうしを、型付きのままつなぎます。
+
+<Aside type="tip" title="この章で学ぶこと">
+- 型は IDL(JIDL)で書き、`juiz idl` で各言語の型を作ること
+- 型は**契約**で、通信で流れるデータは今までどおりの辞書であること
+- 同じ IDL から作った型は、言語が違っても同じ型(指紋が同じ)になり、そのままつながること
+- 型の合わない Process は、つなごうとした時点でエラーになること
+- 型付けは任意で、型なしの Process や CLI からの辞書の呼び出しとも一緒に使えること
+</Aside>
+
+<Aside type="caution" title="juiz 0.0.23 以降が必要です">
+データ型は juiz 0.0.23 から使えます。`juiz` コマンド(`juiz_app` か `juiz-cli`)と pyjuiz を 0.0.23 以降にしてください。
+`cargo install juiz_app --version 0.0.23 --locked`、`pip install pyjuiz==0.0.23` のように入れられます。
+</Aside>
+
+## サンプルを用意する
+
+第 1 章でクローンしたサンプル集を最新にして、ビルドし直します。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+cd juiz_examples_rust
+git pull
+cargo build
+pip install pyjuiz==0.0.23   # この章では Python の Process も一緒に動かす
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+cd juiz_examples_python
+git pull
+source .venv/bin/activate
+pip install -r requirements.txt  # juiz-cli 0.0.23 が入る
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+cd juiz_examples_cpp
+git pull
+cmake -S . -B build
+cmake --build build
+pip install pyjuiz==0.0.23   # この章では Python の Process も一緒に動かす
+```
+
+C++ の型を作る生成器 `juiz-idl` も、CMake が juiz のリポジトリからビルドします。
+
+</TabItem>
+</Tabs>
+
+この章で使うファイルは次のとおりです。
+
+| 役割 | 名前 |
+| --- | --- |
+| 型の定義(IDL) | `types/geometry.jidl` |
+| Process `pose_move`(言語ごとに `pose_move` / `pose_move_python` / `pose_move_cpp`) | 姿勢 `pose` を速度 `twist` で `dt` 秒動かした姿勢を返す |
+| Python の Process `twist_python` | 速度 `Twist2D` を出す |
+| Python の Process `pose_print_python` | 受け取った姿勢 `Pose2D` を表示する |
+| 設定ファイル `typed_pose.conf` | 3 つを型付きでつなぐ |
+| 設定ファイル `typed_mismatch.conf` | 型の合わない接続の例 |
+
+## IDL で型を書く
+
+型は、juiz の IDL である **JIDL**(拡張子 `.jidl`)で書きます。
+[`types/geometry.jidl`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/types/geometry.jidl) は、Rust・Python・C++・Haskell の 4 つのサンプル集で同じ中身にしてあります。
+
+```text
+namespace examples.geometry;
+
+/** 平面上の点 [m] */
+record Point2D {
+  double x = 0.0;
+  double y = 0.0;
+}
+
+/** 平面上の姿勢 */
+record Pose2D {
+  Point2D position = {"x": 0.0, "y": 0.0};
+  /** 向き [rad] */
+  double theta = 0.0;
+  /** 座標系の名前 */
+  string frame_id = "map";
+}
+
+/** 平面上の速度 */
+record Twist2D {
+  /** 前向きの速さ [m/s] */
+  double linear = 0.0;
+  /** 回る速さ [rad/s] */
+  double angular = 0.0;
+}
+
+/** 姿勢 pose から速度 twist で dt 秒動いた姿勢を返す */
+process Pose2D pose_move(Pose2D pose, Twist2D twist, double dt = 1.0);
+```
+
+- `namespace` は型の名前空間です。型の完全名は `examples.geometry.Pose2D` になります(ID の [ネームスペース](/ja/guides/namespace/) とは別のものです)。
+- `record` はフィールドを並べた型です。`= 値` で既定値を書きます。既定値は辞書(JSON)の書き方で書きます。
+- `/** … */` は説明で、生成したコードや `juiz type show` の表示に残ります。
+- `process` は Process の**シグネチャ**(引数と戻り値の型)の宣言です。Python ではここから型付きで呼び出すクライアントが作られます。
+
+使える型や書き方の全体は、[ガイドの「データ型」](/ja/guides/datatype/) にまとめてあります。
+
+## 型を生成して Process で使う
+
+JIDL から各言語の型を作り、Process の引数と戻り値に使います。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+Rust では、`build.rs` でビルドのたびに型を作ります。[`process/pose_move/build.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/process/pose_move/build.rs)
+
+```rust
+fn main() {
+    juiz_idl::build::compile(&["../../types/geometry.jidl"]).unwrap();
+}
+```
+
+`Cargo.toml` の `[build-dependencies]` に `juiz_idl` を足しておきます。
+作った型は `include!` で読み込みます。名前空間 `examples.geometry` が、モジュール `examples::geometry` になります。
+[`process/pose_move/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/process/pose_move/src/lib.rs)
+
+```rust
+use juiz_sdk::prelude::*;
+
+include!(concat!(env!("OUT_DIR"), "/juiz_idl.rs"));
+use examples::geometry::{Point2D, Pose2D, Twist2D};
+
+#[juiz_process(
+    description = "Moves the pose by the twist for dt seconds."
+    arguments = {
+        // 型付きの引数の既定値は辞書の表し方で書く。Pose2D・Twist2D は全フィールドに既定値があるので {} でよい
+        default = "{\"pose\": {}, \"twist\": {}, \"dt\": 1.0}"
+    }
+)]
+fn pose_move(pose: Pose2D, twist: Twist2D, dt: f64) -> JuizResult<Pose2D> {
+    let distance = twist.linear * dt;
+    let moved = Pose2D {
+        position: Point2D {
+            x: pose.position.x + distance * pose.theta.cos(),
+            y: pose.position.y + distance * pose.theta.sin(),
+        },
+        theta: pose.theta + twist.angular * dt,
+        frame_id: pose.frame_id,
+    };
+    Ok(moved)
+}
+```
+
+引数と戻り値に生成した型を書くだけで、`#[juiz_process]` が manifest に型の情報を載せます。
+`f64` や `String` などの今までの型の引数(ここでは `dt`)は、今までどおり型なしの引数です。
+
+</TabItem>
+<TabItem label="Python">
+
+Python では、`juiz idl -g python` で型のパッケージを作ります。
+
+```sh
+juiz idl -g python -o gen types/geometry.jidl
+# gen/examples/__init__.py と gen/examples/geometry/__init__.py ができる
+```
+
+名前空間 `examples.geometry` が、パッケージ `examples.geometry` になります。型は dataclass で、Process の型ヒントに書くだけで型付きになります。
+[`process/pose_move_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/process/pose_move_python.py)
+
+```python
+import math
+
+from juiz import juiz_process
+from examples.geometry import Point2D, Pose2D, Twist2D
+
+
+@juiz_process
+def pose_move_python(pose: Pose2D = Pose2D(), twist: Twist2D = Twist2D(), dt: float = 1.0) -> Pose2D:
+    """姿勢 pose から速度 twist で dt 秒動いた姿勢を返す"""
+    distance = twist.linear * dt
+    moved = Pose2D(position=Point2D(x=pose.position.x + distance * math.cos(pose.theta),
+                                    y=pose.position.y + distance * math.sin(pose.theta)),
+                   theta=pose.theta + twist.angular * dt,
+                   frame_id=pose.frame_id)
+    return moved
+```
+
+辞書で届いた値も `Pose2D` の値になってから関数に渡ります。戻り値も `Pose2D` のまま返せます。
+`float` や `str` などの今までの型ヒントの引数(ここでは `dt`)は、今までどおり型なしの引数です。
+
+</TabItem>
+<TabItem label="C++">
+
+C++ では、CMake の関数 `juiz_generate_types()` がビルドのときにヘッダを作ります。
+[`process/CMakeLists.txt`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/process/CMakeLists.txt)
+
+```cmake
+add_juiz_process(pose_move_cpp SOURCES pose_move_cpp/pose_move_cpp.cpp)
+juiz_generate_types(pose_move_cpp IDL ${PROJECT_SOURCE_DIR}/types/geometry.jidl)
+```
+
+作ったヘッダは `juiz_idl.h` で読み込みます。名前空間 `examples.geometry` が、C++ の名前空間 `examples::geometry` になります。
+[`process/pose_move_cpp/pose_move_cpp.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/process/pose_move_cpp/pose_move_cpp.cpp)
+
+```cpp
+#include <cmath>
+
+#include "juiz/juiz.h"
+#include "juiz_idl.h"
+
+using examples::geometry::Point2D;
+using examples::geometry::Pose2D;
+using examples::geometry::Twist2D;
+
+auto manifest() {
+    return ProcessManifest{"pose_move_cpp"}
+        .description("Moves the pose by the twist for dt seconds.")
+        .add_typed_arg<Pose2D>("pose", "current pose", Pose2D{})
+        .add_typed_arg<Twist2D>("twist", "velocity", Twist2D{})
+        .add_float_arg("dt", "duration [s]", 1.0)
+        .returns<Pose2D>();
+}
+
+std::optional<Pose2D> pose_move_cpp(const Pose2D& pose, const Twist2D& twist, double dt) {
+    const double distance = twist.linear * dt;
+    Pose2D moved = pose;
+    moved.position = Point2D{pose.position.x + distance * std::cos(pose.theta),
+                             pose.position.y + distance * std::sin(pose.theta)};
+    moved.theta = pose.theta + twist.angular * dt;
+    return moved;
+}
+
+PROCESS_FACTORY(manifest, pose_move_cpp);
+```
+
+型付きの引数は `add_typed_arg<T>`、型付きの戻り値は `returns<T>()` で manifest に書きます。既定値は型の値(`Pose2D{}` は全フィールドが既定値)で書けます。
+
+</TabItem>
+</Tabs>
+
+<Aside type="note" title="Haskell では">
+Haskell でも、`juiz-idl -g haskell` で作ったモジュール(`Examples.Geometry`)の型を、そのまま引数と戻り値に使えます。
+例は [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) の `process/PoseMove.hs` を見てください。
+</Aside>
+
+## 型付きの Process を動かす
+
+まず Python の型を `gen/` に作ります。Rust と C++ のサンプル集でも、速度を出す Process と姿勢を表示する Process は Python で書いてあるので、この手順が要ります。
+
+```sh
+juiz idl -g python -o gen types/geometry.jidl
+```
+
+設定ファイルでは、3 つの Process をつなぎます。
+
+```text
+twist0 (twist_python, Twist2D を出す) --Pull--> move0 (pose_move) --Push--> print0 (pose_print_python, Pose2D を表示)
+```
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+[`typed_pose.conf`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/typed_pose.conf)
+
+```yaml
+name: typed_pose
+option:
+  http_broker:
+    start: true
+    port: 8000
+  # Python のプラグインの場所 (./python) から見た、Python の型 (gen/) の場所
+  pythonpath: ["../gen"]
+plugins:
+  process_factories:
+    pose_move:
+      path: "./target/debug"
+    twist_python:
+      language: python
+      path: "./python"
+    pose_print_python:
+      language: python
+      path: "./python"
+processes:
+  - type_name: twist_python
+    name: twist0
+  - type_name: pose_move
+    name: move0
+  - type_name: pose_print_python
+    name: print0
+connections:
+  - name: twist_to_move
+    connection_type: Pull
+    source:
+      name: twist0
+      type_name: twist_python
+    destination:
+      name: move0
+      type_name: pose_move
+    arg_name: twist
+  - name: move_to_print
+    connection_type: Push
+    source:
+      name: move0
+      type_name: pose_move
+    destination:
+      name: print0
+      type_name: pose_print_python
+    arg_name: pose
+```
+
+Rust の `pose_move` が、Python の Process から `Twist2D` を受け取り、Python の Process へ `Pose2D` を渡します。
+
+</TabItem>
+<TabItem label="Python">
+
+[`typed_pose.conf`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/typed_pose.conf)
+
+```yaml
+name: typed_pose
+option:
+  http_broker:
+    start: true
+    port: 8000
+  # Python のプラグインの場所 (./process) から見た、Python の型 (gen/) の場所
+  pythonpath: ["../gen"]
+plugins:
+  process_factories:
+    twist_python:
+      language: python
+      path: "./process"
+    pose_move_python:
+      language: python
+      path: "./process"
+    pose_print_python:
+      language: python
+      path: "./process"
+processes:
+  - type_name: twist_python
+    name: twist0
+  - type_name: pose_move_python
+    name: move0
+  - type_name: pose_print_python
+    name: print0
+connections:
+  - name: twist_to_move
+    connection_type: Pull
+    source:
+      name: twist0
+      type_name: twist_python
+    destination:
+      name: move0
+      type_name: pose_move_python
+    arg_name: twist
+  - name: move_to_print
+    connection_type: Push
+    source:
+      name: move0
+      type_name: pose_move_python
+    destination:
+      name: print0
+      type_name: pose_print_python
+    arg_name: pose
+```
+
+</TabItem>
+<TabItem label="C++">
+
+[`typed_pose.conf`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/typed_pose.conf)
+
+```yaml
+name: typed_pose
+option:
+  http_broker:
+    start: true
+    port: 8000
+  # Python のプラグインの場所 (./python) から見た、Python の型 (gen/) の場所
+  pythonpath: ["../gen"]
+plugins:
+  process_factories:
+    pose_move_cpp:
+      language: "c++"
+      path: "./build/plugins"
+    twist_python:
+      language: python
+      path: "./python"
+    pose_print_python:
+      language: python
+      path: "./python"
+processes:
+  - type_name: twist_python
+    name: twist0
+  - type_name: pose_move_cpp
+    name: move0
+  - type_name: pose_print_python
+    name: print0
+connections:
+  - name: twist_to_move
+    connection_type: Pull
+    source:
+      name: twist0
+      type_name: twist_python
+    destination:
+      name: move0
+      type_name: pose_move_cpp
+    arg_name: twist
+  - name: move_to_print
+    connection_type: Push
+    source:
+      name: move0
+      type_name: pose_move_cpp
+    destination:
+      name: print0
+      type_name: pose_print_python
+    arg_name: pose
+```
+
+C++ の `pose_move_cpp` が、Python の Process から `Twist2D` を受け取り、Python の Process へ `Pose2D` を渡します。
+
+</TabItem>
+</Tabs>
+
+`option.pythonpath` は、Python の Process が `gen/` の型を `import` できるようにする設定です。
+速度を出す Python の Process は、型ヒントに `Twist2D` を書いてあるだけです。
+
+```python
+from juiz import juiz_process
+from examples.geometry import Twist2D
+
+
+@juiz_process
+def twist_python(linear: float = 0.5, angular: float = 0.0) -> Twist2D:
+    """速度 (前向き linear [m/s]、回転 angular [rad/s]) を出力する"""
+    return Twist2D(linear=linear, angular=angular)
+```
+
+起動します。
+
+```sh
+juiz -f typed_pose.conf -d
+```
+
+別のターミナルから `move0` を実行(execute)すると、`twist0` から速度を取ってきて動き、結果を `print0` に送ります。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/move0::pose_move" -H "Content-Type: application/json" -d '{}'
+# => {"frame_id":"map","position":{"x":0.5,"y":0.0},"theta":0.0}
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/move0::pose_move_python" -H "Content-Type: application/json" -d '{}'
+# => {"frame_id":"map","position":{"x":0.5,"y":0.0},"theta":0.0}
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/move0::pose_move_cpp" -H "Content-Type: application/json" -d '{}'
+# => {"frame_id":"map","position":{"x":0.5,"y":0.0},"theta":0.0}
+```
+
+</TabItem>
+</Tabs>
+
+`juiz` を起動したターミナルには、受け取った姿勢が表示されます。`print0` には `Pose2D` の値として届いています。
+
+```text
+pose_print_python receives Pose2D(x=0.50, y=0.00, theta=0.00, frame_id=map)
+```
+
+## 通信で流れるのは辞書のまま
+
+型付きの Process も、通信で流れるデータは今までどおりの辞書です。型は「この形の辞書をやりとりする」という**契約**です。
+そのため、型を知らない CLI や curl からも、辞書で呼び出せます。書かなかったフィールドは既定値になります。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/move0::pose_move" '{"pose": {"position": {"x": 1.0, "y": 2.0}}, "twist": {"linear": 1.0}, "dt": 2.0}' -p
+# => CapsulePtr((value:Value({"frame_id":"map","position":{"x":3.0,"y":2.0},"theta":0.0}), option: []))
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/move0::pose_move_python" '{"pose": {"position": {"x": 1.0, "y": 2.0}}, "twist": {"linear": 1.0}, "dt": 2.0}' -p
+# => CapsulePtr((value:Value({"frame_id":"map","position":{"x":3.0,"y":2.0},"theta":0.0}), option: []))
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/move0::pose_move_cpp" '{"pose": {"position": {"x": 1.0, "y": 2.0}}, "twist": {"linear": 1.0}, "dt": 2.0}' -p
+# => CapsulePtr((value:Value({"frame_id":"map","position":{"x":3.0,"y":2.0},"theta":0.0}), option: []))
+```
+
+</TabItem>
+</Tabs>
+
+型に合わない辞書(`x` に文字列など)を渡すと、関数は呼ばれずにエラーになり、`juiz` のログに `ValueDoesNotMatchTypeError: value does not match type double at 'pose.position.x'` のように、どこが合わないのかが出ます。
+
+Python では、JIDL の `process pose_move(…)` から、型付きで呼び出すクライアント `PoseMoveClient` も作られています。名前で Process を探すので、どの言語の `move0` でも同じように呼べます。
+[`scripts/pose_client.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/scripts/pose_client.py)(Python のサンプル集)
+
+```python
+from examples.geometry import Point2D, Pose2D, PoseMoveClient, Twist2D
+
+move = PoseMoveClient.connect("move0")
+moved = move(Pose2D(position=Point2D(x=1.0, y=2.0)), Twist2D(linear=1.0), dt=2.0)
+print(moved.position.x)   # 3.0 (戻り値も Pose2D)
+```
+
+## 言語が違っても同じ型
+
+読み込んだ型は `juiz type` で見られます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz type list --long
+# NAME                       KIND    SHORT_ID          USED_BY
+# examples.geometry.Point2D  record  Point2D@5649ab39  pose_move,pose_print_python
+# examples.geometry.Pose2D   record  Pose2D@123b8c15   pose_move,pose_print_python
+# examples.geometry.Twist2D  record  Twist2D@115b9e0f  pose_move,twist_python
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz type list --long
+# NAME                       KIND    SHORT_ID          USED_BY
+# examples.geometry.Point2D  record  Point2D@5649ab39  pose_move_python,pose_print_python
+# examples.geometry.Pose2D   record  Pose2D@123b8c15   pose_move_python,pose_print_python
+# examples.geometry.Twist2D  record  Twist2D@115b9e0f  pose_move_python,twist_python
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz type list --long
+# NAME                       KIND    SHORT_ID          USED_BY
+# examples.geometry.Point2D  record  Point2D@5649ab39  pose_move_cpp,pose_print_python
+# examples.geometry.Pose2D   record  Pose2D@123b8c15   pose_move_cpp,pose_print_python
+# examples.geometry.Twist2D  record  Twist2D@115b9e0f  pose_move_cpp,twist_python
+```
+
+</TabItem>
+</Tabs>
+
+`@` の後ろは型の**指紋**で、型の中身(フィールドの名前・型・順番と、型の完全名)から計算した SHA-256 の先頭 8 桁です。
+同じ JIDL から作った型は、どの言語で作っても指紋が同じになります。言語の違う Process が、同じ 1 つの型を使っているとわかります。
+指紋が同じ型どうしは、言語が違ってもそのままつながります。
+
+`juiz type show` で、型の定義を JIDL の形で表示できます。
+
+```sh
+juiz type show examples.geometry.Pose2D
+# // examples.geometry.Pose2D@sha256:123b8c15…
+# // used by: …
+# namespace examples.geometry;
+#
+# /** 平面上の姿勢 */
+# record Pose2D {
+#   Point2D position = {"x":0.0,"y":0.0};
+#   ...
+```
+
+管理画面(`http://127.0.0.1:8000/ui`)では、Process の性質欄に引数の型が表示され、「呼び出す」から型に合わせた入力欄で呼び出せます(→ [管理画面](/ja/guides/web-ui/))。
+
+## 型が合わないとつながらない
+
+`typed_mismatch.conf` は、`twist0` が出す `Twist2D` を、`move0` の引数 `pose`(`Pose2D`)につなごうとする設定ファイルです。
+
+```yaml
+connections:
+  - name: twist_to_pose
+    connection_type: Pull
+    source:
+      name: twist0
+      type_name: twist_python
+    destination:
+      name: move0
+      type_name: pose_move   # Python は pose_move_python、C++ は pose_move_cpp
+    arg_name: pose
+```
+
+起動すると、juiz は接続を作らずにエラーで終わります。
+
+```sh
+juiz -f typed_mismatch.conf -d
+# Error:setup_objects() failed in setup in system.rs
+# ...
+#     2: Type examples.geometry.Twist2D@sha256:115b9e0f… cannot be read as examples.geometry.Pose2D@sha256:123b8c15… at 'Pose2D': record name examples.geometry.Twist2D does not match examples.geometry.Pose2D (add an alias to read it)
+```
+
+型なしの辞書のままだったら、この接続はできてしまい、動かしてから値がおかしいことに気づくことになります。
+型付きの Process どうしは、つなぐ時点で確かめられます。設定ファイルでの接続だけでなく、`juiz connection create` で後からつなぐときも同じです。
+
+<Aside type="note" title="型付けは任意です">
+型を付けるかどうかは、Process ごと・引数ごとに選べます。型なしの Process は今までどおり動き、型付きの Process と型なしの Process はいつでもつながります(型の検査は、両方が型付きのときだけ行います)。
+試作のうちは辞書のまま書き、形が決まったところから型を付ける、という進め方ができます。
+</Aside>
+
+## やってみよう
+
+- `juiz process call` で `move0` を呼ぶときに `"dt"` を省いてみましょう。`call` では省いた引数は既定値にならず、`ArgumentMissing` のエラーになります(EC や `execute` で動かしたときは既定値が使われます)。
+- `types/geometry.jidl` の `Twist2D` に、既定値つきのフィールド `double lateral = 0.0;` を足して型を作り直してみましょう。指紋は変わりますが、足したフィールドに既定値があるので、古い型の値とも読み合えます(どんな変更なら互換のままかは、[ガイドの「互換性の決まり」](/ja/guides/datatype/#互換性の決まり) にあります)。
+- `juiz idl -g json-schema -o schema types/geometry.jidl` で、辞書の形を表す JSON Schema を作ってみましょう。juiz を使わないプログラムに型を伝えるときに使えます。
+
+## まとめ
+
+- 型は JIDL(`.jidl`)で書き、`juiz idl`(Rust は `build.rs` の `juiz_idl`、C++ は CMake の `juiz_generate_types()`)で各言語の型を作ります。
+- 生成した型を引数と戻り値に書くと、その Process は型付きになります。今までの型の引数は型なしのままです。
+- 型は契約で、通信で流れるのは今までどおりの辞書です。CLI や curl からも辞書で呼べます。
+- 同じ JIDL から作った型は、言語が違っても指紋が同じになり、そのままつながります。型の合わない接続は、つなぐ時点でエラーになります。
+- IDL の文法、互換性の決まり、標準の型 `juiz_std`、型パッケージの配り方は、[ガイドの「データ型」](/ja/guides/datatype/) にまとめてあります。
+
+これでチュートリアルはおしまいです。やりたいことが決まったら、[ガイド](/ja/guides/process/) から逆引きで探してみてください。
