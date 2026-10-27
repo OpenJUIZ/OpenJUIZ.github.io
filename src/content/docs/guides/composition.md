@@ -14,7 +14,7 @@ inc_twice(arg1) = increment_process(increment_process(arg1))
 
 :::caution[Requires juiz 0.0.22 or later]
 Definitions in the configuration file (`composites:` / `composite_containers:`) and the display in the CLI and web UI are available from juiz 0.0.22.
-Defining Composites in a running juiz ([Defining at run time](#defining-at-run-time)) and [lazy evaluation](/guides/lazy-evaluation/), which skips conversion between Python Processes, arrive in the release after 0.0.22.
+Defining Composites in a running juiz ([Defining at run time](#defining-at-run-time)) and [lazy evaluation](/guides/lazy-evaluation/), which skips conversion within a process, are available from 0.0.23.
 :::
 
 ## The idea
@@ -217,7 +217,7 @@ INFO ... Composite(inc_twice) body (increment_process) -> 5
 
 ## Defining at run time
 
-You can add and remove Composites in a running juiz from the CLI or Python (from the release after 0.0.22). The definitions have the same shape as in the configuration file.
+You can add and remove Composites in a running juiz from the CLI or Python (0.0.23 or later). The definitions have the same shape as in the configuration file.
 
 ```sh
 # A file with one Composite (type_name and body), or with composites: / composite_containers:

@@ -10,7 +10,7 @@ Process の引数と戻り値には、`robot.geometry.Pose2D` のような**名�
 手を動かして試すには、[チュートリアル第 8 章](/ja/tutorial/datatype/) から始めてください。
 
 :::caution[juiz 0.0.23 以降]
-データ型は juiz 0.0.23 から使えます。このページの [標準の型 juiz_std](#標準の型-juiz_std)、import の探し先(`-I`)、`--extern` は、0.0.23 の次の版から入ります。
+データ型は juiz 0.0.23 から使えます。このページの [標準の型 juiz_std](#標準の型-juiz_std)、import の探し先(`-I`)、`--extern` は 0.0.24 から使えます。
 :::
 
 ## 考え方
@@ -180,8 +180,8 @@ juiz idl [-o 出力先] [-g 出力の種類,…] [--check] 入力.jidl|入力.av
 
 ### import の探し先とほかのパッケージの型
 
-:::note[0.0.23 の次の版から]
-import の探し先(`-I`・`JUIZ_IDL_PATH`)と `--extern` は、0.0.23 の次の版の `juiz idl` から使えます。
+:::note[juiz 0.0.24 以降]
+import の探し先(`-I`・`JUIZ_IDL_PATH`)と `--extern` は、0.0.24 以降の `juiz idl` で使えます。
 :::
 
 `import idl "x/y.jidl";` は、次の順に探します。
@@ -269,8 +269,8 @@ option:
 
 ## 標準の型 juiz_std
 
-:::note[0.0.23 の次の版から]
-`juiz_std`、Rust のクレート `juiz_std_types`、pyjuiz の `juiz_std` パッケージは、0.0.23 の次の版から入ります。
+:::note[juiz 0.0.24 以降]
+`juiz_std`、Rust のクレート `juiz_std_types`、pyjuiz の `juiz_std` パッケージは、0.0.24 から使えます。
 :::
 
 よく使う型は、標準の型 `juiz_std` として juiz-idl に組み込んであり、ファイルを用意しなくても `import idl "juiz_std/geometry.jidl";` で使えます。
@@ -305,8 +305,8 @@ record Goal {
 
 ## 型パッケージを配る
 
-:::note[0.0.23 の次の版から]
-ここで使う `-I`・`--extern`・`export_idl_dir` は、0.0.23 の次の版から使えます。
+:::note[juiz 0.0.24 以降]
+ここで使う `-I`・`--extern`・`export_idl_dir` は、0.0.24 から使えます。
 :::
 
 自分の型をほかの人やリポジトリと共有するときは、JIDL を正本にして、そこから作ったものを各言語のパッケージに入れます。
