@@ -10,7 +10,7 @@ Types are written in the IDL (**JIDL**, extension `.jidl`), and the generator `j
 To try it hands-on, start with [chapter 8 of the tutorial](/tutorial/datatype/).
 
 :::caution[juiz 0.0.23 or later]
-Data types are available from juiz 0.0.23. The [standard types juiz_std](#standard-types-juiz_std), import search paths (`-I`), and `--extern` on this page arrive in the release after 0.0.23.
+Data types are available from juiz 0.0.23. The [standard types juiz_std](#standard-types-juiz_std), import search paths (`-I`), and `--extern` on this page are available from 0.0.24.
 :::
 
 ## Ideas
@@ -180,8 +180,8 @@ Examples for each language are `types/geometry.jidl` and the `pose_move` that us
 
 ### Import search paths and types from other packages
 
-:::note[From the release after 0.0.23]
-Import search paths (`-I`, `JUIZ_IDL_PATH`) and `--extern` are available in `juiz idl` from the release after 0.0.23.
+:::note[juiz 0.0.24 or later]
+Import search paths (`-I`, `JUIZ_IDL_PATH`) and `--extern` are available in `juiz idl` 0.0.24 or later.
 :::
 
 `import idl "x/y.jidl";` is looked up in this order:
@@ -269,8 +269,8 @@ Give new fields a default, and give enums a default, so that old and new types c
 
 ## Standard types juiz_std
 
-:::note[From the release after 0.0.23]
-`juiz_std`, the Rust crate `juiz_std_types`, and the `juiz_std` package in pyjuiz arrive in the release after 0.0.23.
+:::note[juiz 0.0.24 or later]
+`juiz_std`, the Rust crate `juiz_std_types`, and the `juiz_std` package in pyjuiz are available from 0.0.24.
 :::
 
 Commonly used types are built into juiz-idl as the standard types `juiz_std`. You can use them with `import idl "juiz_std/geometry.jidl";` without any file of your own.
@@ -305,8 +305,8 @@ Once released, the standard types do not change (new fields are added only with 
 
 ## Distributing type packages
 
-:::note[From the release after 0.0.23]
-`-I`, `--extern`, and `export_idl_dir` used here are available from the release after 0.0.23.
+:::note[juiz 0.0.24 or later]
+`-I`, `--extern`, and `export_idl_dir` used here are available from 0.0.24.
 :::
 
 To share your types with other people or repositories, keep the JIDL as the source of truth and put what you generate from it into a package for each language.

@@ -14,7 +14,7 @@ inc_twice(arg1) = increment_process(increment_process(arg1))
 
 :::caution[juiz 0.0.22 以降が必要です]
 設定ファイルでの定義(`composites:` / `composite_containers:`)と CLI・管理画面での表示は juiz 0.0.22 から使えます。
-実行中の juiz への定義([実行中に定義する](#実行中に定義する))と、Python 同士の受け渡しで変換を省く[遅延評価](/ja/guides/lazy-evaluation/)は、その次の版から入ります。
+実行中の juiz への定義([実行中に定義する](#実行中に定義する))と、プロセス内の受け渡しで変換を省く[遅延評価](/ja/guides/lazy-evaluation/)は、0.0.23 から使えます。
 :::
 
 ## 考え方
@@ -217,7 +217,7 @@ INFO ... Composite(inc_twice) body (increment_process) -> 5
 
 ## 実行中に定義する
 
-起動している juiz に、CLI や Python から Composite を足したり消したりできます(0.0.22 の次の版から)。定義の形は設定ファイルと同じです。
+起動している juiz に、CLI や Python から Composite を足したり消したりできます(0.0.23 以降)。定義の形は設定ファイルと同じです。
 
 ```sh
 # Composite 1 件(type_name と body)か、composites: / composite_containers: を持つファイル
