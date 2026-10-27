@@ -216,7 +216,7 @@ Rust と Python は `--extern` で型パッケージのものを使います(同
 | manifest を作るとき(プラグインを読み込むとき) | 型付きの引数の既定値が型に合うか | 常に |
 | 接続を作るとき(設定ファイルの `connections`、`juiz connection create`) | つなぐ元の戻り値の型を、つなぐ先の引数の型として読めるか。読めなければ接続しないでエラー(`TypeIncompatibleError`) | 常に |
 | Topic に publish / subscribe を始めるとき | 同じ Topic につながっている相手と型が合うか | 常に |
-| Composite を定義するとき | 子の戻り値と親の引数の型が合うか | 常に |
+| Composite を定義するとき | 子の戻り値と親の引数の型が合うか(0.0.25 以降、→ [Composition](/ja/guides/composition/#型の検査)) | 常に |
 | 呼び出し(`call`)のとき | 渡された辞書が引数の型に合うか。合わなければ関数を呼ばずにエラー(`ValueDoesNotMatchTypeError`) | オフ |
 
 呼び出し時の検査は、設定ファイルで入れます。
