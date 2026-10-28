@@ -30,7 +30,7 @@ Process は、以前の発表では「Operation」と呼んでいました。
 
 ## Broker と Execution Context
 
-- **Broker** は Process や Container をネットワーク越しに公開します。HTTP+JSON と QUIC のブローカーを標準で提供し、HTTP ブローカーは OpenAPI 定義を出すので Swagger UI から試せます。
+- **Broker** は Process や Container をネットワーク越しに公開します。HTTP+JSON と QUIC、同じマシンの中で速く渡す IPC のブローカーを標準で提供し(→ [ブローカーの選び方と大きなデータ](/ja/guides/large-data/))、HTTP ブローカーは OpenAPI 定義を出すので Swagger UI から試せます。
 - **Execution Context** は Process を実行するタイミングを決めます。周期実行の TimerEC、メインスレッドで実行する MainLoopEC、一度だけ実行する OneShotEC があります。
 
 juiz を作った動機と設計思想は [MOTIVATION.md](https://github.com/OpenJUIZ/juiz/blob/main/MOTIVATION.md) にまとめています。

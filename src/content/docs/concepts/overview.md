@@ -29,7 +29,7 @@ Only the **ContainerProcesses** bound to a Container read or write it, so it is 
 
 ## Brokers and Execution Contexts
 
-- A **Broker** exposes Processes and Containers over the network. HTTP+JSON and QUIC brokers are built in, and the HTTP broker serves an OpenAPI definition you can try from Swagger UI.
+- A **Broker** exposes Processes and Containers over the network. HTTP+JSON, QUIC and same-machine IPC brokers are built in (see [Choosing a broker and large data](/guides/large-data/)), and the HTTP broker serves an OpenAPI definition you can try from Swagger UI.
 - An **Execution Context** decides when a Process runs: TimerEC runs it periodically, MainLoopEC on the main thread, and OneShotEC once.
 
 The motivation and design philosophy behind juiz are in [MOTIVATION.md](https://github.com/OpenJUIZ/juiz/blob/main/MOTIVATION.md) (Japanese).

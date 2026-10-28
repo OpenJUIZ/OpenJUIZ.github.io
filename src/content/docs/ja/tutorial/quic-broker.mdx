@@ -335,5 +335,6 @@ juiz process call "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" '{}' -p
 - ID の先頭(`http://` や `qmp://`)が、どのブローカーを通るかを表します。`juiz connection create` や `juiz process call` は、ID を変えるだけで QUIC を使います。
 - 1 つの juiz は複数のブローカーを同時に持てます。同じ Process に、ブローカーごとの ID があります。
 - Process のコードは、どのブローカーで呼ばれるのかを知りません。だから通信方式を変えても、Process はそのまま使えます。
+- 同じマシンの別プロセスへ画像などを速く渡すときは、IPC ブローカー(`ipc`)も使えます(juiz 0.1.0 以降)。使い分けは[ブローカーの選び方と大きなデータ](/ja/guides/large-data/)を見てください。
 
 次の章では、Process の引数と戻り値にデータ型を付け、言語の違う Process どうしを型付きでつなぎます。[データ型: 型を決めて言語をまたいでつなぐ](/ja/tutorial/datatype/) に進みましょう。
