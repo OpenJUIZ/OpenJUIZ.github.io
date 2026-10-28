@@ -15,6 +15,7 @@ inc_twice(arg1) = increment_process(increment_process(arg1))
 :::caution[Requires juiz 0.0.22 or later]
 Definitions in the configuration file (`composites:` / `composite_containers:`) and the display in the CLI and web UI are available from juiz 0.0.22.
 Defining Composites in a running juiz ([Defining at run time](#defining-at-run-time)) and [lazy evaluation](/guides/lazy-evaluation/), which skips conversion within a process, are available from 0.0.23.
+Type checks when a Composite is defined ([Type checks](#type-checks)) were added in 0.0.25.
 :::
 
 ## The idea
@@ -103,6 +104,16 @@ The Composite's arguments are built from the children's arguments by these rules
 5. Type, default and description come from the child argument (the first child where the name appears).
 6. Arguments are ordered by where each exposed name first appears when the tree is walked in the evaluation order below.
 7. The Container of a ContainerProcess child is not an argument; it comes from a slot.
+
+### Type checks
+
+From 0.0.25, when a Composite is defined (in the configuration file or [at run time](#defining-at-run-time)), juiz uses the children's [data types](/guides/datatype/) to check the following. If any check fails, the definition is an error (`CompositeManifestInvalidError`) and nothing is registered.
+
+- Each child's return type can be read as the type of the parent argument that receives it. The rules are the same as for connections ([Compatibility rules](/guides/datatype/#compatibility-rules)). The error shows the position of the receiving argument (such as `body.pose`).
+- `const` values and `expose` defaults match the type of the child argument.
+- Arguments merged under one exposed name (rule 3) have the same type. Typed arguments that are only compatible are not merged.
+
+If either side is untyped, nothing is compared, so Processes without types can be combined as before.
 
 ### Evaluation order
 

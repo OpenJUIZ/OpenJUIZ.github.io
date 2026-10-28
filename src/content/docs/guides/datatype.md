@@ -216,7 +216,7 @@ Rust and Python use `--extern` to take types from the type package (so that the 
 | When a manifest is made (when a plugin is loaded) | That the defaults of typed arguments match their types | Always |
 | When a connection is made (`connections` in a configuration file, `juiz connection create`) | That the source's return type can be read as the destination argument's type. If not, the connection is not made and an error is returned (`TypeIncompatibleError`) | Always |
 | When a Process starts to publish / subscribe to a Topic | That its type matches the others connected to the same Topic | Always |
-| When a Composite is defined | That children's return types match the parents' argument types | Always |
+| When a Composite is defined | That children's return types match the parents' argument types (0.0.25 or later, → [Composition](/guides/composition/#type-checks)) | Always |
 | On a call (`call`) | That the dictionary passed matches the argument types. If not, the function is not called and an error is returned (`ValueDoesNotMatchTypeError`) | Off |
 
 Turn on checks on calls in the configuration file:
