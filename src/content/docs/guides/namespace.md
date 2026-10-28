@@ -164,7 +164,7 @@ In the [web UI](/guides/web-ui/), namespaces appear as folders under each catego
 
 ## Not the same as the IPC broker's `namespace`
 
-The IPC broker settings also have a key called `namespace`, but it is the name of the socket file (`/tmp/<namespace>`) and has nothing to do with the ID namespaces described here.
+Before 0.1.0, the IPC broker settings had a key called `namespace`, which was the name of the socket file (`/tmp/<namespace>`) and had nothing to do with the ID namespaces described here. Because it was confusing, 0.1.0 removed it; the IPC broker's name is now set with `name` (see [Choosing a broker and large data](/guides/large-data/#using-the-ipc-broker)).
 
 ## Examples
 

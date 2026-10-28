@@ -52,6 +52,8 @@ processes:
 | `name` | Name of the system |
 | `namespace` | Default namespace for the whole System. It can also be set on each element (see [Namespaces](/guides/namespace/), juiz 0.0.21 or later) |
 | `option` | Settings for modules that run by default. Setting `start` of `http_broker` to `true` starts the HTTP broker on the port given by `port`. `pythonpath` adds places that Python Processes `import` from (relative to the plugin's directory), and `type_check.on_call` turns on type checks on calls (→ [Data types](/guides/datatype/#type-checks), juiz 0.0.23 or later) |
+| `brokers` | Extra brokers to start. Give `type_name`, either `qmp` (QUIC) or `ipc` (same machine), and `name`. The body size limit of the HTTP broker is `option.http_broker.max_body_bytes` (→ [Choosing a broker and large data](/guides/large-data/), IPC needs juiz 0.1.0 or later) |
+| `topics` | Per-Topic settings. `shared_memory` streams the Topic to other processes on the same machine through shared memory (→ [Streaming a Topic through shared memory](/guides/large-data/#streaming-a-topic-through-shared-memory), juiz 0.1.0 or later) |
 | `plugins` | Shared libraries (factories) to load. `container_factories` for Containers, `process_factories` for Processes |
 | `containers` | Instances to create from the loaded Containers, and the ContainerProcesses bound to each Container. A ContainerProcess entry can have `p_apply` |
 | `processes` | Instances to create from the loaded Processes. An entry can have `p_apply` |
