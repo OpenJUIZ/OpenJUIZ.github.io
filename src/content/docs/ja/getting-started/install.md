@@ -111,7 +111,7 @@ curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-
 
 ### Haskell
 
-[hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) で書きます。GHC 9.6 以降と cabal が必要です(Linux・macOS)。
+[hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) で書きます。GHC 9.4.7 以降と cabal が必要です(Linux・macOS)。
 hsjuiz は Hackage への公開を待っているので、いまは juiz のソースを `juiz` と同じ版のタグで取得し、その `bindings/hsjuiz` から使います。自分のパッケージの `cabal.project` に、hsjuiz のソースと libjuiz_sdk の場所を書きます。
 
 ```sh

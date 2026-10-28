@@ -406,9 +406,9 @@ Leave `juiz` running, open another terminal, and look at the lists.
 juiz process list
 # => ["http://127.0.0.1:8000/process/proc0::example_component_increment"]
 juiz container list
-# => ["core://core/container/container0::example_component_container"]
+# => ["http://127.0.0.1:8000/container/container0::example_component_container"]
 juiz container-process list
-# => ["core://core/container_process/add0::example_component_container_add:container0", "core://core/container_process/get0::example_component_container_get:container0", "core://core/container_process/increment0::example_component_container_increment:container0"]
+# => ["http://127.0.0.1:8000/container_process/add0::example_component_container_add:container0", "http://127.0.0.1:8000/container_process/get0::example_component_container_get:container0", "http://127.0.0.1:8000/container_process/increment0::example_component_container_increment:container0"]
 ```
 
 </TabItem>
@@ -418,9 +418,9 @@ juiz container-process list
 juiz process list
 # => ["http://127.0.0.1:8000/process/increment0::example_component_python_increment"]
 juiz container list
-# => ["core://core/container/container0::example_component_python_container"]
+# => ["http://127.0.0.1:8000/container/container0::example_component_python_container"]
 juiz container-process list
-# => ["core://core/container_process/set0::example_component_python_container_set:container0", "core://core/container_process/get0::example_component_python_container_get:container0"]
+# => ["http://127.0.0.1:8000/container_process/set0::example_component_python_container_set:container0", "http://127.0.0.1:8000/container_process/get0::example_component_python_container_get:container0"]
 ```
 
 </TabItem>
@@ -430,9 +430,9 @@ juiz container-process list
 juiz process list
 # => ["http://127.0.0.1:8000/process/proc0::example_component_cpp_increment"]
 juiz container list
-# => ["core://core/container/container0::example_component_cpp_container"]
+# => ["http://127.0.0.1:8000/container/container0::example_component_cpp_container"]
 juiz container-process list
-# => ["core://core/container_process/get0::example_component_cpp_container_get:container0", "core://core/container_process/increment0::example_component_cpp_container_increment:container0"]
+# => ["http://127.0.0.1:8000/container_process/get0::example_component_cpp_container_get:container0", "http://127.0.0.1:8000/container_process/increment0::example_component_cpp_container_increment:container0"]
 ```
 
 </TabItem>
