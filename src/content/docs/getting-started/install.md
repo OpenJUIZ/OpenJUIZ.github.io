@@ -81,7 +81,7 @@ Use the same juiz_sdk version as the `juiz` you installed with `cargo install ju
 crate-type = ["cdylib"]
 
 [dependencies]
-juiz_sdk = "0.0.25"
+juiz_sdk = "0.0.26"
 ```
 
 ### Python
@@ -91,41 +91,43 @@ Write components with the decorators in [pyjuiz](https://pypi.org/project/pyjuiz
 ### C++ and Haskell: libjuiz_sdk
 
 C++ and Haskell components link to libjuiz_sdk, the shared library of C functions that pass values to and from juiz.
-libjuiz_sdk is not published as a package yet, so get the juiz source at the tag of the **same version** as `juiz` and build it (you need the Rust toolchain).
+From 0.0.26, archives of libjuiz_sdk with the headers for each OS and CPU (Linux x86_64 and aarch64, macOS arm64 and x86_64) are on [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases).
+Get the **same version** as `juiz` with `install-juiz-sdk.sh`; it is extracted to `~/.juiz/sdk/<version>`.
 
 ```sh
-juiz --version      # e.g. juiz 0.0.25
-git clone --depth 1 --branch v0.0.25 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.25
-cargo build --release -p juiz_sdk --manifest-path ~/juiz-0.0.25/Cargo.toml
-# => ~/juiz-0.0.25/target/release/libjuiz_sdk.so (.dylib on macOS)
+juiz --version      # e.g. juiz 0.0.26
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.26
+# => ~/.juiz/sdk/0.0.26/lib/libjuiz_sdk.so (.dylib on macOS)
+#    ~/.juiz/sdk/0.0.26/cjuiz/include, ~/.juiz/sdk/0.0.26/cppjuiz/include
 ```
 
-The C++ headers are in `bindings/cjuiz/include` and `bindings/cppjuiz/include` of the same source.
-
-:::note
-Archives of libjuiz_sdk with the headers for each OS and CPU are being prepared for [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases). Once they are published, you will not need to build from source.
-:::
+juiz refuses to load a plugin built with a different version of libjuiz_sdk.
+On platforms without an archive, or for 0.0.25 and earlier, get the juiz source at the tag of the same version and use the libjuiz_sdk in `target/release` built by `cargo build --release -p juiz_sdk` (the headers are in `bindings/cjuiz/include` and `bindings/cppjuiz/include` of the source).
 
 ### C++
 
-The CMake file of the [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) examples ([cmake/Juiz.cmake](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/cmake/Juiz.cmake)) fetches and builds the source as above automatically. Using this file is also the quickest way for your own project.
-To set it up by hand, add `bindings/cjuiz/include` and `bindings/cppjuiz/include` to the include path and link to libjuiz_sdk in `target/release`.
+The CMake file of the [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) examples ([cmake/Juiz.cmake](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/cmake/Juiz.cmake)) fetches and builds libjuiz_sdk automatically. Using this file is also the quickest way for your own project.
+To set it up by hand, add `cjuiz/include` and `cppjuiz/include` of the archive to the include path and link to libjuiz_sdk in `lib` (there is also `lib/pkgconfig/juiz_sdk.pc` for pkg-config).
 
 ### Haskell
 
 Write components with [hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz). You need GHC 9.6 or later and cabal (Linux, macOS).
-For now, hsjuiz is also used from the juiz source (`bindings/hsjuiz` of the source you got above). In the `cabal.project` of your package, write where the hsjuiz source and libjuiz_sdk are.
+hsjuiz is waiting to be published on Hackage, so for now get the juiz source at the tag of the same version as `juiz` and use its `bindings/hsjuiz`. In the `cabal.project` of your package, write where the hsjuiz source and libjuiz_sdk are.
+
+```sh
+git clone --depth 1 --branch v0.0.26 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.26
+```
 
 ```txt
-packages: . /home/me/juiz-0.0.25/bindings/hsjuiz
+packages: . /home/me/juiz-0.0.26/bindings/hsjuiz
 
 package hsjuiz
-  extra-lib-dirs: /home/me/juiz-0.0.25/target/release
-  ghc-options: -optl-Wl,-rpath,/home/me/juiz-0.0.25/target/release
+  extra-lib-dirs: /home/me/.juiz/sdk/0.0.26/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.26/lib
 ```
 
 The rpath is needed because GHC loads libjuiz_sdk together with hsjuiz when it runs Template Haskell.
-The `build.sh` of the [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) examples does everything from getting the juiz source to building libjuiz_sdk and the examples, so you can also use it as a template.
+The `build.sh` of the [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) examples does everything from getting libjuiz_sdk and hsjuiz to building the examples, so you can also use it as a template.
 
 See the [hsjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) for how to write them.
 
