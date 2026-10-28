@@ -327,7 +327,7 @@ record Goal {
 
 - **Python(PyPI)**: `juiz idl -g python -o <パッケージの置き場所> idl/*.jidl` で作ったパッケージをコミットして wheel に入れ、`pyjuiz` を依存に書きます。ほかの型パッケージの型を使うなら `--extern <その名前空間>` を付けて作り、そのパッケージを依存に書きます。名前空間の先頭がそのまま Python のトップレベルのパッケージ名になるので、PyPI のほかのパッケージとぶつからない名前空間にします。
 - **C++(CMake)**: .jidl を `share/<パッケージ名>/idl` などに入れて配り、使う側が `juiz_generate_types(<ターゲット> IDL <使う .jidl> IMPORT_DIRS <その idl ディレクトリ>)` でヘッダを作ります(生成したヘッダは配らなくてよい)。
-- **Haskell(Hackage)**: `juiz-idl -g haskell -o src idl/*.jidl` で作ったモジュールをコミットして `exposed-modules` に書き、`hsjuiz` を依存に、.jidl を `extra-source-files` に入れます。
+- **Haskell(cabal パッケージ)**: `juiz-idl -g haskell -o src idl/*.jidl` で作ったモジュールをコミットして `exposed-modules` に書き、`hsjuiz` を依存に、.jidl を `extra-source-files` に入れます。hsjuiz はまだ Hackage に公開していないので、いまは型パッケージも git などで配り、使う側の `cabal.project` に書きます。
 
 型を変えるときは [型を変えるときの目安](#型を変えるときの目安) を見てください。既存のフィールドの型・名前・順番を変えると指紋が変わり、古い版とは別の型になります。パッケージの版を上げても、指紋が同じなら同じ型として扱われます。
 
