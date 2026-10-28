@@ -81,7 +81,7 @@ juiz_sdk の版は、`cargo install juiz_app` で入れた `juiz` と合わせ�
 crate-type = ["cdylib"]
 
 [dependencies]
-juiz_sdk = "0.0.25"
+juiz_sdk = "0.0.26"
 ```
 
 ### Python
@@ -91,41 +91,43 @@ juiz_sdk = "0.0.25"
 ### C++ と Haskell の共通: libjuiz_sdk
 
 C++ と Haskell の機能要素は、libjuiz_sdk(値を受け渡す C の関数の共有ライブラリ)にリンクします。
-いまは libjuiz_sdk を配布物としては公開していないので、juiz のソースを `juiz` と **同じ版** のタグで取得してビルドします(Rust のツールチェーンが要ります)。
+0.0.26 から、libjuiz_sdk とヘッダを OS・CPU ごとのアーカイブ(Linux x86_64・aarch64、macOS arm64・x86_64)にして [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) に置いています。
+`juiz` と **同じ版** を `install-juiz-sdk.sh` で取得すると、`~/.juiz/sdk/<版>` に展開されます。
 
 ```sh
-juiz --version      # 例: juiz 0.0.25
-git clone --depth 1 --branch v0.0.25 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.25
-cargo build --release -p juiz_sdk --manifest-path ~/juiz-0.0.25/Cargo.toml
-# => ~/juiz-0.0.25/target/release/libjuiz_sdk.so (macOS は .dylib)
+juiz --version      # 例: juiz 0.0.26
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.26
+# => ~/.juiz/sdk/0.0.26/lib/libjuiz_sdk.so (macOS は .dylib)
+#    ~/.juiz/sdk/0.0.26/cjuiz/include、~/.juiz/sdk/0.0.26/cppjuiz/include
 ```
 
-C++ のヘッダは同じソースの `bindings/cjuiz/include` と `bindings/cppjuiz/include` にあります。
-
-:::note
-OS・CPU ごとにヘッダと一緒にした libjuiz_sdk のアーカイブを [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) に置く準備をしています。公開したら、ソースからのビルドは要らなくなります。
-:::
+版が違う libjuiz_sdk でビルドしたプラグインは、juiz が読み込むときにエラーにします。
+アーカイブのない環境や 0.0.25 以前の版では、juiz のソースを同じ版のタグで取得し、`cargo build --release -p juiz_sdk` でできる `target/release` の libjuiz_sdk を使います(ヘッダはソースの `bindings/cjuiz/include` と `bindings/cppjuiz/include`)。
 
 ### C++
 
-サンプル集 [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) の CMake([cmake/Juiz.cmake](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/cmake/Juiz.cmake))が、上の取得とビルドを自動で行います。自分のプロジェクトでも、このファイルを使うのが手早い方法です。
-手で設定するときは、インクルードパスに `bindings/cjuiz/include` と `bindings/cppjuiz/include` を足し、`target/release` の libjuiz_sdk にリンクします。
+サンプル集 [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) の CMake([cmake/Juiz.cmake](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/cmake/Juiz.cmake))が、libjuiz_sdk の取得とビルドを自動で行います。自分のプロジェクトでも、このファイルを使うのが手早い方法です。
+手で設定するときは、インクルードパスにアーカイブの `cjuiz/include` と `cppjuiz/include` を足し、`lib` の libjuiz_sdk にリンクします(pkg-config 用の `lib/pkgconfig/juiz_sdk.pc` もあります)。
 
 ### Haskell
 
 [hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) で書きます。GHC 9.6 以降と cabal が必要です(Linux・macOS)。
-hsjuiz も、いまは juiz のソース(上で取得した `bindings/hsjuiz`)から使います。自分のパッケージの `cabal.project` に、hsjuiz のソースと libjuiz_sdk の場所を書きます。
+hsjuiz は Hackage への公開を待っているので、いまは juiz のソースを `juiz` と同じ版のタグで取得し、その `bindings/hsjuiz` から使います。自分のパッケージの `cabal.project` に、hsjuiz のソースと libjuiz_sdk の場所を書きます。
+
+```sh
+git clone --depth 1 --branch v0.0.26 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.26
+```
 
 ```txt
-packages: . /home/me/juiz-0.0.25/bindings/hsjuiz
+packages: . /home/me/juiz-0.0.26/bindings/hsjuiz
 
 package hsjuiz
-  extra-lib-dirs: /home/me/juiz-0.0.25/target/release
-  ghc-options: -optl-Wl,-rpath,/home/me/juiz-0.0.25/target/release
+  extra-lib-dirs: /home/me/.juiz/sdk/0.0.26/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.26/lib
 ```
 
 rpath は、Template Haskell を動かすときに GHC が hsjuiz と一緒に libjuiz_sdk を読み込むために要ります。
-サンプル集 [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) の `build.sh` が、juiz のソースの取得から libjuiz_sdk とサンプルのビルドまでを自動で行うので、ひな形にも使えます。
+サンプル集 [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) の `build.sh` が、libjuiz_sdk と hsjuiz の取得からサンプルのビルドまでを自動で行うので、ひな形にも使えます。
 
 書き方は [hsjuiz の README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) を見てください。
 

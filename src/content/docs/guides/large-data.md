@@ -8,9 +8,9 @@ sidebar:
 juiz Processes can be called from other processes and other machines through brokers.
 This page explains when to use each of the three brokers (HTTP, QUIC and IPC) and how to pass large data such as camera images quickly.
 
-:::caution[Requires juiz 0.1.0 or later]
-The IPC broker, raw-byte image transfer over the QUIC broker, shared memory, pyjuiz's `IpcProxy`, and image arguments and return values in C++ and Haskell are available from juiz 0.1.0.
-The QUIC broker in 0.1.0 cannot talk to QUIC brokers of earlier versions (the wire format changed). Use 0.1.0 or later for every juiz you connect over QUIC.
+:::caution[Requires juiz 0.0.26 or later]
+The IPC broker, raw-byte image transfer over the QUIC broker, shared memory, pyjuiz's `IpcProxy`, and image arguments and return values in C++ and Haskell are available from juiz 0.0.26.
+The QUIC broker in 0.0.26 cannot talk to QUIC brokers of earlier versions (the wire format changed). Use 0.0.26 or later for every juiz you connect over QUIC.
 :::
 
 ## Choosing a broker
@@ -62,7 +62,7 @@ brokers:
 
 - A name is 1 to 64 characters of letters, digits, `_`, `-` and `.`, and must not start with `.`.
 - If an IPC broker with the same name is already running, juiz fails to start (`ipc://cam0 is already in use`). If an earlier juiz crashed and only left its socket file behind, juiz cleans it up and starts.
-- The IPC broker's `namespace` key from configuration files before 0.1.0 has been removed. It is now an error, so rename it to `name`. `buffer_size` is ignored.
+- The IPC broker's `namespace` key from configuration files before 0.0.26 has been removed. It is now an error, so rename it to `name`. `buffer_size` is ignored.
 
 ### Transport and access control
 

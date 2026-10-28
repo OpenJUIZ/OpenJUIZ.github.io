@@ -52,8 +52,8 @@ processes:
 | `name` | システムの名前 |
 | `namespace` | System 全体の既定のネームスペース。各要素にも書ける(→ [ネームスペース](/ja/guides/namespace/)、juiz 0.0.21 以降) |
 | `option` | 既定で動くモジュールの設定。`http_broker` の `start` を `true` にすると、`port` で指定したポートで HTTP ブローカーが起動します。`pythonpath` は Python の Process が `import` する場所の追加(プラグインの場所から見た相対パス)、`type_check.on_call` は呼び出し時の型の検査(→ [データ型](/ja/guides/datatype/#型の検査)、juiz 0.0.23 以降) |
-| `brokers` | 追加で立てるブローカー。`type_name` が `qmp`(QUIC)か `ipc`(同じマシンの中)で、`name` を書く。HTTP ブローカーの本文の上限は `option.http_broker.max_body_bytes`(→ [ブローカーの選び方と大きなデータ](/ja/guides/large-data/)、IPC は juiz 0.1.0 以降) |
-| `topics` | Topic ごとの設定。`shared_memory` で、同じマシンの別プロセスへ共有メモリで流す(→ [共有メモリで Topic を流す](/ja/guides/large-data/#共有メモリで-topic-を流す)、juiz 0.1.0 以降) |
+| `brokers` | 追加で立てるブローカー。`type_name` が `qmp`(QUIC)か `ipc`(同じマシンの中)で、`name` を書く。HTTP ブローカーの本文の上限は `option.http_broker.max_body_bytes`(→ [ブローカーの選び方と大きなデータ](/ja/guides/large-data/)、IPC は juiz 0.0.26 以降) |
+| `topics` | Topic ごとの設定。`shared_memory` で、同じマシンの別プロセスへ共有メモリで流す(→ [共有メモリで Topic を流す](/ja/guides/large-data/#共有メモリで-topic-を流す)、juiz 0.0.26 以降) |
 | `plugins` | 読み込む共有ライブラリ（ファクトリー）の定義。`container_factories` は Container、`process_factories` は Process |
 | `containers` | 読み込んだ Container を実体化する定義と、その Container に結びつく ContainerProcess。ContainerProcess の項目には `p_apply` を書ける |
 | `processes` | 読み込んだ Process を実体化する定義。`p_apply` を書ける |
