@@ -335,6 +335,6 @@ juiz process call "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" '{}' -p
 - The start of an ID (`http://` or `qmp://`) tells which broker a request goes through. `juiz connection create` and `juiz process call` use QUIC just by changing the ID.
 - One juiz can run several brokers at the same time. The same Process has one ID per broker.
 - A Process's code does not know which broker calls it. That is why the Process works unchanged when you change the transport.
-- To pass images and other large data quickly to another process on the same machine, there is also the IPC broker (`ipc`, juiz 0.1.0 or later). See [Choosing a broker and large data](/guides/large-data/) for when to use which.
+- To pass images and other large data quickly to another process on the same machine, there is also the IPC broker (`ipc`, juiz 0.0.26 or later). See [Choosing a broker and large data](/guides/large-data/) for when to use which.
 
 In the next chapter, you give data types to a Process's arguments and return value, and connect Processes written in different languages with typed values. Go on to [Data types: agreeing on a type across languages](/tutorial/datatype/).
