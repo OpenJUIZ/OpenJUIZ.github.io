@@ -12,7 +12,7 @@ next:
   label: "3. 設定ファイルでまとめて起動する"
 ---
 
-import { Aside, FileTree } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 第 1 章の Process は、同じ引数を渡せばいつも同じ結果を返す冪等な関数でした。
 しかし、ロボットや IoT の部品を作っていると、カウンタの値やモータの現在位置、カメラの接続のように「覚えておきたいもの」が必ず出てきます。
@@ -186,6 +186,9 @@ endforeach()
 
 ## ビルドする
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 cmake -S . -B build
 cmake --build build
@@ -194,19 +197,45 @@ ls build/plugins
 #    libexample_container_cpp_increment.so  libincrement_process_cpp.so
 ```
 
-macOS では拡張子が `.dylib` になります。第 1 章の Process も含めて、すべて `build/plugins` にそろいます。
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+cmake -S . -B build
+cmake --build build
+ls build/plugins
+# => libexample_container_cpp.dylib  libexample_container_cpp_get.dylib
+#    libexample_container_cpp_increment.dylib  libincrement_process_cpp.dylib
+```
+
+</TabItem>
+</Tabs>
+
+第 1 章の Process も含めて、すべて `build/plugins` にそろいます。
 
 ## 動かす
 
 まずは第 1 章と同じように、ファイルを指定して `juiz` を起動します。
 Container は `--container`、ContainerProcess は `--container_process` で読み込みます。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --container ./build/plugins/libexample_container_cpp.so \
      --container_process ./build/plugins/libexample_container_cpp_increment.so -l cpp -1 -d
 ```
 
-macOS では拡張子が `.dylib` になります。
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --container ./build/plugins/libexample_container_cpp.dylib \
+     --container_process ./build/plugins/libexample_container_cpp_increment.dylib -l cpp -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 `-1` を付けると、読み込んだ Container の型からインスタンスを 1 つ作り、そこに ContainerProcess のインスタンスを 1 つ結びつけます。
 インスタンス名は第 1 章と同じく型名の後ろに `0` を付けた名前で、Container は `example_container_cpp0`、ContainerProcess は `example_container_cpp_increment0` になります。

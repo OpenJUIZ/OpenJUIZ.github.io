@@ -1,0 +1,204 @@
+---
+title: "5. Component にまとめて配布する(Python)"
+description: Process・Container・ContainerProcess を Python で 1 つの Component にまとめ、設定ファイル 1 行で読み込みます。
+sidebar:
+  order: 2
+  label: Python
+prev:
+  link: /ja/tutorial/connect/python/
+  label: "4. Process をつなぐ(Python)"
+next:
+  link: /ja/tutorial/multi-process/
+  label: "6. 別々のプロセスをつなぐ"
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+ここまでは、Process も Container も ContainerProcess も、1 つの型ごとに別々のファイル(ライブラリ)として作ってきました。
+第 3 章の設定ファイルでも、`plugins` に型を 1 つずつ並べて、それぞれのファイルを読み込ませていました。
+
+実際に「このカメラを動かす部品一式」を誰かに渡すときに、ファイルがばらばらだと不便です。
+この章では、Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を作り、設定ファイルから読み込みます。
+
+<Aside type="tip" title="この章で学ぶこと">
+- Component は、複数の Process・Container・ContainerProcess を 1 つにまとめた**配布の単位**であること
+- Component の中の型は、これまでと同じ型名で、同じようにインスタンスを作れること
+- `plugins` の `components` には、型ではなく Component の名前を 1 つ書けばよいこと
+</Aside>
+
+## サンプルを用意する
+
+第 4 章でクローンしてビルドしたサンプル集をそのまま使います。Component のサンプルも、第 4 章のビルドで一緒にできあがっています。
+まだの場合は、[第 4 章(Python)の「サンプルを用意する」](/ja/tutorial/connect/python/#サンプルを用意する) の手順を済ませてください。
+
+この章で使う Component には、次のものが入っています。どれも、これまでの章で作ったものと同じ働きです。
+
+| 種類 | 働き |
+| --- | --- |
+| Process | 引数に 1 を足して返す(第 1 章の `increment_process` と同じ) |
+| Container | 整数値を 1 つ持つ(第 2 章のカウンタと同じ) |
+| ContainerProcess | Container の値を読む・変える |
+
+## Component のコードを読む
+
+[`component/example_component_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/component/example_component_python.py)
+
+```python
+from juiz import juiz_container, juiz_container_process, juiz_process
+
+
+@juiz_process
+def example_component_python_increment(arg1: int = 0) -> int:
+    """引数に 1 を足して返す"""
+    return arg1 + 1
+
+
+class IntegerContainer:
+    def __init__(self, value: int):
+        self.value = value
+
+
+@juiz_container
+def example_component_python_container(initial_value: int = 0) -> IntegerContainer:
+    """整数値を 1 つ保持する Container"""
+    return IntegerContainer(initial_value)
+
+
+@juiz_container_process(container_type="example_component_python_container")
+def example_component_python_container_set(container, value: int = 0) -> int:
+    """Container の値を設定する"""
+    container.value = value
+    return container.value
+
+
+@juiz_container_process(container_type="example_component_python_container")
+def example_component_python_container_get(container) -> int:
+    """Container の値を返す"""
+    return container.value
+```
+
+使っているデコレータは、第 1 章・第 2 章とまったく同じです。違うのは、それらを **1 つのファイルに並べた**ことだけです。
+Component として読み込むと、このファイルの中でデコレータを付けた関数が、まとめてこの Component の型になります。ファイル名 `example_component_python` が Component の名前です。
+
+これまで型ごとに分かれていたものが、Component では1 つのファイルに入っています。
+それぞれの Process や ContainerProcess の中身は、これまでと変わりません。Process は冪等な関数のまま、状態に触れるのは ContainerProcess だけ、という考え方もそのままです。
+
+## 設定ファイルを読む
+
+[`example_component.conf`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/example_component.conf)
+
+```yaml
+name: example_component
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  components:
+    example_component_python:
+      language: python
+      path: "./component"
+processes:
+  - type_name: example_component_python_increment
+    name: increment0
+containers:
+  - type_name: example_component_python_container
+    name: container0
+    processes:
+      - type_name: example_component_python_container_set
+        name: set0
+      - type_name: example_component_python_container_get
+        name: get0
+```
+
+第 3 章の設定ファイルと比べてみましょう。
+
+### plugins: Component を 1 つ書く
+
+```yaml
+plugins:
+  components:
+    example_component:
+      path: "./target/debug"
+```
+
+第 3 章では、`process_factories` と `container_factories` に型を 1 つずつ書き、ContainerProcess も Container の下に 1 つずつ書いていました。
+Component では、`components` に **Component の名前を 1 つ**書くだけです。キーの名前から読み込むファイルが決まるのは、第 3 章と同じです。
+
+Component 名 `example_component_python` なら、`./component` の中の `example_component_python.py` が読み込まれます。
+
+この 1 行で、Component の中にある Process・Container・ContainerProcess の型が、すべて読み込まれます。
+
+### processes と containers: いつもどおり作る
+
+`processes` と `containers` の書き方は、第 3 章とまったく同じです。`type_name` に Component の中の型名を書き、`name` にインスタンスの名前を書きます。
+Container の初期値を渡せるのも同じです(このサンプルでは省略していて、初期値 `0` から始まります)。
+
+型がどのファイルから来たのかは、インスタンスを作る側には関係ありません。
+Component は「型をまとめて配る」ためのもので、作ったインスタンスは、別々のファイルから読み込んだときと同じように動きます。
+
+## 動かす
+
+設定ファイルを `-f` で渡して起動します。
+
+```sh
+juiz -f example_component.conf -d
+```
+
+第 4 章で作った venv を有効にしたターミナルで実行してください。
+
+## 外から呼び出す
+
+`juiz` を起動したまま別のターミナルを開き、一覧を見てみます。
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment0::example_component_python_increment"]
+juiz container list
+# => ["http://127.0.0.1:8000/container/container0::example_component_python_container"]
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/set0::example_component_python_container_set:container0", "http://127.0.0.1:8000/container_process/get0::example_component_python_container_get:container0"]
+```
+
+1 つのファイルから読み込んだ型で、Process・Container・ContainerProcess のインスタンスがそろってできています。ID の形も、これまでの章とまったく同じです。
+それぞれを呼び出してみましょう。
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/increment0::example_component_python_increment" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/set0::example_component_python_container_set:container0" '{"value": 10}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_python_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+Process は引数に 1 を足して返し、ContainerProcess は Container の値を変えたり読んだりします。
+呼び出す側から見ると、第 1 章〜第 3 章で別々のファイルから作ったものと区別がつきません。
+
+## Component は配布の単位
+
+ここまでで見たように、Component にまとめても、Process や Container の働きや使い方は何も変わりません。変わるのは**ファイルの束ね方**だけです。
+
+- **作る人**は、関連する Process・Container・ContainerProcess を 1 つのプロジェクトで書き、1 つのライブラリとして配れます。たとえばカメラなら、カメラを開いて持っておく Container、画像を読む ContainerProcess、画像を変換する Process を 1 つの Component にできます。
+- **使う人**は、`plugins` の `components` に 1 行書くだけで、中の型を全部使えるようになります。どの型を何個作るかは、これまでどおり `processes` と `containers` で自由に決められます。
+
+つまり、Process・Container・ContainerProcess が「動かすときの単位」であるのに対して、Component は「配るときの単位」です。
+
+## やってみよう
+
+- `processes` に `example_component_python_increment`のインスタンスをもう 1 つ書き足してみましょう。Component から読み込んだ型からも、第 3 章と同じように、いくつでもインスタンスを作れます。
+- `containers` にもう 1 つ Container(たとえば `container1`)と、それに結びつく ContainerProcess を書き足してみましょう。`container0` と `container1` は別々の値を持ちます。
+- 第 4 章の `connections` と `ecs` を書き足して、1 つ目の Process の出力を、書き足した 2 つ目の Process の `arg1` につないでみましょう。Component から読み込んだ型かどうかに関係なく、同じようにつなげます。`plugins` には `components` と `process_factories` を並べて書けるので、第 3 章の `increment_process` のような別ファイルの Process とつなぐこともできます。
+- 設定ファイルを使わずに、コマンドラインから Component を読み込むこともできます。`-1` を付けると、Component の中のすべての型から、インスタンスを 1 つずつ作ります(名前は第 1 章と同じく「型名 + `0`」になります)。起動時に `ERROR` の行がいくつか表示されますが、そのまま動きます。
+
+```sh
+juiz --component ./component/example_component_python.py -l python -1 -d
+```
+
+## まとめ
+
+- Component は、複数の Process・Container・ContainerProcess を 1 つのファイルにまとめたものです。
+- 設定ファイルでは、`plugins` の `components` に Component の名前を 1 つ書くだけで、中の型がすべて読み込まれます。
+- インスタンスの作り方、ID、呼び出し方、つなぎ方は、別々のファイルから読み込んだときと同じです。Component は動かし方を変えるものではなく、**配布の単位**です。
+
+次の章では、別々に起動した juiz どうしを、設定ファイルなしでコマンドからつなぎます。[別々のプロセスをつなぐ](/ja/tutorial/multi-process/) に進みましょう。

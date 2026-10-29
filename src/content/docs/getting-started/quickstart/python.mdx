@@ -12,7 +12,7 @@ next:
   label: How this tutorial works
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 Using the Python examples [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python), you run a Process that just adds 1 to its argument.
 Install the `juiz` command first, as described in [Installation](/getting-started/install/).
@@ -21,13 +21,41 @@ Install the `juiz` command first, as described in [Installation](/getting-starte
 
 The Python examples need no build, and no Rust toolchain.
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 git clone https://github.com/OpenJUIZ/juiz_examples_python.git
 cd juiz_examples_python
 python3 -m venv .venv
-source .venv/bin/activate        # on Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt  # installs juiz-cli (the juiz command and pyjuiz)
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git
+cd juiz_examples_python
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt  # installs juiz-cli (the juiz command and pyjuiz)
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git
+cd juiz_examples_python
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt  # installs juiz-cli (the juiz command and pyjuiz)
+```
+
+</TabItem>
+</Tabs>
 
 Run the following steps in a terminal where this venv is activated.
 

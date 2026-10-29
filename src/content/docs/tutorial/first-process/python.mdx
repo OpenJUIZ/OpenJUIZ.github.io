@@ -122,11 +122,35 @@ If you also install `juiz-cli`, you end up with two `juiz` commands, and which o
 
 Create a venv (virtual environment) just for this project and install the packages listed in `pyproject.toml`.
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 python3 -m venv .venv
-source .venv/bin/activate        # on Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -e .
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e .
+```
+
+</TabItem>
+</Tabs>
 
 `pip install -e .` reads `pyproject.toml` in the current directory and installs the packages in `dependencies` into the venv.
 It also creates a `my_juiz_python.egg-info` directory. pip uses it, and you can ignore it (add it to `.gitignore` if you use Git).

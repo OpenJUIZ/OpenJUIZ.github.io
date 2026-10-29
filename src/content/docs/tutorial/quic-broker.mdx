@@ -49,7 +49,7 @@ Create the following two files at the root of the example repository. They are t
 
 `listener_qmp.conf`, for the listener, makes the QUIC broker listen on UDP port 5000.
 
-```yaml
+```yaml title="listener_qmp.conf"
 name: listener_qmp
 brokers:
   - type_name: qmp
@@ -57,15 +57,195 @@ brokers:
     port: 5000
 ```
 
+<details>
+<summary>Show the whole file (with the Process in the configuration file too)</summary>
+
+In this chapter you load the Process with `--process` on the command line and write only the broker in the configuration file. With both the Process and the broker in one configuration file, it looks like this. If you save it as `listener_qmp_full.conf`, `juiz -f listener_qmp_full.conf -d` alone starts the same juiz as in "Start the listener" below. The file has no file extensions in it, so it is the same on every OS.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```yaml title="listener_qmp_full.conf"
+name: listener_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    listener:
+      path: "./target/debug"
+processes:
+  - type_name: listener
+    name: listener0
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5000
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```yaml title="listener_qmp_full.conf"
+name: listener_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    listener_python:
+      language: python
+      path: "./process"
+processes:
+  - type_name: listener_python
+    name: listener_python0
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5000
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```yaml title="listener_qmp_full.conf"
+name: listener_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    listener_cpp:
+      language: "c++"
+      path: "./build/plugins"
+processes:
+  - type_name: listener_cpp
+    name: listener_cpp0
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5000
+```
+
+</TabItem>
+</Tabs>
+
+</details>
+
 `talker_qmp.conf`, for the talker, differs only in its name and port. Unlike the HTTP broker, the QUIC broker does not move to another port when its port is in use; juiz fails to start instead. Give each juiz its own port number.
 
-```yaml
+```yaml title="talker_qmp.conf"
 name: talker_qmp
 brokers:
   - type_name: qmp
     name: qmp0
     port: 5001
 ```
+
+<details>
+<summary>Show the whole file (with the Process in the configuration file too)</summary>
+
+The talker can also put the Process, the EC (instead of `-r 1.0`) and the broker in one file. If you save it as `talker_qmp_full.conf`, `juiz -f talker_qmp_full.conf -d` starts the same juiz as in "Start the talker" below (HTTP port 8000 is taken by the listener, so it moves to 8001 automatically).
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```yaml title="talker_qmp_full.conf"
+name: talker_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker:
+      path: "./target/debug"
+processes:
+  - type_name: talker
+    name: talker0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker
+    auto_start: true
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5001
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```yaml title="talker_qmp_full.conf"
+name: talker_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_python:
+      language: python
+      path: "./process"
+processes:
+  - type_name: talker_python
+    name: talker_python0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker_python0
+        type_name: talker_python
+    auto_start: true
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5001
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```yaml title="talker_qmp_full.conf"
+name: talker_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_cpp:
+      language: "c++"
+      path: "./build/plugins"
+processes:
+  - type_name: talker_cpp
+    name: talker_cpp0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker_cpp0
+        type_name: talker_cpp
+    auto_start: true
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5001
+```
+
+</TabItem>
+</Tabs>
+
+</details>
 
 The `name` under `brokers` is required, but any name will do.
 
@@ -80,9 +260,22 @@ In terminal 1, start the listener. It is the chapter 6 command with `-f listener
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz -f listener_qmp.conf --process ./target/debug/liblistener.so -1 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz -f listener_qmp.conf --process ./target/debug/liblistener.dylib -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">
@@ -94,9 +287,22 @@ juiz -f listener_qmp.conf --process ./process/listener_python.py -l python -1 -d
 </TabItem>
 <TabItem label="C++">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz -f listener_qmp.conf --process ./build/plugins/liblistener_cpp.so -l cpp -1 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz -f listener_qmp.conf --process ./build/plugins/liblistener_cpp.dylib -l cpp -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 </Tabs>
@@ -170,9 +376,22 @@ In terminal 2, start the talker. Again, it is the chapter 6 command with `-f tal
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz -f talker_qmp.conf --process ./target/debug/libtalker.so -1 -r 1.0 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz -f talker_qmp.conf --process ./target/debug/libtalker.dylib -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">
@@ -184,9 +403,22 @@ juiz -f talker_qmp.conf --process ./process/talker_python.py -l python -1 -r 1.0
 </TabItem>
 <TabItem label="C++">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz -f talker_qmp.conf --process ./build/plugins/libtalker_cpp.so -l cpp -1 -r 1.0 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz -f talker_qmp.conf --process ./build/plugins/libtalker_cpp.dylib -l cpp -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 </Tabs>

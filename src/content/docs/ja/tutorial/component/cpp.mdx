@@ -1,0 +1,259 @@
+---
+title: "5. Component にまとめて配布する(C++)"
+description: Process・Container・ContainerProcess を C++ で 1 つの Component にまとめ、設定ファイル 1 行で読み込みます。
+sidebar:
+  order: 3
+  label: C++
+prev:
+  link: /ja/tutorial/connect/cpp/
+  label: "4. Process をつなぐ(C++)"
+next:
+  link: /ja/tutorial/multi-process/
+  label: "6. 別々のプロセスをつなぐ"
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+ここまでは、Process も Container も ContainerProcess も、1 つの型ごとに別々のファイル(ライブラリ)として作ってきました。
+第 3 章の設定ファイルでも、`plugins` に型を 1 つずつ並べて、それぞれのファイルを読み込ませていました。
+
+実際に「このカメラを動かす部品一式」を誰かに渡すときに、ファイルがばらばらだと不便です。
+この章では、Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を作り、設定ファイルから読み込みます。
+
+<Aside type="tip" title="この章で学ぶこと">
+- Component は、複数の Process・Container・ContainerProcess を 1 つにまとめた**配布の単位**であること
+- Component の中の型は、これまでと同じ型名で、同じようにインスタンスを作れること
+- `plugins` の `components` には、型ではなく Component の名前を 1 つ書けばよいこと
+</Aside>
+
+## サンプルを用意する
+
+第 4 章でクローンしてビルドしたサンプル集をそのまま使います。Component のサンプルも、第 4 章のビルドで一緒にできあがっています。
+まだの場合は、[第 4 章(C++)の「サンプルを用意する」](/ja/tutorial/connect/cpp/#サンプルを用意する) の手順を済ませてください。
+
+この章で使う Component には、次のものが入っています。どれも、これまでの章で作ったものと同じ働きです。
+
+| 種類 | 働き |
+| --- | --- |
+| Process | 引数に 1 を足して返す(第 1 章の `increment_process` と同じ) |
+| Container | 整数値を 1 つ持つ(第 2 章のカウンタと同じ) |
+| ContainerProcess | Container の値を読む・変える |
+
+## Component のコードを読む
+
+[`component/example_component_cpp/example_component_cpp.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/component/example_component_cpp/example_component_cpp.cpp)
+
+```cpp
+#include "juiz/juiz.h"
+
+// 1 つのライブラリに Process・Container・ContainerProcess をまとめた Component
+//
+// Component では各要素を COMPONENT_*_FACTORY で公開し、
+// 最後に component_manifest() でまとめて宣言する。
+
+// Process: arg1 に 1 を足して返す
+static auto example_component_cpp_increment_manif =
+    ProcessManifest("example_component_cpp_increment")
+        .add_int_arg("arg1", "value to be incremented", 1);
+std::optional<int64_t> example_component_cpp_increment(int64_t arg1) {
+    return arg1 + 1;
+}
+COMPONENT_PROCESS_FACTORY(example_component_cpp_increment_manif, example_component_cpp_increment);
+
+// Container: 整数値を 1 つ保持する
+class ComponentContainer {
+public:
+    int64_t value;
+    ComponentContainer(int64_t v) : value(v) {}
+};
+
+static auto example_component_cpp_container_manif =
+    ContainerManifest("example_component_cpp_container");
+ComponentContainer* example_component_cpp_container(juiz::CapsuleMap args) {
+    int64_t initial_value = 0;
+    if (args.has("value")) {
+        initial_value = args.get_int("value");
+    }
+    return new ComponentContainer(initial_value);
+}
+COMPONENT_CONTAINER_FACTORY(example_component_cpp_container_manif, example_component_cpp_container);
+
+// ContainerProcess: Container の値を返す
+static auto example_component_cpp_container_get_manif =
+    ProcessManifest("example_component_cpp_container_get");
+std::optional<int64_t> example_component_cpp_container_get(ComponentContainer* container) {
+    return container->value;
+}
+COMPONENT_CONTAINER_PROCESS_FACTORY(ComponentContainer, example_component_cpp_container_get_manif, example_component_cpp_container_get);
+
+// ContainerProcess: Container の値に arg1 を足す
+static auto example_component_cpp_container_increment_manif =
+    ProcessManifest("example_component_cpp_container_increment")
+        .add_int_arg("arg1", "value to be added", 1);
+std::optional<int64_t> example_component_cpp_container_increment(ComponentContainer* container, int64_t arg1) {
+    container->value += arg1;
+    return container->value;
+}
+COMPONENT_CONTAINER_PROCESS_FACTORY(ComponentContainer, example_component_cpp_container_increment_manif, example_component_cpp_container_increment);
+
+// Component 全体のマニフェスト
+auto component_manifest() {
+    return ComponentManifest("example_component_cpp")
+        .add_process(example_component_cpp_increment_manifest())
+        .add_container(example_component_cpp_container_manifest()
+            .add_process(example_component_cpp_container_get_manifest())
+            .add_process(example_component_cpp_container_increment_manifest()));
+}
+DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(component_manifest)
+```
+
+1 つのライブラリにいくつもの型を入れるので、これまでとは書き方が少し変わります。
+
+- 型ごとのマニフェストは、`manifest()` という同じ名前の関数ではなく、`example_component_cpp_increment_manif` のように型ごとに名前を付けた変数に置きます。
+- 公開には `PROCESS_FACTORY` などの代わりに、`COMPONENT_PROCESS_FACTORY`・`COMPONENT_CONTAINER_FACTORY`・`COMPONENT_CONTAINER_PROCESS_FACTORY` を使います。これらは、関数のほかに `<関数名>_manifest()` という関数も作ります。
+- 最後の `component_manifest()` で、Component の名前と、中に入れる型を宣言します。ContainerProcess は `add_container(...)` の中で、結びつく Container に `add_process` します。`DEFINE_COMPONENT_MANIFEST_ENTRY_POINT` で、これを juiz から読めるように公開します。
+
+ビルドは [`component/CMakeLists.txt`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/component/CMakeLists.txt) の 1 行です。
+
+```cmake
+add_juiz_component(example_component_cpp SOURCES example_component_cpp/example_component_cpp.cpp)
+```
+
+1 つの共有ライブラリができます。ファイル名は Linux では `build/plugins/libexample_component_cpp.so`、macOS では `build/plugins/libexample_component_cpp.dylib` です。
+
+これまで型ごとに分かれていたものが、Component では1 つのライブラリに入っています。
+それぞれの Process や ContainerProcess の中身は、これまでと変わりません。Process は冪等な関数のまま、状態に触れるのは ContainerProcess だけ、という考え方もそのままです。
+
+## 設定ファイルを読む
+
+[`example_component.conf`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/example_component.conf)
+
+```yaml
+name: example_component
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  components:
+    example_component_cpp:
+      language: "c++"
+      path: "./build/plugins"
+processes:
+  - type_name: example_component_cpp_increment
+    name: proc0
+containers:
+  - type_name: example_component_cpp_container
+    name: container0
+    value: 100
+    processes:
+      - type_name: example_component_cpp_container_increment
+        name: increment0
+      - type_name: example_component_cpp_container_get
+        name: get0
+```
+
+第 3 章の設定ファイルと比べてみましょう。
+
+### plugins: Component を 1 つ書く
+
+```yaml
+plugins:
+  components:
+    example_component:
+      path: "./target/debug"
+```
+
+第 3 章では、`process_factories` と `container_factories` に型を 1 つずつ書き、ContainerProcess も Container の下に 1 つずつ書いていました。
+Component では、`components` に **Component の名前を 1 つ**書くだけです。キーの名前から読み込むファイルが決まるのは、第 3 章と同じです。
+
+Component 名 `example_component_cpp` なら、`./build/plugins` の中の `libexample_component_cpp.so`(macOS では `libexample_component_cpp.dylib`)が読み込まれます。設定ファイルには拡張子を書かないので、同じ設定ファイルがどの OS でも使えます。
+
+この 1 行で、Component の中にある Process・Container・ContainerProcess の型が、すべて読み込まれます。
+
+### processes と containers: いつもどおり作る
+
+`processes` と `containers` の書き方は、第 3 章とまったく同じです。`type_name` に Component の中の型名を書き、`name` にインスタンスの名前を書きます。
+Container の初期値を渡せるのも同じです。
+
+型がどのファイルから来たのかは、インスタンスを作る側には関係ありません。
+Component は「型をまとめて配る」ためのもので、作ったインスタンスは、別々のファイルから読み込んだときと同じように動きます。
+
+## 動かす
+
+設定ファイルを `-f` で渡して起動します。
+
+```sh
+juiz -f example_component.conf -d
+```
+
+## 外から呼び出す
+
+`juiz` を起動したまま別のターミナルを開き、一覧を見てみます。
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/proc0::example_component_cpp_increment"]
+juiz container list
+# => ["http://127.0.0.1:8000/container/container0::example_component_cpp_container"]
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/get0::example_component_cpp_container_get:container0", "http://127.0.0.1:8000/container_process/increment0::example_component_cpp_container_increment:container0"]
+```
+
+1 つのファイルから読み込んだ型で、Process・Container・ContainerProcess のインスタンスがそろってできています。ID の形も、これまでの章とまったく同じです。
+それぞれを呼び出してみましょう。
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/proc0::example_component_cpp_increment" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_cpp_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(100), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_component_cpp_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(105), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_cpp_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(105), option: []))
+```
+
+Process は引数に 1 を足して返し、ContainerProcess は Container の値を変えたり読んだりします。
+呼び出す側から見ると、第 1 章〜第 3 章で別々のファイルから作ったものと区別がつきません。
+
+## Component は配布の単位
+
+ここまでで見たように、Component にまとめても、Process や Container の働きや使い方は何も変わりません。変わるのは**ファイルの束ね方**だけです。
+
+- **作る人**は、関連する Process・Container・ContainerProcess を 1 つのプロジェクトで書き、1 つのライブラリとして配れます。たとえばカメラなら、カメラを開いて持っておく Container、画像を読む ContainerProcess、画像を変換する Process を 1 つの Component にできます。
+- **使う人**は、`plugins` の `components` に 1 行書くだけで、中の型を全部使えるようになります。どの型を何個作るかは、これまでどおり `processes` と `containers` で自由に決められます。
+
+つまり、Process・Container・ContainerProcess が「動かすときの単位」であるのに対して、Component は「配るときの単位」です。
+
+## やってみよう
+
+- `processes` に `example_component_cpp_increment`のインスタンスをもう 1 つ書き足してみましょう。Component から読み込んだ型からも、第 3 章と同じように、いくつでもインスタンスを作れます。
+- `containers` にもう 1 つ Container(たとえば `container1`)と、それに結びつく ContainerProcess を書き足してみましょう。`container0` と `container1` は別々の値を持ちます。
+- 第 4 章の `connections` と `ecs` を書き足して、1 つ目の Process の出力を、書き足した 2 つ目の Process の `arg1` につないでみましょう。Component から読み込んだ型かどうかに関係なく、同じようにつなげます。`plugins` には `components` と `process_factories` を並べて書けるので、第 3 章の `increment_process` のような別ファイルの Process とつなぐこともできます。
+- 設定ファイルを使わずに、コマンドラインから Component を読み込むこともできます。`-1` を付けると、Component の中のすべての型から、インスタンスを 1 つずつ作ります(名前は第 1 章と同じく「型名 + `0`」になります)。起動時に `ERROR` の行がいくつか表示されますが、そのまま動きます。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --component ./build/plugins/libexample_component_cpp.so -l cpp -1 -d
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --component ./build/plugins/libexample_component_cpp.dylib -l cpp -1 -d
+```
+
+</TabItem>
+</Tabs>
+
+## まとめ
+
+- Component は、複数の Process・Container・ContainerProcess を 1 つのライブラリにまとめたものです。
+- 設定ファイルでは、`plugins` の `components` に Component の名前を 1 つ書くだけで、中の型がすべて読み込まれます。
+- インスタンスの作り方、ID、呼び出し方、つなぎ方は、別々のファイルから読み込んだときと同じです。Component は動かし方を変えるものではなく、**配布の単位**です。
+
+次の章では、別々に起動した juiz どうしを、設定ファイルなしでコマンドからつなぎます。[別々のプロセスをつなぐ](/ja/tutorial/multi-process/) に進みましょう。

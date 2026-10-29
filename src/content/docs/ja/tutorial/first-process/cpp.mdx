@@ -12,7 +12,7 @@ next:
   label: "2. 状態を持つ(C++)"
 ---
 
-import { Aside, FileTree } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 この章では、空のディレクトリから CMake のプロジェクトを作り、引数に 1 を足して返す Process を C++ で書いて動かします。
 できあがるものは、サンプル集 [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) の `process/increment_process_cpp` と同じです。
@@ -32,8 +32,12 @@ import { Aside, FileTree } from '@astrojs/starlight/components';
 - CMake 3.16 以降と、C++17 対応のコンパイラ
 - `juiz` と同じ版の libjuiz_sdk とヘッダ
 
+<Aside type="caution" title="Windows は準備中です">
+C++ の手順は Linux と macOS 向けです。libjuiz_sdk の配布とサンプル集は、まだ Windows に対応していません([juiz#273](https://github.com/OpenJUIZ/juiz/issues/273) で対応します)。WSL の Ubuntu なら、Linux の手順で進められます。
+</Aside>
+
 C++ の Process は、libjuiz_sdk(juiz と値を受け渡す関数の共有ライブラリ)にリンクしてビルドします。
-`juiz` の版を確かめてから、同じ版の libjuiz_sdk を `~/.juiz/sdk/<版>` に展開します(手でダウンロードする方法は [インストール](/ja/getting-started/install/#c-と-haskell-の共通-libjuiz_sdk) にあります)。
+`juiz` の版を確かめてから、同じ版の libjuiz_sdk を `~/.juiz/sdk/<版>` に展開します(手でダウンロードする方法は [言語ごとのパッケージ](/ja/getting-started/packages/#c-と-haskell-の共通-libjuiz_sdk) にあります)。
 
 ```sh
 juiz --version
@@ -170,10 +174,24 @@ cmake --build build
 1 行目で `build` ディレクトリにビルドの準備をし、2 行目でビルドします。
 できあがった共有ライブラリは `build/plugins` に置かれます。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 ls build/plugins
-# => libincrement_process_cpp.so (macOS では libincrement_process_cpp.dylib)
+# => libincrement_process_cpp.so
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+ls build/plugins
+# => libincrement_process_cpp.dylib
+```
+
+</TabItem>
+</Tabs>
 
 `cmake -S . -B build` で `Could not find JUIZ_SDK_LIBRARY` と表示されたら、libjuiz_sdk を展開した場所と版を確かめてください。
 
@@ -181,11 +199,22 @@ ls build/plugins
 
 `--process` でファイルを指定して `juiz` を起動します。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process ./build/plugins/libincrement_process_cpp.so -l cpp -e -1 -d
 ```
 
-macOS では拡張子が `.dylib` になります。
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./build/plugins/libincrement_process_cpp.dylib -l cpp -e -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 オプションの意味は次のとおりです。
 

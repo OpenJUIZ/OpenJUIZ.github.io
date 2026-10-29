@@ -12,7 +12,7 @@ next:
   label: "2. Keeping state (C++)"
 ---
 
-import { Aside, FileTree } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 In this chapter you create a CMake project from an empty directory, write a Process in C++ that adds 1 to its argument and returns it, and run it.
 What you build is the same as `process/increment_process_cpp` in the [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) examples.
@@ -32,8 +32,12 @@ Prepare the following (Linux or macOS).
 - CMake 3.16 or later and a C++17 compiler
 - libjuiz_sdk and its headers, at the same version as `juiz`
 
+<Aside type="caution" title="Windows is not supported yet">
+The C++ steps are for Linux and macOS. The libjuiz_sdk archives and the C++ examples do not support Windows yet ([juiz#273](https://github.com/OpenJUIZ/juiz/issues/273) tracks it). On Ubuntu under WSL, you can follow the Linux steps.
+</Aside>
+
 C++ Processes are built against libjuiz_sdk, the shared library of functions that pass values to and from juiz.
-Check the version of `juiz`, then extract libjuiz_sdk of the same version into `~/.juiz/sdk/<version>` (to download it by hand, see [Installation](/getting-started/install/#c-and-haskell-libjuiz_sdk)).
+Check the version of `juiz`, then extract libjuiz_sdk of the same version into `~/.juiz/sdk/<version>` (to download it by hand, see [Language packages](/getting-started/packages/#c-and-haskell-libjuiz_sdk)).
 
 ```sh
 juiz --version
@@ -170,10 +174,24 @@ cmake --build build
 The first line prepares the build in the `build` directory, and the second line builds.
 The shared library is placed in `build/plugins`.
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 ls build/plugins
-# => libincrement_process_cpp.so (libincrement_process_cpp.dylib on macOS)
+# => libincrement_process_cpp.so
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+ls build/plugins
+# => libincrement_process_cpp.dylib
+```
+
+</TabItem>
+</Tabs>
 
 If `cmake -S . -B build` prints `Could not find JUIZ_SDK_LIBRARY`, check where you extracted libjuiz_sdk and its version.
 
@@ -181,11 +199,22 @@ If `cmake -S . -B build` prints `Could not find JUIZ_SDK_LIBRARY`, check where y
 
 Start `juiz`, passing the file with `--process`.
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process ./build/plugins/libincrement_process_cpp.so -l cpp -e -1 -d
 ```
 
-On macOS the extension is `.dylib`.
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./build/plugins/libincrement_process_cpp.dylib -l cpp -e -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 The options mean the following.
 

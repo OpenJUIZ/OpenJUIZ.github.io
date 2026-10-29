@@ -67,9 +67,22 @@ def increment_process(arg1: int = 1) -> int:
 
 ビルドしたファイルを `--process` で指定し、`-e` で実体化して実行します。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process target/debug/libincrement_process.so -l rust -e -1 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process target/debug/libincrement_process.dylib -l rust -e -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 - `-l` は言語（`rust` / `cpp` / `python`、既定は `rust`）
 - `-e` はロードした Process を一つ実体化し、既定の引数で実行

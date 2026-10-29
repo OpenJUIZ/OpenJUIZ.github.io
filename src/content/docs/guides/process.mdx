@@ -67,9 +67,22 @@ Just add the `@juiz_process` decorator to make it a Process. Define your own dat
 
 Give the built file with `--process`, and instantiate and run it with `-e`.
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process target/debug/libincrement_process.so -l rust -e -1 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process target/debug/libincrement_process.dylib -l rust -e -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 - `-l` is the language (`rust` / `cpp` / `python`, default `rust`)
 - `-e` instantiates one loaded Process and runs it with its default arguments

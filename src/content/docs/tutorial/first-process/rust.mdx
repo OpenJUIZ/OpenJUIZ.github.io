@@ -12,7 +12,7 @@ next:
   label: "2. Keeping state (Rust)"
 ---
 
-import { Aside, FileTree } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 In this chapter you create a Cargo project from an empty directory, write a Process in Rust that adds 1 to its argument and returns it, and run it.
 What you build is the same as `process/increment_process` in the [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust) examples.
@@ -27,6 +27,10 @@ What you build is the same as `process/increment_process` in the [juiz_examples_
 ## Before you start
 
 Install Rust and the `juiz` command by following "Install with cargo" in [Installation](/getting-started/install/).
+
+<Aside type="note" title="On Windows">
+The Rust steps are for Linux and macOS (`cargo install juiz_app` is documented for Linux and macOS). On Ubuntu under WSL, you can follow the Linux steps.
+</Aside>
 
 ```sh
 juiz --version
@@ -153,10 +157,24 @@ cargo build
 The first build fetches and compiles `juiz_sdk` and its dependencies, so it takes a while.
 The shared library is placed in `target/debug`.
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 ls target/debug/libincrement_process.*
-# => target/debug/libincrement_process.so (libincrement_process.dylib on macOS)
+# => target/debug/libincrement_process.so
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+ls target/debug/libincrement_process.*
+# => target/debug/libincrement_process.dylib
+```
+
+</TabItem>
+</Tabs>
 
 Because this is a workspace, a single `cargo build` at the root builds every crate as you add more, and all the outputs end up in the same `target/debug`.
 
@@ -164,11 +182,23 @@ Because this is a workspace, a single `cargo build` at the root builds every cra
 
 Start `juiz`, passing the file with `--process`.
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process ./target/debug/libincrement_process.so -e -1 -d
 ```
 
-On macOS the extension is `.dylib` (`./target/debug/libincrement_process.dylib`).
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./target/debug/libincrement_process.dylib -e -1 -d
+```
+
+</TabItem>
+</Tabs>
+
 
 The options mean the following.
 

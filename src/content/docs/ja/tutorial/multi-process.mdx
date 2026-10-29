@@ -20,7 +20,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 ## サンプルを用意する
 
 第 4 章と同じ talker と listener を使います。サンプル集は、第 4 章でクローンしてビルドしたものをそのまま使えます。
-まだの場合は、[第 4 章の「サンプルを用意する」](/ja/tutorial/connect/#サンプルを用意する) の手順を済ませてください。
+まだの場合は、第 4 章の「サンプルを用意する」([Rust](/ja/tutorial/connect/rust/#サンプルを用意する)・[Python](/ja/tutorial/connect/python/#サンプルを用意する)・[C++](/ja/tutorial/connect/cpp/#サンプルを用意する))の手順を済ませてください。
 
 この章ではターミナルを 3 つ使います。どれも、サンプル集のルートで開いておいてください(Python の場合は、どのターミナルでも venv を有効にしておきます)。
 
@@ -37,11 +37,22 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process ./target/debug/liblistener.so -1 -d
 ```
 
-macOS では拡張子が `.dylib` になります。
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./target/debug/liblistener.dylib -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">
@@ -53,11 +64,22 @@ juiz --process ./process/listener_python.py -l python -1 -d
 </TabItem>
 <TabItem label="C++">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process ./build/plugins/liblistener_cpp.so -l cpp -1 -d
 ```
 
-macOS では拡張子が `.dylib` になります。
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./build/plugins/liblistener_cpp.dylib -l cpp -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 </Tabs>
@@ -101,9 +123,22 @@ juiz process list
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process ./target/debug/libtalker.so -1 -r 1.0 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./target/debug/libtalker.dylib -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">
@@ -115,9 +150,22 @@ juiz --process ./process/talker_python.py -l python -1 -r 1.0 -d
 </TabItem>
 <TabItem label="C++">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process ./build/plugins/libtalker_cpp.so -l cpp -1 -r 1.0 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./build/plugins/libtalker_cpp.dylib -l cpp -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 </Tabs>

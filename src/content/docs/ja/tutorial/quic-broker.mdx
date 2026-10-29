@@ -49,7 +49,7 @@ QUIC ブローカーは `juiz` コマンドに組み込まれているので、�
 
 listener 用の `listener_qmp.conf` は、QUIC ブローカーを UDP の 5000 番で待ち受けさせます。
 
-```yaml
+```yaml title="listener_qmp.conf"
 name: listener_qmp
 brokers:
   - type_name: qmp
@@ -57,15 +57,195 @@ brokers:
     port: 5000
 ```
 
+<details>
+<summary>ファイル全体を見る(Process も設定ファイルに書く場合)</summary>
+
+この章では Process をコマンドラインの `--process` で読み込み、設定ファイルにはブローカーだけを書いています。Process もブローカーも 1 つの設定ファイルに書くと、次のようになります。`listener_qmp_full.conf` という名前で保存した場合は、`juiz -f listener_qmp_full.conf -d` だけで、このあとの「listener を起動する」と同じ juiz が動きます。ファイル名の拡張子を書かないので、OS ごとに書き分ける必要もありません。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```yaml title="listener_qmp_full.conf"
+name: listener_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    listener:
+      path: "./target/debug"
+processes:
+  - type_name: listener
+    name: listener0
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5000
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```yaml title="listener_qmp_full.conf"
+name: listener_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    listener_python:
+      language: python
+      path: "./process"
+processes:
+  - type_name: listener_python
+    name: listener_python0
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5000
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```yaml title="listener_qmp_full.conf"
+name: listener_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    listener_cpp:
+      language: "c++"
+      path: "./build/plugins"
+processes:
+  - type_name: listener_cpp
+    name: listener_cpp0
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5000
+```
+
+</TabItem>
+</Tabs>
+
+</details>
+
 talker 用の `talker_qmp.conf` は、名前とポート番号だけが違います。HTTP ブローカーと違って、QUIC ブローカーはポートが使用中でも自動ではずれず、juiz の起動に失敗します。juiz ごとに別の番号を書いてください。
 
-```yaml
+```yaml title="talker_qmp.conf"
 name: talker_qmp
 brokers:
   - type_name: qmp
     name: qmp0
     port: 5001
 ```
+
+<details>
+<summary>ファイル全体を見る(Process も設定ファイルに書く場合)</summary>
+
+talker も同じように、Process・EC(`-r 1.0` の代わり)・ブローカーを 1 つに書けます。`talker_qmp_full.conf` という名前で保存した場合は、`juiz -f talker_qmp_full.conf -d` で、このあとの「talker を起動する」と同じ juiz が動きます(HTTP の 8000 番は listener が使っているので、自動で 8001 番になります)。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```yaml title="talker_qmp_full.conf"
+name: talker_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker:
+      path: "./target/debug"
+processes:
+  - type_name: talker
+    name: talker0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker
+    auto_start: true
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5001
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```yaml title="talker_qmp_full.conf"
+name: talker_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_python:
+      language: python
+      path: "./process"
+processes:
+  - type_name: talker_python
+    name: talker_python0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker_python0
+        type_name: talker_python
+    auto_start: true
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5001
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```yaml title="talker_qmp_full.conf"
+name: talker_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_cpp:
+      language: "c++"
+      path: "./build/plugins"
+processes:
+  - type_name: talker_cpp
+    name: talker_cpp0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker_cpp0
+        type_name: talker_cpp
+    auto_start: true
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5001
+```
+
+</TabItem>
+</Tabs>
+
+</details>
 
 `brokers` の `name` は必須ですが、何でもかまいません。
 
@@ -80,9 +260,22 @@ brokers:
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz -f listener_qmp.conf --process ./target/debug/liblistener.so -1 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz -f listener_qmp.conf --process ./target/debug/liblistener.dylib -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">
@@ -94,9 +287,22 @@ juiz -f listener_qmp.conf --process ./process/listener_python.py -l python -1 -d
 </TabItem>
 <TabItem label="C++">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz -f listener_qmp.conf --process ./build/plugins/liblistener_cpp.so -l cpp -1 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz -f listener_qmp.conf --process ./build/plugins/liblistener_cpp.dylib -l cpp -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 </Tabs>
@@ -170,9 +376,22 @@ juiz process list
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz -f talker_qmp.conf --process ./target/debug/libtalker.so -1 -r 1.0 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz -f talker_qmp.conf --process ./target/debug/libtalker.dylib -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">
@@ -184,9 +403,22 @@ juiz -f talker_qmp.conf --process ./process/talker_python.py -l python -1 -r 1.0
 </TabItem>
 <TabItem label="C++">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz -f talker_qmp.conf --process ./build/plugins/libtalker_cpp.so -l cpp -1 -r 1.0 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz -f talker_qmp.conf --process ./build/plugins/libtalker_cpp.dylib -l cpp -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 </Tabs>

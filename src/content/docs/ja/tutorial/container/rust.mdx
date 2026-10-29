@@ -12,7 +12,7 @@ next:
   label: "3. 設定ファイルでまとめて起動する"
 ---
 
-import { Aside, FileTree } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 第 1 章の Process は、同じ引数を渡せばいつも同じ結果を返す冪等な関数でした。
 しかし、ロボットや IoT の部品を作っていると、カウンタの値やモータの現在位置、カメラの接続のように「覚えておきたいもの」が必ず出てきます。
@@ -222,6 +222,9 @@ fn example_container_get(container: &mut ContainerImpl<ExampleContainer>) -> Jui
 
 ## ビルドする
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 cargo build
 ls target/debug/*.so
@@ -229,19 +232,44 @@ ls target/debug/*.so
 #    target/debug/libexample_container_increment.so  target/debug/libincrement_process.so
 ```
 
-macOS では拡張子が `.dylib` になります。第 1 章の Process も含めて、すべて `target/debug` にそろいます。
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+cargo build
+ls target/debug/*.dylib
+# => target/debug/libexample_container.dylib  target/debug/libexample_container_get.dylib
+#    target/debug/libexample_container_increment.dylib  target/debug/libincrement_process.dylib
+```
+
+</TabItem>
+</Tabs>
+
+第 1 章の Process も含めて、すべて `target/debug` にそろいます。
 
 ## 動かす
 
 まずは第 1 章と同じように、ファイルを指定して `juiz` を起動します。
 Container は `--container`、ContainerProcess は `--container_process` で読み込みます。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --container ./target/debug/libexample_container.so \
      --container_process ./target/debug/libexample_container_increment.so -1 -d
 ```
 
-macOS では拡張子が `.dylib` になります。
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --container ./target/debug/libexample_container.dylib \
+     --container_process ./target/debug/libexample_container_increment.dylib -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 `-1` を付けると、読み込んだ Container の型からインスタンスを 1 つ作り、そこに ContainerProcess のインスタンスを 1 つ結びつけます。
 インスタンス名は第 1 章と同じく型名の後ろに `0` を付けた名前で、Container は `example_container0`、ContainerProcess は `example_container_increment0` になります。

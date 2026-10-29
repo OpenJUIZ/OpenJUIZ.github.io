@@ -148,8 +148,23 @@ def example_container_python_get(container) -> int:
 
 ## Running it on its own
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --container ./target/debug/libexample_container.so \
      --container_process ./target/debug/libexample_container_increment.so \
      -l rust -e -1 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --container ./target/debug/libexample_container.dylib \
+     --container_process ./target/debug/libexample_container_increment.dylib \
+     -l rust -e -1 -d
+```
+
+</TabItem>
+</Tabs>

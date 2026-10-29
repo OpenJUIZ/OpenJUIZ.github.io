@@ -122,11 +122,35 @@ py-modules = []
 
 プロジェクト専用の venv(仮想環境)を作り、`pyproject.toml` に書いたパッケージを入れます。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 python3 -m venv .venv
-source .venv/bin/activate        # Windows では .venv\Scripts\activate
+source .venv/bin/activate
 pip install -e .
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e .
+```
+
+</TabItem>
+</Tabs>
 
 `pip install -e .` は、カレントディレクトリの `pyproject.toml` を読んで、`dependencies` のパッケージを venv に入れます。
 `my_juiz_python.egg-info` というディレクトリができますが、pip が使うものなので気にしなくてかまいません(Git で管理するなら `.gitignore` に足しておきます)。
