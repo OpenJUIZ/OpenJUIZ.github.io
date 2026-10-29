@@ -1,0 +1,251 @@
+---
+title: "2. Keeping state (Python)"
+description: Add a counter Container and ContainerProcesses to the project from chapter 1, and learn how to handle state.
+sidebar:
+  order: 2
+  label: Python
+prev:
+  link: /tutorial/first-process/python/
+  label: "1. Your first Process (Python)"
+next:
+  link: /tutorial/config-file/
+  label: "3. Starting everything from a configuration file"
+---
+
+import { Aside, FileTree } from '@astrojs/starlight/components';
+
+The Process in chapter 1 was an idempotent function that always returns the same result for the same arguments.
+But when you build parts for robots and IoT devices, you always end up with things you want to remember: a counter value, the current position of a motor, a connection to a camera.
+In this chapter you add a counter that remembers one integer to `my_juiz_python`, the project you created in chapter 1.
+What you build is the same as `container/` in the [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) examples.
+
+<Aside type="tip" title="What you will learn">
+- State lives in a **Container**, never in a Process
+- Only the **ContainerProcesses** bound to a Container touch its state
+- One Container can have several ContainerProcesses with different roles
+</Aside>
+
+## Project layout
+
+In this chapter you add `container/` to the project from chapter 1, giving this layout.
+`pyproject.toml` stays the same. The pyjuiz you installed in chapter 1 is all you need for Containers and ContainerProcesses too.
+
+<FileTree>
+- my_juiz_python/
+  - pyproject.toml unchanged from chapter 1
+  - example_container.conf configuration file for starting it (new)
+  - process/
+    - increment_process_python.py the Process from chapter 1
+  - container/
+    - example_container_python.py Container (the counter value)
+    - example_container_python_increment.py ContainerProcess (adds to the value)
+    - example_container_python_get.py ContainerProcess (reads the value)
+</FileTree>
+
+Create the directory and activate the venv from chapter 1. Run all the following commands in `my_juiz_python`.
+
+```sh
+cd my_juiz_python
+source .venv/bin/activate        # on Windows: .venv\Scripts\activate
+mkdir container
+```
+
+## Write the Container
+
+A Container is the state itself. You write only the box that holds the value and the function that creates it.
+
+```python title="container/example_container_python.py"
+from juiz import juiz_container
+
+
+class PyContainer:
+    def __init__(self, value: int):
+        self.value = value
+
+
+@juiz_container
+def example_container_python(initial_value: int = 0) -> PyContainer:
+    """Holds one integer value"""
+    return PyContainer(initial_value)
+```
+
+| Part | Meaning |
+| --- | --- |
+| `class PyContainer` | The class that holds the state. Any ordinary Python class will do |
+| `@juiz_container` | Makes this function the way to create the Container. The function name `example_container_python` becomes the Container **type name** |
+| `initial_value: int = 0` | A value received when the Container is created. You can pass it from a configuration file (chapter 3) |
+| `-> PyContainer` | Returns the created Container object |
+
+As in chapter 1, **use the same name for the file and the function (the type name).**
+The Container has no code that changes or reads the value. A Container only says "what to remember".
+
+## Write the ContainerProcesses
+
+The code that changes or reads the state goes into ContainerProcesses.
+A ContainerProcess is a Process that **receives the Container as its first argument**. You choose which Container it pairs with by the Container's type name.
+
+### increment: add to the value
+
+```python title="container/example_container_python_increment.py"
+from juiz import juiz_container_process
+
+
+@juiz_container_process(container_type="example_container_python")
+def example_container_python_increment(container, arg1: int = 1) -> int:
+    """Adds arg1 to the Container's value and returns the new value"""
+    container.value = container.value + arg1
+    return container.value
+```
+
+| Part | Meaning |
+| --- | --- |
+| `@juiz_container_process(...)` | Turns this function into a ContainerProcess. The function name `example_container_python_increment` becomes the type name |
+| `container_type="example_container_python"` | The type name of the Container to bind to |
+| `container` | The first argument receives the `PyContainer` object returned by the function that creates the Container. Only this argument needs no type hint |
+| `arg1: int = 1` | Arguments from the second one on are passed when calling, just like the Process in chapter 1 |
+
+### get: read the value
+
+```python title="container/example_container_python_get.py"
+from juiz import juiz_container_process
+
+
+@juiz_container_process(container_type="example_container_python")
+def example_container_python_get(container) -> int:
+    """Returns the Container's value"""
+    return container.value
+```
+
+`get` has no arguments besides the Container and just returns the value.
+
+This is how you write state (the Container) and behavior (the ContainerProcesses) separately.
+Only the ContainerProcesses bound to a Container can change or read its state.
+When you want to know "where does this value change?", you only need to look at the ContainerProcesses.
+
+## Run it
+
+First, start `juiz` with the files, as in chapter 1.
+Load the Container with `--container` and the ContainerProcess with `--container_process`. This is Python, so there is no build.
+
+```sh
+juiz --container ./container/example_container_python.py \
+     --container_process ./container/example_container_python_increment.py -l python -1 -d
+```
+
+With `-1`, juiz creates one instance from the loaded Container type and binds one ContainerProcess instance to it.
+As in chapter 1, the instance names are the type names followed by `0`: the Container is `example_container_python0` and the ContainerProcess is `example_container_python_increment0`.
+The Container starts at 0, the default value of the argument.
+
+## Call it from outside
+
+Leave `juiz` running, open another terminal and activate the venv. First, list the running ContainerProcesses.
+
+```sh
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0"]
+```
+
+A ContainerProcess ID has the form "instance name`::`type name`:`Container instance name", so you can tell from the ID which Container it is bound to.
+
+Call `increment` twice with the same argument.
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+You passed the same `{"arg1": 5}` both times, but the results differ.
+Unlike the Process in chapter 1, the result of a ContainerProcess depends not only on its arguments but also on the state of the Container.
+
+## Share a Container between two ContainerProcesses
+
+Next, read the value changed by `increment` with `get`.
+The command line can load only one ContainerProcess, so write "which ContainerProcesses to bind to which Container" in a configuration file.
+Create `my_juiz_python/example_container.conf` with the following content.
+
+```yaml title="example_container.conf"
+name: example_container
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  container_factories:
+    example_container_python:
+      language: python
+      path: "./container"
+      processes:
+        example_container_python_increment:
+          path: "./container"
+        example_container_python_get:
+          path: "./container"
+containers:
+  - type_name: example_container_python
+    name: container0
+    processes:
+      - type_name: example_container_python_increment
+        name: increment0
+      - type_name: example_container_python_get
+        name: get0
+```
+
+The configuration file says:
+
+- Where to load the Container type and the ContainerProcess types from (`plugins`). juiz looks for the type name plus `.py` in the `path` directory
+- Create one Container instance, `container0` (`containers`)
+- Bind an `increment` instance `increment0` and a `get` instance `get0` to `container0`
+
+Chapter 3 covers how to write configuration files in detail. For now, just note the shape: "one Container with two ContainerProcesses hanging from it".
+
+Stop the running `juiz` with Ctrl+C, then start it again with the configuration file.
+
+```sh
+juiz -f example_container.conf -d
+```
+
+The list now has two ContainerProcesses (the order may change from run to run).
+
+```sh
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_python_get:container0"]
+```
+
+Check the current value with `get`, call `increment` twice, then check the value with `get` again.
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_python_get:container0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_python_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+`get`, a different ContainerProcess, reads the value that `increment` changed. The two ContainerProcesses share the same Container.
+
+### Call it from a browser
+
+As in chapter 1, you can also call them from Swagger UI (`http://127.0.0.1:8000/docs/`).
+Open `PATCH /api/container_process/call` and, as identifier, enter the ID shown by `juiz container-process list` with the leading `http://127.0.0.1:8000` replaced by `core://core`.
+
+- identifier: `core://core/container_process/get0::example_container_python_get:container0`
+- Request body: `{}`
+
+## Try it yourself
+
+- Pass a negative number to `increment` (such as `{"arg1": -3}`) and check that the value goes down.
+- Stop `juiz` with Ctrl+C, start it again and call `get`. The value is back at the start. The state exists only inside the running Container.
+- Add a ContainerProcess that resets the value to 0 (`example_container_python_reset`). Create a file shaped like `get`, set `container.value = 0` and return the value. Do not forget to add it to `example_container.conf`.
+
+## Summary
+
+- State lives in a Container. A Container only says "what to remember"; it has no logic.
+- Only the ContainerProcesses bound to a Container read and write its state. A ContainerProcess receives the Container as its first argument.
+- One Container can have several ContainerProcesses with different roles, and they share the same state.
+- The result of a ContainerProcess depends on the Container's state as well as its arguments. Keeping idempotent Processes separate from state-handling ContainerProcesses makes it clear where state changes.
+
+In the next chapter you learn how to write the configuration file used in this chapter, and start the Process from chapter 1 and the Container from this chapter together from one configuration file. Move on to [Starting everything from a configuration file](/tutorial/config-file/).

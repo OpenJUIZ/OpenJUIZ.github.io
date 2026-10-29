@@ -36,12 +36,41 @@ export default defineConfig({
 				{
 					label: 'Getting Started',
 					translations: { ja: 'はじめに' },
-					items: [{ autogenerate: { directory: 'getting-started' } }],
+					items: [
+						'getting-started/install',
+						{
+							label: 'Quick start',
+							translations: { ja: 'クイックスタート' },
+							items: [
+								'getting-started/quickstart',
+								{ autogenerate: { directory: 'getting-started/quickstart' } },
+							],
+						},
+					],
 				},
 				{
 					label: 'Tutorial',
 					translations: { ja: 'チュートリアル' },
-					items: [{ autogenerate: { directory: 'tutorial' } }],
+					// 第 1・2 章は言語ごとのページに分かれるので、章ごとのグループにする
+					items: [
+						'tutorial',
+						{
+							label: '1. Your first Process',
+							translations: { ja: '1. はじめての Process' },
+							items: ['tutorial/first-process', { autogenerate: { directory: 'tutorial/first-process' } }],
+						},
+						{
+							label: '2. Keeping state',
+							translations: { ja: '2. 状態を持つ' },
+							items: ['tutorial/container', { autogenerate: { directory: 'tutorial/container' } }],
+						},
+						'tutorial/config-file',
+						'tutorial/connect',
+						'tutorial/component',
+						'tutorial/multi-process',
+						'tutorial/quic-broker',
+						'tutorial/datatype',
+					],
 				},
 				{
 					label: 'Concepts',

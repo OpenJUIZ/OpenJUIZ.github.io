@@ -1,0 +1,113 @@
+---
+title: "Quick start: Haskell"
+description: Build the Haskell examples and run a Process with juiz.
+sidebar:
+  order: 4
+  label: Haskell
+prev:
+  link: /getting-started/quickstart/
+  label: Quick start
+next:
+  link: /tutorial/
+  label: How this tutorial works
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Using the Haskell examples [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell), you run a Process that just adds 1 to its argument.
+Install the `juiz` command first, as described in [Installation](/getting-started/install/).
+
+## Build the examples
+
+Requirements:
+
+- Linux or macOS
+- GHC 9.6 or later and cabal (install with [GHCup](https://www.haskell.org/ghcup/))
+- Rust (stable), used to build juiz-idl, which generates the types of the examples
+- git, curl
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_haskell.git
+cd juiz_examples_haskell
+./build.sh
+```
+
+`build.sh` gets libjuiz_sdk and hsjuiz (the Haskell library) of the same version as `juiz`, then builds the examples. The first run takes a while.
+Each example is built as a shared library in `build/plugins`.
+If linking fails on macOS, see the [README](https://github.com/OpenJUIZ/juiz_examples_haskell#readme) of the examples.
+
+## The Process code
+
+This is the Process you will run.
+
+[`process/IncrementProcess.hs`](https://github.com/OpenJUIZ/juiz_examples_haskell/blob/main/process/IncrementProcess.hs)
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+module IncrementProcess () where
+
+import Juiz
+
+manifest :: ProcessManifest
+manifest = processManifest "increment_process_hs"
+  & description "Adds 1 to arg1."
+  & addIntArg "arg1" "value to be incremented" 1
+
+increment :: Int64 -> IO Int64
+increment arg1 = pure (arg1 + 1)
+
+juizProcess 'increment 'manifest
+```
+
+## Start it
+
+From the root of the repository, start `juiz` with the configuration file. The configuration file looks for plugins by paths relative to the repository root.
+
+```sh
+juiz -f increment_process.conf -d
+```
+
+With `-d`, juiz starts the HTTP broker on port 8000 and keeps running (stop it with Ctrl+C).
+
+## Call it
+
+Leave `juiz` running, open another terminal in the same directory, and call the Process.
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment0::increment_process_hs"]
+juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_hs" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+You passed `3` and got `4` back.
+
+### Call it from a browser
+
+Open the following URL in a browser to call the Process from Swagger UI and check the result.
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+Open `PATCH /api/process/call`, press "Try it out", enter `core://core/process/increment0::increment_process_hs` as identifier and `{"arg1": 3}` as the request body, and press "Execute".
+
+### Look at it in the web UI
+
+Open the following URL to see the running Processes and connections in the web UI. See [Web UI](/guides/web-ui/) for details.
+
+```
+http://127.0.0.1:8000/ui/
+```
+
+## Next steps
+
+Once it runs, move on to [How this tutorial works](/tutorial/). It starts with writing a Process from scratch.
+The tutorial is written for Rust, Python and C++. For Haskell, see the [hsjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) and the examples.
+
+Quick start for other languages:
+
+- [Rust](/getting-started/quickstart/rust/)
+- [Python](/getting-started/quickstart/python/)
+- [C++](/getting-started/quickstart/cpp/)

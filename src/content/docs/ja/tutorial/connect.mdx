@@ -19,8 +19,56 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 ## サンプルを用意する
 
-第 1 章でクローンしてビルドしたサンプル集をそのまま使います。talker と listener も、第 1 章のビルドで一緒にできあがっています。
-まだの場合は、[第 1 章の「サンプルを用意する」](/ja/tutorial/first-process/#サンプルを用意する) の手順を済ませてください。
+第 3 章までは自分で 1 からプロジェクトを作りました。ここからは題材が増えるので、サンプル集をクローンしてビルドし、そのファイルを読みながら進めます。
+以降の章のコマンドは、すべてクローンしたリポジトリのルートで実行します。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_rust.git
+cd juiz_examples_rust
+cargo build
+```
+
+各サンプルは共有ライブラリとして `target/debug` にビルドされます。
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git
+cd juiz_examples_python
+python3 -m venv .venv
+source .venv/bin/activate        # Windows では .venv\Scripts\activate
+pip install -r requirements.txt  # juiz-cli が入る
+```
+
+`requirements.txt` には [juiz-cli](https://pypi.org/project/juiz-cli/) が書いてあり、`juiz` コマンドと `pyjuiz` が venv に入ります。
+以降の手順は、この venv を有効にしたターミナルで実行してください。
+
+<Aside type="note">
+`cargo install juiz_app` で入れた `juiz` を使う場合は、`requirements.txt` の代わりに `pip install pyjuiz==0.0.26` のように、`juiz` と同じ版の pyjuiz だけを入れてください。
+</Aside>
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_cpp.git
+cd juiz_examples_cpp
+cmake -S . -B build
+cmake --build build
+```
+
+サンプル集の CMake は、`juiz` と同じ版の libjuiz_sdk とヘッダを [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から取得します(第 1 章のように `~/.juiz/sdk` に展開しておく必要はありません)。
+サンプルの型を作るのに `juiz` コマンドを使うので、`cmake` は `juiz` が使えるターミナルで実行してください。
+各サンプルは共有ライブラリとして `build/plugins` にビルドされます。
+
+</TabItem>
+</Tabs>
+
+この章で使うのは、次のものです。
 
 | 役割 | 名前 |
 | --- | --- |

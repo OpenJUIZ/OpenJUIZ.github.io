@@ -1,0 +1,366 @@
+---
+title: "2. Keeping state (Rust)"
+description: Add a counter Container crate and ContainerProcess crates to the workspace from chapter 1, and learn how to handle state.
+sidebar:
+  order: 1
+  label: Rust
+prev:
+  link: /tutorial/first-process/rust/
+  label: "1. Your first Process (Rust)"
+next:
+  link: /tutorial/config-file/
+  label: "3. Starting everything from a configuration file"
+---
+
+import { Aside, FileTree } from '@astrojs/starlight/components';
+
+The Process in chapter 1 was an idempotent function that always returns the same result for the same arguments.
+But when you build parts for robots and IoT devices, you always end up with things you want to remember: a counter value, the current position of a motor, a connection to a camera.
+In this chapter you add a counter that remembers one integer to `my_juiz_rust`, the workspace you created in chapter 1.
+What you build is the same as `container/` in the [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust) examples.
+
+<Aside type="tip" title="What you will learn">
+- State lives in a **Container**, never in a Process
+- Only the **ContainerProcesses** bound to a Container touch its state
+- One Container can have several ContainerProcesses with different roles
+- How to write `Cargo.toml` so that a ContainerProcess crate can use the Container crate
+</Aside>
+
+## Project layout
+
+In this chapter you add `container/` to the workspace from chapter 1, giving this layout.
+
+<FileTree>
+- my_juiz_rust/
+  - Cargo.toml workspace settings (add members)
+  - example_container.conf configuration file for starting it (new)
+  - process/
+    - increment_process/ the Process from chapter 1
+  - container/
+    - example_container/ Container (the counter value)
+      - Cargo.toml
+      - src/
+        - lib.rs
+    - example_container_increment/ ContainerProcess (adds to the value)
+      - Cargo.toml
+      - src/
+        - lib.rs
+    - example_container_get/ ContainerProcess (reads the value)
+      - Cargo.toml
+      - src/
+        - lib.rs
+</FileTree>
+
+| Role | Crate |
+| --- | --- |
+| Container | `example_container`: holds one counter value |
+| ContainerProcess | `example_container_increment`: adds `arg1` to the Container's value and returns the new value |
+| ContainerProcess | `example_container_get`: returns the Container's value as is |
+
+Create the directories. Run all the following commands in `my_juiz_rust`.
+
+```sh
+cd my_juiz_rust
+mkdir -p container/example_container/src
+mkdir -p container/example_container_increment/src
+mkdir -p container/example_container_get/src
+```
+
+Add the three crates to `members` in the workspace `Cargo.toml`.
+
+```toml title="Cargo.toml" ins={5-7}
+[workspace]
+resolver = "2"
+members = [
+    "process/increment_process",
+    "container/example_container",
+    "container/example_container_increment",
+    "container/example_container_get",
+]
+
+[workspace.dependencies]
+juiz_sdk = "0.0.26"
+```
+
+## Write the Container
+
+A Container is the state itself. You write only the box that holds the value and the function that creates it.
+
+```toml title="container/example_container/Cargo.toml"
+[package]
+name = "example_container"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+juiz_sdk = { workspace = true }
+```
+
+The difference from the Process in chapter 1 is the extra `"rlib"` in `crate-type`.
+
+| `crate-type` | Used for |
+| --- | --- |
+| `"cdylib"` | The shared library `juiz` loads as a plugin (`libexample_container.so`) |
+| `"rlib"` | A regular library that other Rust crates can `use` |
+
+The ContainerProcesses read and write the fields of the Container struct `ExampleContainer`. So the ContainerProcess crates must be able to use this crate as a Rust library.
+
+```rust title="container/example_container/src/lib.rs"
+use juiz_sdk::prelude::*;
+
+#[repr(Rust)]
+pub struct ExampleContainer {
+    pub value: i64,
+}
+
+#[juiz_container]
+fn example_container(initial_value: i64) -> JuizResult<Box<ExampleContainer>> {
+    Ok(Box::new(ExampleContainer {
+        value: initial_value,
+    }))
+}
+```
+
+| Part | Meaning |
+| --- | --- |
+| `pub struct ExampleContainer` | The struct that holds the state. ContainerProcesses use it, so the struct and its fields are `pub` |
+| `#[juiz_container]` | Makes this function the way to create the Container. The function name `example_container` becomes the Container **type name** |
+| `initial_value: i64` | A value received when the Container is created. You can pass it from a configuration file (chapter 3) |
+| `JuizResult<Box<ExampleContainer>>` | Returns the created Container in a `Box` |
+
+The Container has no code that changes or reads the value. A Container only says "what to remember".
+
+## Write the ContainerProcesses
+
+The code that changes or reads the state goes into ContainerProcesses.
+A ContainerProcess is a Process that **receives the Container as its first argument**. You choose which Container it pairs with by the Container's type name.
+
+### increment: add to the value
+
+```toml title="container/example_container_increment/Cargo.toml"
+[package]
+name = "example_container_increment"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+juiz_sdk = { workspace = true }
+example_container = { path = "../example_container" }
+```
+
+`example_container = { path = "../example_container" }` under `[dependencies]` uses the Container crate in the same workspace. This is why you added `rlib` above.
+
+```rust title="container/example_container_increment/src/lib.rs"
+use example_container::ExampleContainer;
+use juiz_sdk::prelude::*;
+
+#[juiz_container_process(
+    container_type = "example_container"
+    description = "Container Process for example_container. This process will add given value to container."
+    arguments = {
+        default = {
+            arg1 = 1
+        }
+    }
+)]
+fn example_container_increment(
+    container: &mut ContainerImpl<ExampleContainer>,
+    arg1: i64,
+) -> JuizResult<Capsule> {
+    container.value = container.value + arg1;
+    return Ok(jvalue!(container.value).into());
+}
+```
+
+| Part | Meaning |
+| --- | --- |
+| `use example_container::ExampleContainer;` | Imports the struct from the Container crate |
+| `#[juiz_container_process(...)]` | Turns this function into a ContainerProcess. The function name `example_container_increment` becomes the type name |
+| `container_type = "example_container"` | The type name of the Container to bind to |
+| `description`, `arguments` | The description of the ContainerProcess and the default values of its arguments (`arg1` defaults to 1). Both are optional |
+| `container: &mut ContainerImpl<ExampleContainer>` | The first argument receives the Container. You can read and write its fields like `container.value` |
+| `arg1: i64` | Arguments from the second one on are passed when calling, just like the Process in chapter 1 |
+
+### get: read the value
+
+```toml title="container/example_container_get/Cargo.toml"
+[package]
+name = "example_container_get"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+juiz_sdk = { workspace = true }
+example_container = { path = "../example_container" }
+```
+
+```rust title="container/example_container_get/src/lib.rs"
+use example_container::ExampleContainer;
+use juiz_sdk::prelude::*;
+
+#[juiz_container_process(container_type = "example_container")]
+fn example_container_get(container: &mut ContainerImpl<ExampleContainer>) -> JuizResult<Capsule> {
+    println!("example_container_get() called");
+    return Ok(jvalue!(container.value).into());
+}
+```
+
+`get` has no arguments besides the Container and just returns the value.
+
+This is how you write state (the Container) and behavior (the ContainerProcesses) separately.
+Only the ContainerProcesses bound to a Container can change or read its state.
+When you want to know "where does this value change?", you only need to look at the ContainerProcesses.
+
+## Build it
+
+```sh
+cargo build
+ls target/debug/*.so
+# => target/debug/libexample_container.so  target/debug/libexample_container_get.so
+#    target/debug/libexample_container_increment.so  target/debug/libincrement_process.so
+```
+
+On macOS the extension is `.dylib`. Everything, including the Process from chapter 1, ends up in `target/debug`.
+
+## Run it
+
+First, start `juiz` with the files, as in chapter 1.
+Load the Container with `--container` and the ContainerProcess with `--container_process`.
+
+```sh
+juiz --container ./target/debug/libexample_container.so \
+     --container_process ./target/debug/libexample_container_increment.so -1 -d
+```
+
+On macOS the extension is `.dylib`.
+
+With `-1`, juiz creates one instance from the loaded Container type and binds one ContainerProcess instance to it.
+As in chapter 1, the instance names are the type names followed by `0`: the Container is `example_container0` and the ContainerProcess is `example_container_increment0`.
+The Container starts at 0.
+
+## Call it from outside
+
+Leave `juiz` running and open another terminal. First, list the running ContainerProcesses.
+
+```sh
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0"]
+```
+
+A ContainerProcess ID has the form "instance name`::`type name`:`Container instance name", so you can tell from the ID which Container it is bound to.
+
+Call `increment` twice with the same argument.
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+You passed the same `{"arg1": 5}` both times, but the results differ.
+Unlike the Process in chapter 1, the result of a ContainerProcess depends not only on its arguments but also on the state of the Container.
+
+<Aside>
+Even if an argument has a default value, pass it explicitly when you call.
+</Aside>
+
+## Share a Container between two ContainerProcesses
+
+Next, read the value changed by `increment` with `get`.
+The command line can load only one ContainerProcess, so write "which ContainerProcesses to bind to which Container" in a configuration file.
+Create `my_juiz_rust/example_container.conf` with the following content.
+
+```yaml title="example_container.conf"
+name: example_container
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  container_factories:
+    example_container:
+      path: "./target/debug"
+      processes:
+        example_container_increment:
+          path: "./target/debug"
+        example_container_get:
+          path: "./target/debug"
+containers:
+  - type_name: example_container
+    name: container0
+    processes:
+      - type_name: example_container_increment
+        name: increment0
+      - type_name: example_container_get
+        name: get0
+```
+
+The configuration file says:
+
+- Where to load the Container type and the ContainerProcess types from (`plugins`). juiz builds a file name such as `libexample_container.so` from the type name and looks for it in the `path` directory
+- Create one Container instance, `container0` (`containers`)
+- Bind an `increment` instance `increment0` and a `get` instance `get0` to `container0`
+
+Chapter 3 covers how to write configuration files in detail. For now, just note the shape: "one Container with two ContainerProcesses hanging from it".
+
+Stop the running `juiz` with Ctrl+C, then start it again with the configuration file.
+
+```sh
+juiz -f example_container.conf -d
+```
+
+The list now has two ContainerProcesses (the order may change from run to run).
+
+```sh
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_get:container0"]
+```
+
+Check the current value with `get`, call `increment` twice, then check the value with `get` again.
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+`get`, a different ContainerProcess, reads the value that `increment` changed. The two ContainerProcesses share the same Container.
+
+### Call it from a browser
+
+As in chapter 1, you can also call them from Swagger UI (`http://127.0.0.1:8000/docs/`).
+Open `PATCH /api/container_process/call` and, as identifier, enter the ID shown by `juiz container-process list` with the leading `http://127.0.0.1:8000` replaced by `core://core`.
+
+- identifier: `core://core/container_process/get0::example_container_get:container0`
+- Request body: `{}`
+
+## Try it yourself
+
+- Pass a negative number to `increment` (such as `{"arg1": -3}`) and check that the value goes down.
+- Stop `juiz` with Ctrl+C, start it again and call `get`. The value is back at the start. The state exists only inside the running Container.
+- Add a ContainerProcess that resets the value to 0 (`example_container_reset`). Create a crate shaped like `get`, set `container.value = 0;` and return the value. Do not forget to add it to both the workspace `members` and `example_container.conf`.
+
+## Summary
+
+- State lives in a Container. A Container only says "what to remember"; it has no logic.
+- Only the ContainerProcesses bound to a Container read and write its state. A ContainerProcess receives the Container as its first argument.
+- In Rust, make the Container crate `crate-type = ["cdylib", "rlib"]` and depend on it from the ContainerProcess crates with `path`.
+- One Container can have several ContainerProcesses with different roles, and they share the same state.
+- The result of a ContainerProcess depends on the Container's state as well as its arguments. Keeping idempotent Processes separate from state-handling ContainerProcesses makes it clear where state changes.
+
+In the next chapter you learn how to write the configuration file used in this chapter, and start the Process from chapter 1 and the Container from this chapter together from one configuration file. Move on to [Starting everything from a configuration file](/tutorial/config-file/).

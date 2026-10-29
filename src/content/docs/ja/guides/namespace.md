@@ -178,7 +178,7 @@ README には、同じ設定ファイルを `--namespace robot1` と `--namespac
 | C++ | [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) | `talker_cpp` / `listener_cpp` |
 | Haskell | [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) | `talker_hs` / `listener_hs` |
 
-サンプルの用意のしかたは、Rust・Python・C++ は [チュートリアル第1章](/ja/tutorial/first-process/#サンプルを用意する)、Haskell はリポジトリの README を見てください。
+サンプルの用意のしかたは、[クイックスタート](/ja/getting-started/quickstart/) の各言語のページを見てください。
 
 ```sh
 juiz -f namespace.conf -d

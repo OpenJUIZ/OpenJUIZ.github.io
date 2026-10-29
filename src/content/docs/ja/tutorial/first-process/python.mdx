@@ -1,0 +1,265 @@
+---
+title: "1. はじめての Process(Python)"
+description: pyproject.toml と venv で Python のプロジェクトを 1 から作り、引数に 1 を足す Process を書いて動かします。
+sidebar:
+  order: 2
+  label: Python
+prev:
+  link: /ja/tutorial/first-process/
+  label: "1. はじめての Process"
+next:
+  link: /ja/tutorial/container/python/
+  label: "2. 状態を持つ(Python)"
+---
+
+import { Aside, FileTree, Tabs, TabItem } from '@astrojs/starlight/components';
+
+この章では、空のディレクトリから Python のプロジェクトを作り、引数に 1 を足して返す Process を書いて動かします。
+できあがるものは、サンプル集 [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) の `process/increment_process_python.py` と同じです。
+
+<Aside type="tip" title="この章で学ぶこと">
+- Process を書く Python のプロジェクトの作り方(`pyproject.toml` の書き方)
+- Process は、引数を受け取って結果を返す冪等な関数であること
+- Process には「型名」と「インスタンス名」があること
+- 外から Process を呼び出して結果を受け取る使い方(call)
+</Aside>
+
+## 準備
+
+Python 3.10 以降が必要です。Rust のツールチェーンは要りません。
+`juiz` コマンドは、このあとプロジェクトの venv に入れます。[インストール](/ja/getting-started/install/) の手順を先に済ませておく必要はありません。
+
+## プロジェクトの形
+
+この章では、次の形のプロジェクトを作ります。
+
+<FileTree>
+- my_juiz_python/
+  - pyproject.toml プロジェクトの設定(使うパッケージ)
+  - process/
+    - increment_process_python.py Process のコード
+</FileTree>
+
+Python の Process は、ビルドしません。`juiz` コマンドが `.py` ファイルを直接読み込みます。
+そのため、プロジェクトに要るのは「Process を書いた `.py` ファイル」と、「`juiz` コマンドと pyjuiz を入れるための設定」だけです。
+第 2 章では、このプロジェクトに `container/` を足します。
+
+まず、ディレクトリを作ります。
+
+```sh
+mkdir my_juiz_python
+cd my_juiz_python
+mkdir process
+```
+
+以降のコマンドは、すべて `my_juiz_python` で実行します。
+
+## pyproject.toml を書く
+
+`pyproject.toml` は、Python のプロジェクトの名前や、使うパッケージを書くファイルです。
+`my_juiz_python/pyproject.toml` を、次の内容で作ります。
+
+<Tabs syncKey="install">
+<TabItem label="pip で入れる">
+
+```toml title="pyproject.toml"
+[project]
+name = "my-juiz-python"
+version = "0.1.0"
+description = "juiz のチュートリアルで作る Python の Process"
+requires-python = ">=3.10"
+dependencies = [
+    "juiz-cli==0.0.26",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = []
+```
+
+</TabItem>
+<TabItem label="cargo で入れる">
+
+`cargo install juiz_app` で入れた `juiz` コマンドを使う場合は、`juiz-cli` の代わりに `pyjuiz` を書きます。
+
+```toml title="pyproject.toml"
+[project]
+name = "my-juiz-python"
+version = "0.1.0"
+description = "juiz のチュートリアルで作る Python の Process"
+requires-python = ">=3.10"
+dependencies = [
+    "pyjuiz==0.0.26",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = []
+```
+
+`juiz-cli` も入れると `juiz` コマンドが 2 つになり、どちらが動くかが PATH の順番で決まってしまいます。
+
+</TabItem>
+</Tabs>
+
+| 項目 | 意味 |
+| --- | --- |
+| `[project]` の `name`・`version`・`description` | プロジェクトの名前・版・説明です。自由に付けてかまいません |
+| `requires-python` | 使える Python の版です。pyjuiz は Python 3.10 以降で動きます |
+| `dependencies` | このプロジェクトで使うパッケージです。`juiz-cli` を入れると、`juiz` コマンドと、Process を書くための pyjuiz(`import juiz`)の両方が入ります |
+| `[build-system]` | `pip install` がこのプロジェクトを扱うときに使う道具(setuptools)です |
+| `[tool.setuptools]` の `py-modules = []` | このプロジェクトの `.py` ファイルは `juiz` が直接読み込むので、Python のパッケージとしてはインストールしない、という指定です |
+
+**`juiz-cli`(または `pyjuiz`)の版は、`==` で固定しておくのがおすすめです。** 同じプロジェクトをほかのマシンで動かしたときも、同じ版の `juiz` で動きます。
+
+## venv を作ってパッケージを入れる
+
+プロジェクト専用の venv(仮想環境)を作り、`pyproject.toml` に書いたパッケージを入れます。
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate        # Windows では .venv\Scripts\activate
+pip install -e .
+```
+
+`pip install -e .` は、カレントディレクトリの `pyproject.toml` を読んで、`dependencies` のパッケージを venv に入れます。
+`my_juiz_python.egg-info` というディレクトリができますが、pip が使うものなので気にしなくてかまいません(Git で管理するなら `.gitignore` に足しておきます)。
+
+```sh
+juiz --version
+# => juiz 0.0.26
+```
+
+以降の手順は、この venv を有効にしたターミナルで実行してください。新しいターミナルを開いたら、`my_juiz_python` で `source .venv/bin/activate` を実行します。
+
+## Process のコードを書く
+
+`process/increment_process_python.py` を、次の内容で作ります。引数 `arg1` に 1 を足して返す Process です。
+
+```python title="process/increment_process_python.py"
+from juiz import juiz_process
+
+
+@juiz_process
+def increment_process_python(arg1: int = 0) -> int:
+    """引数に 1 を足して返す"""
+    print(f"increment_process_python: {arg1} -> {arg1 + 1}")
+    return arg1 + 1
+```
+
+| 行 | 意味 |
+| --- | --- |
+| `from juiz import juiz_process` | pyjuiz から、Process を作るデコレータを読み込みます |
+| `@juiz_process` | この関数を Process にします |
+| `def increment_process_python(arg1: int = 0)` | 関数名 `increment_process_python` が Process の**型名**です。引数の名前・型・既定値は、型ヒントと既定値から juiz が読み取ります |
+| `-> int` | 出力の型です。戻り値の型ヒントは省略できません |
+| `"""..."""` | 関数の説明(docstring)は、Process の説明として使われます |
+
+`print` の行は、呼ばれたことを確かめるためのもので、なくてもかまいません。
+
+<Aside type="tip">
+**ファイル名と関数名(型名)をそろえてください。** juiz は、ファイル名 `increment_process_python.py` から関数 `increment_process_python` を探します。
+第 3 章で使う設定ファイルも、型名からファイル名を作って探します。
+</Aside>
+
+## 動かす
+
+`--process` でファイルを指定して `juiz` を起動します。
+
+```sh
+juiz --process ./process/increment_process_python.py -l python -e -1 -d
+```
+
+`-e` で一度実行されるので、既定値の `arg1 = 0` で呼ばれたことが表示されます。
+
+```
+increment_process_python: 0 -> 1
+```
+
+オプションの意味は次のとおりです。
+
+| オプション | 意味 |
+| --- | --- |
+| `--process <パス>` | Process のファイルを読み込む |
+| `-l <言語>` | ファイルの言語(`rust` / `python` / `cpp`、既定は `rust`)。Python では `-l python` を付ける |
+| `-1` | 読み込んだ Process から、インスタンスを 1 つ作る |
+| `-e` | 作ったインスタンスを、既定の引数で 1 回実行する |
+| `-d` | HTTP ブローカーを 8000 番ポートで立ち上げて待機する(Ctrl+C で終了) |
+
+ここで「読み込む」と「インスタンスを作る」が分かれていることに注目してください。
+ファイルを読み込むと、juiz は Process の**型**(作り方)を覚えます。`-1` を付けると、その型から**インスタンス**を 1 つ作ります。
+インスタンス名は、型名の後ろに `0` を付けた名前(`increment_process_python0`)になります。
+同じ型から、名前の違うインスタンスをいくつも作ることもできます(第 3 章で扱います)。
+
+## 外から呼び出す
+
+`juiz` を起動したまま、別のターミナルを開き、venv を有効にして Process を呼び出してみます。
+まず、動いている Process の一覧を見ます。
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment_process_python0::increment_process_python"]
+```
+
+表示された URL が、この Process の **ID** です。
+`http://127.0.0.1:8000` は Process がいる場所(ブローカー)、`process/` の後ろは「インスタンス名`::`型名」を表しています。
+[ネームスペース](/ja/guides/namespace/)を使うと、インスタンス名の前に `robot1/` のようにネームスペースが入ります。使わなければ上のとおりです。
+
+この ID と引数を指定して、Process を呼び出します(call)。引数は JSON で渡します。
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/increment_process_python0::increment_process_python" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+`3` を渡して `4` が返ってきました。`-p` は結果を表示するオプションです。
+`juiz` を起動したターミナルには `increment_process_python: 3 -> 4` と表示されます。
+何度呼び出しても、同じ引数なら同じ結果が返ることも確かめてみてください。
+
+### ブラウザから呼び出す
+
+`-d` で立ち上げた HTTP ブローカーは、Swagger UI も提供しています。ブラウザで次の URL を開きます。
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+一覧から `PATCH /api/process/call` を開き、「Try it out」を押して次のように入力し、「Execute」を押すと結果が返ってきます。
+
+- identifier: `core://core/process/increment_process_python0::increment_process_python`
+- Request body: `{"arg1": 3}`
+
+<Aside>
+Swagger UI で呼び出すときは、ブローカー自身の中にある Process を指す `core://core/...` という形の ID を使います。
+</Aside>
+
+`juiz` コマンドも Swagger UI も、HTTP で同じ API を呼んでいるだけです。
+つまり、HTTP を話せるプログラムなら、どの言語からでも Process を呼び出して結果を受け取れます。
+これが、juiz をサーバー・クライアントのように使う **call** という使い方です。
+
+## Process は冪等な関数
+
+`increment_process_python` は、引数を受け取って結果を返すだけです。
+外部の状態を読み書きしないので、同じ引数を渡せばいつも同じ結果が返ります(冪等)。
+この性質のおかげで、Process はテストしやすく、あとでつないだり別のマシンに置いたりしても振る舞いが変わりません。
+
+## やってみよう
+
+- 関数を書き換えて、1 を足す代わりに 2 倍にして返すようにしてみましょう。Python はビルドが要らないので、`juiz` を起動し直すだけで、`{"arg1": 3}` に対して `6` が返ってくるはずです。
+- 1 を引く Process `decrement_process_python` を、`process/decrement_process_python.py` に書いてみましょう。答えはサンプル集の [`process/decrement_process_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/process/decrement_process_python.py) にあります。
+
+## まとめ
+
+- Python の Process はビルドしません。`pyproject.toml` に `juiz-cli`(cargo で入れた場合は `pyjuiz`)を書いて venv に入れ、`.py` ファイルを `juiz` に読み込ませます。
+- ファイル名と関数名(型名)はそろえます。
+- Process は、引数を受け取って結果を返すだけの冪等な関数です。`@juiz_process` を付けた関数の名前が型名になり、引数と出力の型は型ヒントから読み取られます。
+- juiz はファイルを読み込んで Process の**型**を覚え、そこから名前の付いた**インスタンス**を作ります。
+- 動いている Process には URL の形をした ID があり、ID と引数を指定して外から呼び出せます(call)。
+
+次の章では、このプロジェクトにカウンタの Container を足して、状態を持つ部品の書き方を学びます。[状態を持つ: Container と ContainerProcess(Python)](/ja/tutorial/container/python/) に進みましょう。

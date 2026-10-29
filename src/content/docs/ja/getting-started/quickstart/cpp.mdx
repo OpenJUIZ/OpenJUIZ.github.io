@@ -1,0 +1,105 @@
+---
+title: "クイックスタート: C++"
+description: C++ のサンプル集をビルドして、juiz で Process を動かします。
+sidebar:
+  order: 3
+  label: C++
+prev:
+  link: /ja/getting-started/quickstart/
+  label: クイックスタート
+next:
+  link: /ja/tutorial/
+  label: チュートリアルの進め方
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+C++ のサンプル集 [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) を使って、引数に 1 を足すだけの Process を動かしてみます。
+先に [インストール](/ja/getting-started/install/) で `juiz` コマンドを入れておいてください。
+
+## サンプルをビルドする
+
+CMake と C++17 対応のコンパイラが必要です。`juiz` コマンドは pip と cargo のどちらで入れたものでも使えます。
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_cpp.git
+cd juiz_examples_cpp
+cmake -S . -B build
+cmake --build build
+```
+
+CMake が、`juiz` と同じ版の libjuiz_sdk とヘッダを [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から取得します。
+サンプルの型を作るのに `juiz` コマンドを使うので、`cmake` は `juiz` が使えるターミナル(pip で入れた場合は venv を有効にしたターミナル)で実行してください。
+各サンプルは共有ライブラリとして `build/plugins` にビルドされます。
+
+## Process のコード
+
+動かすのは、次の Process です。
+
+[`process/increment_process_cpp/increment_process_cpp.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/process/increment_process_cpp/increment_process_cpp.cpp)
+
+```cpp
+#include "juiz/juiz.h"
+
+auto manifest() {
+    return ProcessManifest{"increment_process_cpp"}
+        .description("Adds 1 to arg1.")
+        .add_int_arg("arg1", "value to be incremented", 1);
+}
+
+std::optional<int64_t> increment_process_cpp(int64_t arg1) {
+    return arg1 + 1;
+}
+
+PROCESS_FACTORY(manifest, increment_process_cpp);
+```
+
+## 起動する
+
+リポジトリのルートで、設定ファイルを指定して `juiz` を起動します。設定ファイルは、リポジトリのルートからの相対パスでプラグインを探します。
+
+```sh
+juiz -f increment_process.conf -d
+```
+
+`-d` を付けると、HTTP ブローカーを 8000 番ポートで立ち上げて待機します(Ctrl+C で終了)。
+
+## 呼び出す
+
+`juiz` を起動したまま、別のターミナルを開いて、同じディレクトリで呼び出します。
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment0::increment_process_cpp"]
+juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_cpp" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+`3` を渡して `4` が返ってきました。
+
+### ブラウザから呼び出す
+
+ブラウザで次の URL を開くと、Swagger UI から Process を呼び出して結果を確かめられます。
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+`PATCH /api/process/call` を開き、「Try it out」を押して、identifier に `core://core/process/increment0::increment_process_cpp`、Request body に `{"arg1": 3}` を入れて「Execute」を押します。
+
+### 管理画面で見る
+
+次の URL を開くと、動いている Process や接続を管理画面で確かめられます。詳しくは [管理画面](/ja/guides/web-ui/) を見てください。
+
+```
+http://127.0.0.1:8000/ui/
+```
+
+## 次に進む
+
+動かせたら、[チュートリアルの進め方](/ja/tutorial/) に進みましょう。Process を 1 から書くところから、順に学べます。
+ほかの言語のクイックスタート:
+
+- [Rust](/ja/getting-started/quickstart/rust/)
+- [Python](/ja/getting-started/quickstart/python/)
+- [Haskell](/ja/getting-started/quickstart/haskell/)

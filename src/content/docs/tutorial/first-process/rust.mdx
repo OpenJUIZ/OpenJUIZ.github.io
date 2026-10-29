@@ -1,0 +1,252 @@
+---
+title: "1. Your first Process (Rust)"
+description: Create a Cargo workspace from scratch, write a Process in Rust that adds 1 to its argument, and run it.
+sidebar:
+  order: 1
+  label: Rust
+prev:
+  link: /tutorial/first-process/
+  label: "1. Your first Process"
+next:
+  link: /tutorial/container/rust/
+  label: "2. Keeping state (Rust)"
+---
+
+import { Aside, FileTree } from '@astrojs/starlight/components';
+
+In this chapter you create a Cargo project from an empty directory, write a Process in Rust that adds 1 to its argument and returns it, and run it.
+What you build is the same as `process/increment_process` in the [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust) examples.
+
+<Aside type="tip" title="What you will learn">
+- How to set up a Cargo project for writing Processes (how to write `Cargo.toml`)
+- A Process is an idempotent function that takes arguments and returns a result
+- A Process has a "type name" and an "instance name"
+- How to call a Process from outside and get the result back (call)
+</Aside>
+
+## Before you start
+
+Install Rust and the `juiz` command by following "Install with cargo" in [Installation](/getting-started/install/).
+
+```sh
+juiz --version
+# => juiz 0.0.26
+```
+
+Run Rust plugins with the `juiz` installed with `cargo install juiz_app`. The `juiz` installed with pip cannot load Rust plugins you build yourself.
+
+## Project layout
+
+In this chapter you create a project laid out like this.
+
+<FileTree>
+- my_juiz_rust/
+  - Cargo.toml workspace settings
+  - process/
+    - increment_process/
+      - Cargo.toml settings of the Process crate
+      - src/
+        - lib.rs the Process code
+</FileTree>
+
+In juiz, each Process is built as its own shared library (`.so` or `.dylib`), and the `juiz` command loads it as a plugin.
+Every Process you write adds one crate, so start with a Cargo **workspace** right away and put the Process crates in it.
+Chapter 2 adds Container crates to this workspace.
+
+First, create the directories.
+
+```sh
+mkdir my_juiz_rust
+cd my_juiz_rust
+mkdir -p process/increment_process/src
+```
+
+Run all the following commands in `my_juiz_rust`.
+
+## Write the workspace Cargo.toml
+
+Create `my_juiz_rust/Cargo.toml` with the following content.
+
+```toml title="Cargo.toml"
+[workspace]
+resolver = "2"
+members = [
+    "process/increment_process",
+]
+
+[workspace.dependencies]
+juiz_sdk = "0.0.26"
+```
+
+| Item | Meaning |
+| --- | --- |
+| `[workspace]` | Marks this directory as the root of a workspace. There is no `[package]` here |
+| `resolver = "2"` | The version of the dependency resolver. It is good practice to state it in a workspace |
+| `members` | The directories of the crates in the workspace. Add a line here whenever you add a Process |
+| `[workspace.dependencies]` | Dependencies, and their versions, shared by all crates in the workspace |
+
+`juiz_sdk` is the crate you write Processes and Containers with.
+**Use the same `juiz_sdk` version as the one printed by `juiz --version`.** `juiz` stops with an error when it loads a plugin built with a different version.
+Keeping the version in one place means that when you upgrade `juiz`, this is the only line you need to change.
+
+## Write the Cargo.toml of the Process crate
+
+Create `process/increment_process/Cargo.toml` with the following content.
+
+```toml title="process/increment_process/Cargo.toml"
+[package]
+name = "increment_process"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+juiz_sdk = { workspace = true }
+```
+
+| Item | Meaning |
+| --- | --- |
+| `name` | The crate name. It becomes the file name of the built shared library (`libincrement_process.so`) |
+| `edition` | The Rust edition |
+| `crate-type = ["cdylib"]` under `[lib]` | Builds this crate as a shared library that other languages can load (a C-style dynamic library). This is the format `juiz` can load |
+| `juiz_sdk = { workspace = true }` | Uses the `juiz_sdk` version written in the workspace's `[workspace.dependencies]` |
+
+If you forget `crate-type`, you get only a regular Rust library (`.rlib`), which `juiz` cannot load.
+
+<Aside type="tip">
+Give the crate the same name as the function you are about to write (the Process type name).
+The configuration file you use in chapter 3 builds the file name `libincrement_process.so` from the type name `increment_process` and looks for it.
+</Aside>
+
+## Write the Process code
+
+Create `process/increment_process/src/lib.rs` with the following content. It is a Process that adds 1 to the argument `arg1` and returns it.
+
+```rust title="process/increment_process/src/lib.rs"
+use juiz_sdk::prelude::*;
+
+#[juiz_process]
+fn increment_process(arg1: i64) -> JuizResult<Capsule> {
+    log::trace!("increment_process({:?}) called", arg1);
+    return Ok(jvalue!(arg1 + 1).into());
+}
+```
+
+| Line | Meaning |
+| --- | --- |
+| `use juiz_sdk::prelude::*;` | Brings in the macros and types used to write a Process (`juiz_process`, `JuizResult`, `Capsule`, `jvalue!`, `log` and so on) |
+| `#[juiz_process]` | Turns this function into a Process. The macro also generates the functions `juiz` uses to load it |
+| `fn increment_process(arg1: i64)` | The function name `increment_process` is the Process **type name**, and the argument name `arg1` becomes the argument name as is |
+| `-> JuizResult<Capsule>` | The return value. A `Capsule` is the container juiz uses to pass values around |
+| `jvalue!(arg1 + 1).into()` | Builds a value with `jvalue!` and converts it into a `Capsule` with `into()` |
+
+The `log::trace!` line writes a log message and is optional.
+
+## Build it
+
+```sh
+cargo build
+```
+
+The first build fetches and compiles `juiz_sdk` and its dependencies, so it takes a while.
+The shared library is placed in `target/debug`.
+
+```sh
+ls target/debug/libincrement_process.*
+# => target/debug/libincrement_process.so (libincrement_process.dylib on macOS)
+```
+
+Because this is a workspace, a single `cargo build` at the root builds every crate as you add more, and all the outputs end up in the same `target/debug`.
+
+## Run it
+
+Start `juiz`, passing the file with `--process`.
+
+```sh
+juiz --process ./target/debug/libincrement_process.so -e -1 -d
+```
+
+On macOS the extension is `.dylib` (`./target/debug/libincrement_process.dylib`).
+
+The options mean the following.
+
+| Option | Meaning |
+| --- | --- |
+| `--process <path>` | Load a Process file |
+| `-l <language>` | The language of the file (`rust` / `python` / `cpp`; the default is `rust`, so you can leave it out for Rust) |
+| `-1` | Create one instance from the loaded Process |
+| `-e` | Run the created instance once with the default arguments |
+| `-d` | Start the HTTP broker on port 8000 and keep running (stop with Ctrl+C) |
+
+Notice that "loading" and "creating an instance" are separate steps.
+When juiz loads a file, it learns the Process **type** (how to make one). With `-1`, it creates one **instance** from that type.
+The instance name is the type name followed by `0` (`increment_process0`).
+You can also create several instances with different names from the same type (covered in chapter 3).
+
+## Call it from outside
+
+Leave `juiz` running, open another terminal and call the Process.
+First, list the running Processes.
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment_process0::increment_process"]
+```
+
+The URL shown is the **ID** of this Process.
+`http://127.0.0.1:8000` is where the Process lives (the broker), and the part after `process/` is "instance name`::`type name".
+With [namespaces](/guides/namespace/), a namespace such as `robot1/` comes before the instance name (`process/robot1/increment_process0::increment_process`). Without them, it looks as above.
+
+Call the Process with this ID and arguments (call). Arguments are passed as JSON.
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/increment_process0::increment_process" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+You passed `3` and got `4` back. `-p` prints the result.
+Check that calling it again with the same argument always gives the same result.
+
+### Call it from a browser
+
+The HTTP broker started with `-d` also serves Swagger UI. Open the following URL in a browser.
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+Open `PATCH /api/process/call`, press "Try it out", enter the following, and press "Execute" to get the result.
+
+- identifier: `core://core/process/increment_process0::increment_process`
+- Request body: `{"arg1": 3}`
+
+<Aside>
+In Swagger UI, use an ID of the form `core://core/...`, which points to a Process inside the broker itself.
+</Aside>
+
+Both the `juiz` command and Swagger UI just call the same API over HTTP.
+That means any program that speaks HTTP, in any language, can call a Process and get the result back.
+This is **call**, the way of using juiz like a server and client.
+
+## A Process is an idempotent function
+
+`increment_process` only takes an argument and returns a result.
+It does not read or write any outside state, so the same argument always gives the same result (it is idempotent).
+Thanks to this, Processes are easy to test, and they behave the same when you later connect them or move them to another machine.
+
+## Try it yourself
+
+- Change `lib.rs` to return twice the argument instead of adding 1. Rebuild with `cargo build` and restart `juiz`; `{"arg1": 3}` should now give `6`.
+- Add `decrement_process`, a Process that subtracts 1, as another crate. Create the same set of files in `process/decrement_process` and add it to the workspace `members`. The answer is in [`process/decrement_process`](https://github.com/OpenJUIZ/juiz_examples_rust/tree/main/process/decrement_process) of the examples.
+
+## Summary
+
+- A Rust Process is built as a crate with `crate-type = ["cdylib"]`. Since you will add more Processes, a workspace is convenient.
+- Use the same `juiz_sdk` version as the `juiz` command.
+- A Process is an idempotent function that only takes arguments and returns a result. The name of the function with `#[juiz_process]` becomes the type name.
+- juiz loads a file to learn a Process **type**, and creates named **instances** from it.
+- A running Process has an ID shaped like a URL, and you can call it from outside with that ID and arguments (call).
+
+In the next chapter you add a counter Container to this workspace and learn how to write building blocks that keep state. Move on to [Keeping state: Container and ContainerProcess (Rust)](/tutorial/container/rust/).

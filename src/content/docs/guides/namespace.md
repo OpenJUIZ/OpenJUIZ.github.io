@@ -178,7 +178,7 @@ The README also shows how to start the same configuration file twice with `--nam
 | C++ | [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) | `talker_cpp` / `listener_cpp` |
 | Haskell | [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) | `talker_hs` / `listener_hs` |
 
-To prepare the examples, see [Tutorial chapter 1](/tutorial/first-process/#prepare-the-samples) for Rust, Python and C++, and the repository README for Haskell.
+To prepare the examples, see the page for each language in [Quick start](/getting-started/quickstart/).
 
 ```sh
 juiz -f namespace.conf -d
