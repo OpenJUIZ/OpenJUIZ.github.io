@@ -12,7 +12,7 @@ next:
   label: "2. 状態を持つ(Rust)"
 ---
 
-import { Aside, FileTree } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 この章では、空のディレクトリから Cargo のプロジェクトを作り、引数に 1 を足して返す Process を Rust で書いて動かします。
 できあがるものは、サンプル集 [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust) の `process/increment_process` と同じです。
@@ -27,6 +27,10 @@ import { Aside, FileTree } from '@astrojs/starlight/components';
 ## 準備
 
 [インストール](/ja/getting-started/install/) の「cargo で入れる」の手順で、Rust と `juiz` コマンドを入れておいてください。
+
+<Aside type="note" title="Windows の場合">
+Rust の手順は Linux と macOS 向けです(`cargo install juiz_app` は Linux と macOS を案内しています)。WSL の Ubuntu なら、Linux の手順で進められます。
+</Aside>
 
 ```sh
 juiz --version
@@ -153,10 +157,24 @@ cargo build
 初回は `juiz_sdk` とその依存クレートを取得してビルドするので、少し時間がかかります。
 できあがった共有ライブラリは `target/debug` に置かれます。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 ls target/debug/libincrement_process.*
-# => target/debug/libincrement_process.so (macOS では libincrement_process.dylib)
+# => target/debug/libincrement_process.so
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+ls target/debug/libincrement_process.*
+# => target/debug/libincrement_process.dylib
+```
+
+</TabItem>
+</Tabs>
 
 ワークスペースにしたので、クレートが増えても、ルートで `cargo build` を 1 回実行すれば全部ビルドされ、成果物も同じ `target/debug` にそろいます。
 
@@ -164,11 +182,23 @@ ls target/debug/libincrement_process.*
 
 `--process` でファイルを指定して `juiz` を起動します。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process ./target/debug/libincrement_process.so -e -1 -d
 ```
 
-macOS では拡張子が `.dylib` になります(`./target/debug/libincrement_process.dylib`)。
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./target/debug/libincrement_process.dylib -e -1 -d
+```
+
+</TabItem>
+</Tabs>
+
 
 オプションの意味は次のとおりです。
 

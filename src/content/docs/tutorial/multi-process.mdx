@@ -20,7 +20,7 @@ In this chapter you start the talker and the listener in separate `juiz` instanc
 ## Prepare the samples
 
 This chapter uses the same talker and listener as chapter 4. You can keep using the example repository you cloned and built in chapter 4.
-If you have not done that yet, follow [Prepare the samples in chapter 4](/tutorial/connect/#prepare-the-samples).
+If you have not done that yet, follow "Prepare the samples" in chapter 4 ([Rust](/tutorial/connect/rust/#prepare-the-samples), [Python](/tutorial/connect/python/#prepare-the-samples), [C++](/tutorial/connect/cpp/#prepare-the-samples)).
 
 This chapter uses three terminals. Open each of them at the root of the example repository (for Python, activate the venv in every terminal).
 
@@ -37,11 +37,22 @@ In terminal 1, start `juiz` with the listener loaded. As in chapter 1, `-1` crea
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process ./target/debug/liblistener.so -1 -d
 ```
 
-On macOS the extension is `.dylib`.
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./target/debug/liblistener.dylib -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">
@@ -53,11 +64,22 @@ juiz --process ./process/listener_python.py -l python -1 -d
 </TabItem>
 <TabItem label="C++">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process ./build/plugins/liblistener_cpp.so -l cpp -1 -d
 ```
 
-On macOS the extension is `.dylib`.
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./build/plugins/liblistener_cpp.dylib -l cpp -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 </Tabs>
@@ -101,9 +123,22 @@ In terminal 2, start `juiz` with the talker loaded. This time add `-r 1.0`.
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process ./target/debug/libtalker.so -1 -r 1.0 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./target/debug/libtalker.dylib -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">
@@ -115,9 +150,22 @@ juiz --process ./process/talker_python.py -l python -1 -r 1.0 -d
 </TabItem>
 <TabItem label="C++">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --process ./build/plugins/libtalker_cpp.so -l cpp -1 -r 1.0 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./build/plugins/libtalker_cpp.dylib -l cpp -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 </Tabs>

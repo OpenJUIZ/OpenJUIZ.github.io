@@ -12,7 +12,7 @@ next:
   label: "3. 設定ファイルでまとめて起動する"
 ---
 
-import { Aside, FileTree } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 第 1 章の Process は、同じ引数を渡せばいつも同じ結果を返す冪等な関数でした。
 しかし、ロボットや IoT の部品を作っていると、カウンタの値やモータの現在位置、カメラの接続のように「覚えておきたいもの」が必ず出てきます。
@@ -44,11 +44,35 @@ import { Aside, FileTree } from '@astrojs/starlight/components';
 
 ディレクトリを作り、第 1 章の venv を有効にします。以降のコマンドは、すべて `my_juiz_python` で実行します。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 cd my_juiz_python
-source .venv/bin/activate        # Windows では .venv\Scripts\activate
+source .venv/bin/activate
 mkdir container
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+cd my_juiz_python
+source .venv/bin/activate
+mkdir container
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+cd my_juiz_python
+.venv\Scripts\activate
+mkdir container
+```
+
+</TabItem>
+</Tabs>
 
 ## Container を書く
 

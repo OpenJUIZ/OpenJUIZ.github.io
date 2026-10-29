@@ -1,0 +1,262 @@
+---
+title: "5. Component にまとめて配布する(Rust)"
+description: Process・Container・ContainerProcess を Rust で 1 つの Component にまとめ、設定ファイル 1 行で読み込みます。
+sidebar:
+  order: 1
+  label: Rust
+prev:
+  link: /ja/tutorial/connect/rust/
+  label: "4. Process をつなぐ(Rust)"
+next:
+  link: /ja/tutorial/multi-process/
+  label: "6. 別々のプロセスをつなぐ"
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+ここまでは、Process も Container も ContainerProcess も、1 つの型ごとに別々のファイル(ライブラリ)として作ってきました。
+第 3 章の設定ファイルでも、`plugins` に型を 1 つずつ並べて、それぞれのファイルを読み込ませていました。
+
+実際に「このカメラを動かす部品一式」を誰かに渡すときに、ファイルがばらばらだと不便です。
+この章では、Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を作り、設定ファイルから読み込みます。
+
+<Aside type="tip" title="この章で学ぶこと">
+- Component は、複数の Process・Container・ContainerProcess を 1 つにまとめた**配布の単位**であること
+- Component の中の型は、これまでと同じ型名で、同じようにインスタンスを作れること
+- `plugins` の `components` には、型ではなく Component の名前を 1 つ書けばよいこと
+</Aside>
+
+## サンプルを用意する
+
+第 4 章でクローンしてビルドしたサンプル集をそのまま使います。Component のサンプルも、第 4 章のビルドで一緒にできあがっています。
+まだの場合は、[第 4 章(Rust)の「サンプルを用意する」](/ja/tutorial/connect/rust/#サンプルを用意する) の手順を済ませてください。
+
+この章で使う Component には、次のものが入っています。どれも、これまでの章で作ったものと同じ働きです。
+
+| 種類 | 働き |
+| --- | --- |
+| Process | 引数に 1 を足して返す(第 1 章の `increment_process` と同じ) |
+| Container | 整数値を 1 つ持つ(第 2 章のカウンタと同じ) |
+| ContainerProcess | Container の値を読む・変える |
+
+## Component のコードを読む
+
+[`component/example_component/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/component/example_component/src/lib.rs)
+
+```rust
+use juiz_sdk::prelude::*;
+
+#[juiz_component_process]
+fn example_component_increment(arg1: i64) -> JuizResult<Capsule> {
+    log::trace!("increment_process({:?}) called", arg1);
+    return Ok(jvalue!(arg1 + 1).into());
+}
+
+#[repr(Rust)]
+pub struct ExampleComponentContainer {
+    pub value: i64,
+}
+
+#[juiz_component_container]
+fn example_component_container(initial_value: i64) -> JuizResult<Box<ExampleComponentContainer>> {
+    println!("example_component_container({initial_value}) called");
+    Ok(Box::new(ExampleComponentContainer {
+        value: initial_value,
+    }))
+}
+
+#[juiz_component_container_process(container_type = "example_component_container")]
+fn example_component_container_get(
+    container: &mut ContainerImpl<ExampleComponentContainer>,
+) -> JuizResult<Capsule> {
+    println!("example_component_container_get()");
+    Ok(jvalue!(container.value).into())
+}
+
+#[juiz_component_container_process(container_type = "example_component_container")]
+fn example_component_container_increment(
+    container: &mut ContainerImpl<ExampleComponentContainer>,
+) -> JuizResult<Capsule> {
+    println!("example_component_container_increment()");
+    container.value = container.value + 1;
+    Ok(jvalue!(container.value).into())
+}
+
+#[juiz_component_container_process( container_type = "example_component_container" 
+   arguments = {
+      default = {
+        arg1 = 1
+      }
+   }
+)]
+fn example_component_container_add(
+    container: &mut ContainerImpl<ExampleComponentContainer>,
+    arg1: i64,
+) -> JuizResult<Capsule> {
+    println!("example_component_container_add({arg1})");
+    container.value = container.value + arg1;
+    Ok(jvalue!(container.value).into())
+}
+
+juiz_component_manifest!(
+    component_name = "example_component"
+    containers = {
+        example_component_container = [
+            example_component_container_get,
+            example_component_container_increment,
+            example_component_container_add
+        ]
+    }
+    processes = [
+        example_component_increment
+    ]
+);
+```
+
+関数の書き方は、これまでとほとんど同じです。違うのは 2 点だけです。
+
+- 属性マクロが `#[juiz_process]` → `#[juiz_component_process]`、`#[juiz_container]` → `#[juiz_component_container]`、`#[juiz_container_process]` → `#[juiz_component_container_process]` のように、`component` の付いたものに変わります。
+- 最後の `juiz_component_manifest!` で、この Component の名前と、中に入れる Process・Container・ContainerProcess を宣言します。ContainerProcess は、結びつく Container の下に並べます。
+
+Component 全体が 1 つのクレート([`Cargo.toml`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/component/example_component/Cargo.toml) の `crate-type = ["cdylib"]`)になり、1 つの共有ライブラリにビルドされます。ファイル名は Linux では `target/debug/libexample_component.so`、macOS では `target/debug/libexample_component.dylib` です。
+
+これまで型ごとに分かれていたものが、Component では1 つのライブラリに入っています。
+それぞれの Process や ContainerProcess の中身は、これまでと変わりません。Process は冪等な関数のまま、状態に触れるのは ContainerProcess だけ、という考え方もそのままです。
+
+## 設定ファイルを読む
+
+[`example_component.conf`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/example_component.conf)
+
+```yaml
+name: example_component
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  components:
+    example_component:
+      language: rust
+      path: "./target/debug"
+processes:
+  - type_name: example_component_increment
+    name: proc0
+containers:
+  - type_name: example_component_container
+    name: container0
+    initial_value: 100
+    processes:
+      - type_name: example_component_container_increment
+        name: increment0
+      - type_name: example_component_container_add
+        name: add0
+      - type_name: example_component_container_get
+        name: get0
+```
+
+第 3 章の設定ファイルと比べてみましょう。
+
+### plugins: Component を 1 つ書く
+
+```yaml
+plugins:
+  components:
+    example_component:
+      path: "./target/debug"
+```
+
+第 3 章では、`process_factories` と `container_factories` に型を 1 つずつ書き、ContainerProcess も Container の下に 1 つずつ書いていました。
+Component では、`components` に **Component の名前を 1 つ**書くだけです。キーの名前から読み込むファイルが決まるのは、第 3 章と同じです。
+
+Component 名 `example_component` なら、`./target/debug` の中の `libexample_component.so`(macOS では `libexample_component.dylib`)が読み込まれます。設定ファイルには拡張子を書かないので、同じ設定ファイルがどの OS でも使えます。
+
+この 1 行で、Component の中にある Process・Container・ContainerProcess の型が、すべて読み込まれます。
+
+### processes と containers: いつもどおり作る
+
+`processes` と `containers` の書き方は、第 3 章とまったく同じです。`type_name` に Component の中の型名を書き、`name` にインスタンスの名前を書きます。
+Container の初期値を渡せるのも同じです。
+
+型がどのファイルから来たのかは、インスタンスを作る側には関係ありません。
+Component は「型をまとめて配る」ためのもので、作ったインスタンスは、別々のファイルから読み込んだときと同じように動きます。
+
+## 動かす
+
+設定ファイルを `-f` で渡して起動します。
+
+```sh
+juiz -f example_component.conf -d
+```
+
+## 外から呼び出す
+
+`juiz` を起動したまま別のターミナルを開き、一覧を見てみます。
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/proc0::example_component_increment"]
+juiz container list
+# => ["http://127.0.0.1:8000/container/container0::example_component_container"]
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/add0::example_component_container_add:container0", "http://127.0.0.1:8000/container_process/get0::example_component_container_get:container0", "http://127.0.0.1:8000/container_process/increment0::example_component_container_increment:container0"]
+```
+
+1 つのファイルから読み込んだ型で、Process・Container・ContainerProcess のインスタンスがそろってできています。ID の形も、これまでの章とまったく同じです。
+それぞれを呼び出してみましょう。
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/proc0::example_component_increment" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(100), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_component_container_increment:container0" '{}' -p
+# => CapsulePtr((value:Value(101), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/add0::example_component_container_add:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(106), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(106), option: []))
+```
+
+Process は引数に 1 を足して返し、ContainerProcess は Container の値を変えたり読んだりします。
+呼び出す側から見ると、第 1 章〜第 3 章で別々のファイルから作ったものと区別がつきません。
+
+## Component は配布の単位
+
+ここまでで見たように、Component にまとめても、Process や Container の働きや使い方は何も変わりません。変わるのは**ファイルの束ね方**だけです。
+
+- **作る人**は、関連する Process・Container・ContainerProcess を 1 つのプロジェクトで書き、1 つのライブラリとして配れます。たとえばカメラなら、カメラを開いて持っておく Container、画像を読む ContainerProcess、画像を変換する Process を 1 つの Component にできます。
+- **使う人**は、`plugins` の `components` に 1 行書くだけで、中の型を全部使えるようになります。どの型を何個作るかは、これまでどおり `processes` と `containers` で自由に決められます。
+
+つまり、Process・Container・ContainerProcess が「動かすときの単位」であるのに対して、Component は「配るときの単位」です。
+
+## やってみよう
+
+- `processes` に `example_component_increment`のインスタンスをもう 1 つ書き足してみましょう。Component から読み込んだ型からも、第 3 章と同じように、いくつでもインスタンスを作れます。
+- `containers` にもう 1 つ Container(たとえば `container1`)と、それに結びつく ContainerProcess を書き足してみましょう。`container0` と `container1` は別々の値を持ちます。
+- 第 4 章の `connections` と `ecs` を書き足して、1 つ目の Process の出力を、書き足した 2 つ目の Process の `arg1` につないでみましょう。Component から読み込んだ型かどうかに関係なく、同じようにつなげます。`plugins` には `components` と `process_factories` を並べて書けるので、第 3 章の `increment_process` のような別ファイルの Process とつなぐこともできます。
+- 設定ファイルを使わずに、コマンドラインから Component を読み込むこともできます。`-1` を付けると、Component の中のすべての型から、インスタンスを 1 つずつ作ります(名前は第 1 章と同じく「型名 + `0`」になります)。起動時に `ERROR` の行がいくつか表示されますが、そのまま動きます。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --component ./target/debug/libexample_component.so -1 -d
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --component ./target/debug/libexample_component.dylib -1 -d
+```
+
+</TabItem>
+</Tabs>
+
+## まとめ
+
+- Component は、複数の Process・Container・ContainerProcess を 1 つのライブラリにまとめたものです。
+- 設定ファイルでは、`plugins` の `components` に Component の名前を 1 つ書くだけで、中の型がすべて読み込まれます。
+- インスタンスの作り方、ID、呼び出し方、つなぎ方は、別々のファイルから読み込んだときと同じです。Component は動かし方を変えるものではなく、**配布の単位**です。
+
+次の章では、別々に起動した juiz どうしを、設定ファイルなしでコマンドからつなぎます。[別々のプロセスをつなぐ](/ja/tutorial/multi-process/) に進みましょう。

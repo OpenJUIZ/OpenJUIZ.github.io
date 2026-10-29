@@ -12,7 +12,7 @@ next:
   label: "3. Starting everything from a configuration file"
 ---
 
-import { Aside, FileTree } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 The Process in chapter 1 was an idempotent function that always returns the same result for the same arguments.
 But when you build parts for robots and IoT devices, you always end up with things you want to remember: a counter value, the current position of a motor, a connection to a camera.
@@ -222,6 +222,9 @@ When you want to know "where does this value change?", you only need to look at 
 
 ## Build it
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 cargo build
 ls target/debug/*.so
@@ -229,19 +232,44 @@ ls target/debug/*.so
 #    target/debug/libexample_container_increment.so  target/debug/libincrement_process.so
 ```
 
-On macOS the extension is `.dylib`. Everything, including the Process from chapter 1, ends up in `target/debug`.
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+cargo build
+ls target/debug/*.dylib
+# => target/debug/libexample_container.dylib  target/debug/libexample_container_get.dylib
+#    target/debug/libexample_container_increment.dylib  target/debug/libincrement_process.dylib
+```
+
+</TabItem>
+</Tabs>
+
+Everything, including the Process from chapter 1, ends up in `target/debug`.
 
 ## Run it
 
 First, start `juiz` with the files, as in chapter 1.
 Load the Container with `--container` and the ContainerProcess with `--container_process`.
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --container ./target/debug/libexample_container.so \
      --container_process ./target/debug/libexample_container_increment.so -1 -d
 ```
 
-On macOS the extension is `.dylib`.
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --container ./target/debug/libexample_container.dylib \
+     --container_process ./target/debug/libexample_container_increment.dylib -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 With `-1`, juiz creates one instance from the loaded Container type and binds one ContainerProcess instance to it.
 As in chapter 1, the instance names are the type names followed by `0`: the Container is `example_container0` and the ContainerProcess is `example_container_increment0`.

@@ -1,0 +1,204 @@
+---
+title: "5. Packaging as a Component (Python)"
+description: Bundle Processes, Containers and ContainerProcesses written in Python into one Component and load it with one line of configuration.
+sidebar:
+  order: 2
+  label: Python
+prev:
+  link: /tutorial/connect/python/
+  label: "4. Connecting Processes (Python)"
+next:
+  link: /tutorial/multi-process/
+  label: "6. Connecting separate processes"
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+So far you have built every Process, Container and ContainerProcess as a separate file (library), one per type.
+In the configuration file in chapter 3, you also listed the types in `plugins` one by one so each file was loaded.
+
+When you want to hand someone "the full set of parts for this camera", scattered files are inconvenient.
+In this chapter you build a **Component** that bundles Processes, Containers and ContainerProcesses into one library, and load it from a configuration file.
+
+<Aside type="tip" title="What you will learn">
+- A Component is the **unit of distribution** that bundles several Processes, Containers and ContainerProcesses
+- Types inside a Component keep their type names, and you create instances from them the same way as before
+- `components` in `plugins` takes a single Component name instead of each type
+</Aside>
+
+## Prepare the samples
+
+Keep using the example repository you cloned and built in chapter 4. The Component example was built along with everything else in chapter 4.
+If you have not done that yet, follow [Prepare the samples in chapter 4 (Python)](/tutorial/connect/python/#prepare-the-samples).
+
+The Component used in this chapter contains the following. Each works the same as what you built in the earlier chapters.
+
+| Kind | What it does |
+| --- | --- |
+| Process | Adds 1 to its argument and returns it (same as `increment_process` in chapter 1) |
+| Container | Holds one integer (same as the counter in chapter 2) |
+| ContainerProcess | Reads or changes the Container's value |
+
+## Read the Component code
+
+[`component/example_component_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/component/example_component_python.py)
+
+```python
+from juiz import juiz_container, juiz_container_process, juiz_process
+
+
+@juiz_process
+def example_component_python_increment(arg1: int = 0) -> int:
+    """Adds 1 to the argument and returns it"""
+    return arg1 + 1
+
+
+class IntegerContainer:
+    def __init__(self, value: int):
+        self.value = value
+
+
+@juiz_container
+def example_component_python_container(initial_value: int = 0) -> IntegerContainer:
+    """A Container that holds one integer"""
+    return IntegerContainer(initial_value)
+
+
+@juiz_container_process(container_type="example_component_python_container")
+def example_component_python_container_set(container, value: int = 0) -> int:
+    """Sets the value of the Container"""
+    container.value = value
+    return container.value
+
+
+@juiz_container_process(container_type="example_component_python_container")
+def example_component_python_container_get(container) -> int:
+    """Returns the value of the Container"""
+    return container.value
+```
+
+The decorators are exactly the same as in chapters 1 and 2. The only difference is that they are **placed in one file**.
+When loaded as a Component, every decorated function in this file becomes a type of this Component. The file name `example_component_python` is the Component's name.
+
+What used to be split per type now lives in one file.
+The bodies of the Processes and ContainerProcesses are unchanged. Processes are still idempotent functions, and only ContainerProcesses touch state.
+
+## Read the configuration file
+
+[`example_component.conf`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/example_component.conf)
+
+```yaml
+name: example_component
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  components:
+    example_component_python:
+      language: python
+      path: "./component"
+processes:
+  - type_name: example_component_python_increment
+    name: increment0
+containers:
+  - type_name: example_component_python_container
+    name: container0
+    processes:
+      - type_name: example_component_python_container_set
+        name: set0
+      - type_name: example_component_python_container_get
+        name: get0
+```
+
+Compare it with the configuration file from chapter 3.
+
+### plugins: one Component entry
+
+```yaml
+plugins:
+  components:
+    example_component:
+      path: "./target/debug"
+```
+
+In chapter 3 you listed types one by one in `process_factories` and `container_factories`, and each ContainerProcess under its Container.
+With a Component, you write **just one Component name** in `components`. As in chapter 3, the key determines which file is loaded.
+
+For the Component name `example_component_python`, juiz loads `example_component_python.py` from `./component`.
+
+That one entry loads every Process, Container and ContainerProcess type in the Component.
+
+### processes and containers: created as usual
+
+`processes` and `containers` are written exactly as in chapter 3. Put a type name from the Component in `type_name` and the instance name in `name`.
+You can pass a Container's initial value the same way, too (this example omits it, so the value starts at `0`).
+
+Where a type came from does not matter to the side creating instances.
+A Component is for "distributing types together", and the instances you create behave exactly as if they had been loaded from separate files.
+
+## Run it
+
+Pass the configuration file with `-f`.
+
+```sh
+juiz -f example_component.conf -d
+```
+
+Run it in a terminal where the venv from chapter 4 is activated.
+
+## Call it from outside
+
+Leave `juiz` running, open another terminal, and look at the lists.
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment0::example_component_python_increment"]
+juiz container list
+# => ["http://127.0.0.1:8000/container/container0::example_component_python_container"]
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/set0::example_component_python_container_set:container0", "http://127.0.0.1:8000/container_process/get0::example_component_python_container_get:container0"]
+```
+
+Process, Container and ContainerProcess instances have all been created from types loaded from one file. The IDs look exactly like those in earlier chapters.
+Call each of them.
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/increment0::example_component_python_increment" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/set0::example_component_python_container_set:container0" '{"value": 10}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_python_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+The Process adds 1 to its argument and returns it, and the ContainerProcesses change or read the Container's value.
+From the caller's point of view, they are indistinguishable from what you built from separate files in chapters 1 to 3.
+
+## A Component is the unit of distribution
+
+As you have seen, bundling into a Component changes nothing about how Processes and Containers work or how you use them. Only **how the files are bundled** changes.
+
+- **Authors** can write related Processes, Containers and ContainerProcesses in one project and distribute them as one library. For a camera, for example, a Container that opens and holds the camera, a ContainerProcess that reads images, and a Process that converts images can all be one Component.
+- **Users** write one line in `components` under `plugins` to get every type inside. Which types to instantiate, and how many, is still decided freely with `processes` and `containers`.
+
+In other words, Processes, Containers and ContainerProcesses are "units for running", while a Component is the "unit for distributing".
+
+## Try it yourself
+
+- Add another instance of `example_component_python_increment` to `processes`. As in chapter 3, you can create any number of instances from types loaded from a Component.
+- Add another Container (for example `container1`) and its ContainerProcesses to `containers`. `container0` and `container1` hold separate values.
+- Add `connections` and `ecs` from chapter 4 and connect the first Process's output to `arg1` of the second Process you added. Types from a Component connect the same way as any other. `plugins` can list `components` and `process_factories` side by side, so you can also connect to a Process from a separate file, such as `increment_process` from chapter 3.
+- You can also load a Component from the command line without a configuration file. With `-1`, juiz creates one instance of every type in the Component (named "type name + `0`" as in chapter 1). Some `ERROR` lines are printed at startup, but it works anyway.
+
+```sh
+juiz --component ./component/example_component_python.py -l python -1 -d
+```
+
+## Summary
+
+- A Component bundles several Processes, Containers and ContainerProcesses into one file.
+- In a configuration file, writing one Component name in `components` under `plugins` loads every type inside it.
+- Creating instances, IDs, calling and connecting all work the same as when types are loaded from separate files. A Component does not change how things run; it is the **unit of distribution**.
+
+In the next chapter you connect juiz instances started separately, using only commands and no configuration file. Move on to [Connecting separate processes](/tutorial/multi-process/).

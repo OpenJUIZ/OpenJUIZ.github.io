@@ -1,0 +1,205 @@
+---
+title: 言語ごとのパッケージ
+description: juiz コマンドを入れたあと、各言語で機能要素を書くためのパッケージ(SDK)を用意します。
+sidebar:
+  order: 2
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+[インストール](/ja/getting-started/install/) で `juiz` コマンドを入れたら、機能要素を書く言語のパッケージを用意します。使う言語の節だけ読めば十分です。
+
+## Rust
+
+機能要素は [juiz_sdk](https://crates.io/crates/juiz_sdk) クレートで書きます。`Cargo.toml` で共有ライブラリとしてビルドする設定にします。
+juiz_sdk の版は、`cargo install juiz_app` で入れた `juiz` と合わせてください。版が食い違うプラグインは、読み込むときにエラーで止まります。
+
+```toml
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+juiz_sdk = "0.0.26"
+```
+
+`Cargo.toml` の書き方は、[チュートリアル第 1 章(Rust)](/ja/tutorial/first-process/rust/) で 1 行ずつ説明しています。
+
+## Python
+
+[pyjuiz](https://pypi.org/project/pyjuiz/) のデコレータ(`from juiz import juiz_process` など)で書きます。
+
+<Tabs syncKey="install">
+<TabItem label="pip で入れる">
+
+pyjuiz は `juiz-cli` と一緒に入っています。追加で入れるものはありません。
+
+</TabItem>
+<TabItem label="cargo で入れる">
+
+[インストール](/ja/getting-started/install/) の「Python の Process も使う場合」のとおり、`juiz` と同じ版の pyjuiz だけを入れます。
+
+```sh
+pip install pyjuiz==0.0.26
+```
+
+</TabItem>
+</Tabs>
+
+## C++ と Haskell の共通: libjuiz_sdk
+
+C++ と Haskell の機能要素は、libjuiz_sdk(値を受け渡す C の関数の共有ライブラリ)にリンクします。
+libjuiz_sdk とヘッダは、OS・CPU ごとのアーカイブにして [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) に置いています(0.0.26 から)。
+`juiz` と **同じ版** を使ってください。版が違う libjuiz_sdk でビルドしたプラグインは、juiz が読み込むときにエラーにします。
+
+いちばん手軽なのは、OS と CPU を自動で見分けて取得する `install-juiz-sdk.sh` を使う方法です。`~/.juiz/sdk/<版>` に展開されます。
+
+```sh
+juiz --version      # 例: juiz 0.0.26
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.26
+```
+
+手でダウンロードする場合は、OS を選んで次のアーカイブを取得し、同じ場所に展開します。
+
+<Tabs syncKey="os">
+<TabItem label="Linux (x86_64)">
+
+ダウンロード: [juiz_sdk-0.0.26-x86_64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.26/juiz_sdk-0.0.26-x86_64-unknown-linux-gnu.tar.gz)
+
+```sh
+mkdir -p ~/.juiz/sdk
+tar xzf juiz_sdk-0.0.26-x86_64-unknown-linux-gnu.tar.gz
+mv juiz_sdk-0.0.26-x86_64-unknown-linux-gnu ~/.juiz/sdk/0.0.26
+# => ~/.juiz/sdk/0.0.26/lib/libjuiz_sdk.so
+```
+
+</TabItem>
+<TabItem label="Linux (aarch64)">
+
+ダウンロード: [juiz_sdk-0.0.26-aarch64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.26/juiz_sdk-0.0.26-aarch64-unknown-linux-gnu.tar.gz)
+
+```sh
+mkdir -p ~/.juiz/sdk
+tar xzf juiz_sdk-0.0.26-aarch64-unknown-linux-gnu.tar.gz
+mv juiz_sdk-0.0.26-aarch64-unknown-linux-gnu ~/.juiz/sdk/0.0.26
+# => ~/.juiz/sdk/0.0.26/lib/libjuiz_sdk.so
+```
+
+</TabItem>
+<TabItem label="macOS (Apple シリコン)">
+
+ダウンロード: [juiz_sdk-0.0.26-aarch64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.26/juiz_sdk-0.0.26-aarch64-apple-darwin.tar.gz)
+
+```sh
+mkdir -p ~/.juiz/sdk
+tar xzf juiz_sdk-0.0.26-aarch64-apple-darwin.tar.gz
+mv juiz_sdk-0.0.26-aarch64-apple-darwin ~/.juiz/sdk/0.0.26
+# => ~/.juiz/sdk/0.0.26/lib/libjuiz_sdk.dylib
+```
+
+</TabItem>
+<TabItem label="macOS (Intel)">
+
+ダウンロード: [juiz_sdk-0.0.26-x86_64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.26/juiz_sdk-0.0.26-x86_64-apple-darwin.tar.gz)
+
+```sh
+mkdir -p ~/.juiz/sdk
+tar xzf juiz_sdk-0.0.26-x86_64-apple-darwin.tar.gz
+mv juiz_sdk-0.0.26-x86_64-apple-darwin ~/.juiz/sdk/0.0.26
+# => ~/.juiz/sdk/0.0.26/lib/libjuiz_sdk.dylib
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+Windows 向けのアーカイブは、まだ配布していません。
+juiz のソースを `juiz` と同じ版のタグで取得し、`cargo build --release -p juiz_sdk` でできる `target/release` の juiz_sdk を使ってください(ヘッダはソースの `bindings/cjuiz/include` と `bindings/cppjuiz/include`)。
+
+</TabItem>
+</Tabs>
+
+展開したディレクトリには、次のものが入っています。
+
+| 場所 | 中身 |
+| --- | --- |
+| `lib/` | libjuiz_sdk(Linux は `.so`、macOS は `.dylib`)と pkg-config 用の `pkgconfig/juiz_sdk.pc` |
+| `cjuiz/include/` | C のヘッダ |
+| `cppjuiz/include/` | C++ のヘッダ(`juiz/juiz.h`) |
+
+0.0.25 以前の版では、Windows と同じく juiz のソースから libjuiz_sdk をビルドしてください。
+
+## C++
+
+インクルードパスに `~/.juiz/sdk/0.0.26/cjuiz/include` と `~/.juiz/sdk/0.0.26/cppjuiz/include` を足し、`~/.juiz/sdk/0.0.26/lib` の libjuiz_sdk にリンクします。
+CMake の書き方は、[チュートリアル第 1 章(C++)](/ja/tutorial/first-process/cpp/) で 1 行ずつ説明しています。
+サンプル集 [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) の [cmake/Juiz.cmake](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/cmake/Juiz.cmake) のように、libjuiz_sdk の取得まで CMake に任せることもできます。
+
+## Haskell
+
+[hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) で書きます。GHC 9.4.7 以降と cabal が必要です(Linux・macOS)。
+hsjuiz は Hackage への公開を待っているので、いまは juiz のソースを `juiz` と同じ版のタグで取得し、その `bindings/hsjuiz` から使います。自分のパッケージの `cabal.project` に、hsjuiz のソースと libjuiz_sdk の場所を書きます。
+
+```sh
+git clone --depth 1 --branch v0.0.26 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.26
+```
+
+<Tabs syncKey="os">
+<TabItem label="Linux (x86_64)">
+
+```txt title="cabal.project"
+packages: . /home/me/juiz-0.0.26/bindings/hsjuiz
+
+package hsjuiz
+  extra-lib-dirs: /home/me/.juiz/sdk/0.0.26/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.26/lib
+```
+
+</TabItem>
+<TabItem label="Linux (aarch64)">
+
+```txt title="cabal.project"
+packages: . /home/me/juiz-0.0.26/bindings/hsjuiz
+
+package hsjuiz
+  extra-lib-dirs: /home/me/.juiz/sdk/0.0.26/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.26/lib
+```
+
+</TabItem>
+<TabItem label="macOS (Apple シリコン)">
+
+```txt title="cabal.project"
+packages: . /Users/me/juiz-0.0.26/bindings/hsjuiz
+
+package hsjuiz
+  extra-lib-dirs: /Users/me/.juiz/sdk/0.0.26/lib
+  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.0.26/lib
+```
+
+</TabItem>
+<TabItem label="macOS (Intel)">
+
+```txt title="cabal.project"
+packages: . /Users/me/juiz-0.0.26/bindings/hsjuiz
+
+package hsjuiz
+  extra-lib-dirs: /Users/me/.juiz/sdk/0.0.26/lib
+  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.0.26/lib
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+Haskell の機能要素は、まだ Windows では動きません。
+
+</TabItem>
+</Tabs>
+
+`/home/me`・`/Users/me` は自分のホームディレクトリに読み替えてください(`cabal.project` では `~` を使えません)。
+rpath は、Template Haskell を動かすときに GHC が hsjuiz と一緒に libjuiz_sdk を読み込むために要ります。
+サンプル集 [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) の `build.sh` が、libjuiz_sdk と hsjuiz の取得からサンプルのビルドまでを自動で行うので、ひな形にも使えます。
+
+書き方は [hsjuiz の README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) を見てください。
+
+<Aside type="note">
+hsjuiz は Hackage への公開を待っています。公開したら、`cabal.project` に hsjuiz のソースを書かずに Hackage から入れられるようになります。
+</Aside>

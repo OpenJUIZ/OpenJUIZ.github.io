@@ -38,6 +38,7 @@ export default defineConfig({
 					translations: { ja: 'はじめに' },
 					items: [
 						'getting-started/install',
+						'getting-started/packages',
 						{
 							label: 'Quick start',
 							translations: { ja: 'クイックスタート' },
@@ -51,7 +52,7 @@ export default defineConfig({
 				{
 					label: 'Tutorial',
 					translations: { ja: 'チュートリアル' },
-					// 第 1・2 章は言語ごとのページに分かれるので、章ごとのグループにする
+					// 第 1・2・4・5 章は言語ごとのページに分かれるので、章ごとのグループにする
 					items: [
 						'tutorial',
 						{
@@ -65,8 +66,16 @@ export default defineConfig({
 							items: ['tutorial/container', { autogenerate: { directory: 'tutorial/container' } }],
 						},
 						'tutorial/config-file',
-						'tutorial/connect',
-						'tutorial/component',
+						{
+							label: '4. Connecting Processes',
+							translations: { ja: '4. Process をつなぐ' },
+							items: ['tutorial/connect', { autogenerate: { directory: 'tutorial/connect' } }],
+						},
+						{
+							label: '5. Packaging as a Component',
+							translations: { ja: '5. Component にまとめて配布する' },
+							items: ['tutorial/component', { autogenerate: { directory: 'tutorial/component' } }],
+						},
 						'tutorial/multi-process',
 						'tutorial/quic-broker',
 						'tutorial/datatype',

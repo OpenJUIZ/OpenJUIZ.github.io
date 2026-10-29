@@ -12,7 +12,7 @@ next:
   label: "3. Starting everything from a configuration file"
 ---
 
-import { Aside, FileTree } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 The Process in chapter 1 was an idempotent function that always returns the same result for the same arguments.
 But when you build parts for robots and IoT devices, you always end up with things you want to remember: a counter value, the current position of a motor, a connection to a camera.
@@ -186,6 +186,9 @@ The `foreach` part adds `container/example_container_cpp` to the include path of
 
 ## Build it
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 cmake -S . -B build
 cmake --build build
@@ -194,19 +197,45 @@ ls build/plugins
 #    libexample_container_cpp_increment.so  libincrement_process_cpp.so
 ```
 
-On macOS the extension is `.dylib`. Everything, including the Process from chapter 1, ends up in `build/plugins`.
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+cmake -S . -B build
+cmake --build build
+ls build/plugins
+# => libexample_container_cpp.dylib  libexample_container_cpp_get.dylib
+#    libexample_container_cpp_increment.dylib  libincrement_process_cpp.dylib
+```
+
+</TabItem>
+</Tabs>
+
+Everything, including the Process from chapter 1, ends up in `build/plugins`.
 
 ## Run it
 
 First, start `juiz` with the files, as in chapter 1.
 Load the Container with `--container` and the ContainerProcess with `--container_process`.
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --container ./build/plugins/libexample_container_cpp.so \
      --container_process ./build/plugins/libexample_container_cpp_increment.so -l cpp -1 -d
 ```
 
-On macOS the extension is `.dylib`.
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --container ./build/plugins/libexample_container_cpp.dylib \
+     --container_process ./build/plugins/libexample_container_cpp_increment.dylib -l cpp -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 With `-1`, juiz creates one instance from the loaded Container type and binds one ContainerProcess instance to it.
 As in chapter 1, the instance names are the type names followed by `0`: the Container is `example_container_cpp0` and the ContainerProcess is `example_container_cpp_increment0`.
