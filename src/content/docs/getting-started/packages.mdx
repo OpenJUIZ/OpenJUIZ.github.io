@@ -51,12 +51,36 @@ C++ and Haskell components link to libjuiz_sdk, the shared library of C function
 Archives of libjuiz_sdk with the headers for each OS and CPU are on [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) (from 0.0.26).
 Use the **same version** as `juiz`. juiz refuses to load a plugin built with a different version of libjuiz_sdk.
 
-The easiest way is `install-juiz-sdk.sh`, which detects your OS and CPU. It extracts the archive to `~/.juiz/sdk/<version>`.
+The easiest way is `install-juiz-sdk.sh` (`install-juiz-sdk.ps1` on Windows), which detects your OS and CPU. It extracts the archive to `~/.juiz/sdk/<version>` (`%USERPROFILE%\.juiz\sdk\<version>` on Windows).
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
 
 ```sh
 juiz --version      # e.g. juiz 0.0.26
 curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.26
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --version      # e.g. juiz 0.0.26
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.26
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+Run this in PowerShell. Windows archives are available from 0.0.27.
+
+```powershell
+juiz --version      # e.g. juiz 0.0.27
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.0.27
+```
+
+</TabItem>
+</Tabs>
 
 To download it by hand, pick your OS, get the archive below and extract it to the same place.
 
@@ -111,8 +135,16 @@ mv juiz_sdk-0.0.26-x86_64-apple-darwin ~/.juiz/sdk/0.0.26
 </TabItem>
 <TabItem label="Windows">
 
-There is no archive for Windows yet.
-Get the juiz source at the tag of the same version as `juiz`, and use the juiz_sdk in `target/release` built by `cargo build --release -p juiz_sdk` (the headers are in `bindings/cjuiz/include` and `bindings/cppjuiz/include` of the source).
+Archives for Windows (x86_64) are available from 0.0.27. The DLL is built with MSVC, but it exposes only C functions, so plugins built with MinGW and other compilers can use it too.
+
+Download: [juiz_sdk-0.0.27-x86_64-pc-windows-msvc.zip](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.27/juiz_sdk-0.0.27-x86_64-pc-windows-msvc.zip)
+
+```powershell
+mkdir $env:USERPROFILE\.juiz\sdk -Force
+Expand-Archive juiz_sdk-0.0.27-x86_64-pc-windows-msvc.zip -DestinationPath .
+Move-Item juiz_sdk-0.0.27-x86_64-pc-windows-msvc $env:USERPROFILE\.juiz\sdk\0.0.27
+# => %USERPROFILE%\.juiz\sdk\0.0.27\bin\juiz_sdk.dll
+```
 
 </TabItem>
 </Tabs>
@@ -121,16 +153,29 @@ The extracted directory contains:
 
 | Path | Contents |
 | --- | --- |
-| `lib/` | libjuiz_sdk (`.so` on Linux, `.dylib` on macOS) and `pkgconfig/juiz_sdk.pc` for pkg-config |
+| `lib/` | libjuiz_sdk (`.so` on Linux, `.dylib` on macOS) and `pkgconfig/juiz_sdk.pc` for pkg-config. On Windows, the import library `juiz_sdk.dll.lib` used for linking |
+| `bin/` | Windows only. The libjuiz_sdk DLL, `juiz_sdk.dll` |
+| `lib/cmake/juiz_sdk/` | Settings for CMake's `find_package(juiz_sdk)` (from 0.0.27) |
 | `cjuiz/include/` | C headers |
 | `cppjuiz/include/` | C++ headers (`juiz/juiz.h`) |
 
-For 0.0.25 and earlier, build libjuiz_sdk from the juiz source, as on Windows.
+For 0.0.25 and earlier, get the juiz source at the tag of the same version as `juiz` and build libjuiz_sdk with `cargo build --release -p juiz_sdk`.
 
 ## C++
 
-Add `~/.juiz/sdk/0.0.26/cjuiz/include` and `~/.juiz/sdk/0.0.26/cppjuiz/include` to the include path, and link to libjuiz_sdk in `~/.juiz/sdk/0.0.26/lib`.
+From 0.0.27, CMake can use libjuiz_sdk through `find_package`. Point `CMAKE_PREFIX_PATH` (or the `PATHS` of `find_package`) at the extracted directory.
+
+```cmake
+find_package(juiz_sdk 0.0.27 EXACT CONFIG REQUIRED)
+add_library(my_process SHARED my_process.cpp)
+target_link_libraries(my_process PRIVATE juiz_sdk::juiz_sdk)
+juiz_sdk_copy_runtime(my_process)   # on Windows, copies juiz_sdk.dll next to the plugin
+```
+
+`juiz_sdk::juiz_sdk` also carries the header directories and the C++17 requirement. On Windows, juiz looks for the `juiz_sdk.dll` a plugin uses in the plugin's directory (and in `PATH`), so `juiz_sdk_copy_runtime` copies it there.
 [Tutorial chapter 1 (C++)](/tutorial/first-process/cpp/) explains the CMake file line by line.
+
+Without CMake, add `cjuiz/include` and `cppjuiz/include` to the include path, and link to libjuiz_sdk in `lib` (`lib/juiz_sdk.dll.lib` on Windows).
 You can also let CMake fetch libjuiz_sdk, as [cmake/Juiz.cmake](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/cmake/Juiz.cmake) in the [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) examples does.
 
 ## Haskell

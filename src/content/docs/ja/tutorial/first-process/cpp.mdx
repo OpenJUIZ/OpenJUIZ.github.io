@@ -26,26 +26,54 @@ import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 ## 準備
 
-次のものを用意してください(Linux または macOS)。
+次のものを用意してください(Linux・macOS・Windows)。
 
-- `juiz` コマンド。[インストール](/ja/getting-started/install/) の、pip と cargo のどちらの入れ方でもかまいません
-- CMake 3.16 以降と、C++17 対応のコンパイラ
+- `juiz` コマンド。[インストール](/ja/getting-started/install/) の、pip と cargo のどちらの入れ方でもかまいません(Windows は pip で入れます)
+- CMake 3.16 以降と、C++17 対応のコンパイラ(Windows は Visual Studio 2022 か Build Tools for Visual Studio 2022 の「C++ によるデスクトップ開発」)
 - `juiz` と同じ版の libjuiz_sdk とヘッダ
 
-<Aside type="caution" title="Windows は準備中です">
-C++ の手順は Linux と macOS 向けです。libjuiz_sdk の配布とサンプル集は、まだ Windows に対応していません([juiz#273](https://github.com/OpenJUIZ/juiz/issues/273) で対応します)。WSL の Ubuntu なら、Linux の手順で進められます。
-</Aside>
-
 C++ の Process は、libjuiz_sdk(juiz と値を受け渡す関数の共有ライブラリ)にリンクしてビルドします。
-`juiz` の版を確かめてから、同じ版の libjuiz_sdk を `~/.juiz/sdk/<版>` に展開します(手でダウンロードする方法は [言語ごとのパッケージ](/ja/getting-started/packages/#c-と-haskell-の共通-libjuiz_sdk) にあります)。
+`juiz` の版を確かめてから、同じ版の libjuiz_sdk を `~/.juiz/sdk/<版>`(Windows は `%USERPROFILE%\.juiz\sdk\<版>`)に展開します(手でダウンロードする方法は [言語ごとのパッケージ](/ja/getting-started/packages/#c-と-haskell-の共通-libjuiz_sdk) にあります)。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
 
 ```sh
 juiz --version
-# => juiz 0.0.26
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.26
-ls ~/.juiz/sdk/0.0.26
+# => juiz 0.0.27
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.27
+ls ~/.juiz/sdk/0.0.27
 # => cjuiz  cppjuiz  lib  ...
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --version
+# => juiz 0.0.27
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.27
+ls ~/.juiz/sdk/0.0.27
+# => cjuiz  cppjuiz  lib  ...
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+PowerShell で実行します。
+
+```powershell
+juiz --version
+# => juiz 0.0.27
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.0.27
+ls $env:USERPROFILE\.juiz\sdk\0.0.27
+# => bin  cjuiz  cppjuiz  lib  ...
+```
+
+Windows の libjuiz_sdk は `bin\juiz_sdk.dll` です。`lib` にはリンクに使う `juiz_sdk.dll.lib` が入っています。
+
+</TabItem>
+</Tabs>
 
 ## プロジェクトの形
 
@@ -59,7 +87,7 @@ ls ~/.juiz/sdk/0.0.26
       - increment_process_cpp.cpp Process のコード
 </FileTree>
 
-juiz では、Process をひとつずつ共有ライブラリ(`.so` や `.dylib`)としてビルドし、`juiz` コマンドがそれをプラグインとして読み込みます。
+juiz では、Process をひとつずつ共有ライブラリ(`.so`・`.dylib`・`.dll`)としてビルドし、`juiz` コマンドがそれをプラグインとして読み込みます。
 第 2 章では、このプロジェクトに Container を足します。
 
 まず、ディレクトリを作ります。
@@ -67,8 +95,11 @@ juiz では、Process をひとつずつ共有ライブラリ(`.so` や `.dylib`
 ```sh
 mkdir my_juiz_cpp
 cd my_juiz_cpp
-mkdir -p process/increment_process_cpp
+mkdir process
+mkdir process/increment_process_cpp
 ```
+
+Windows の PowerShell でも、同じコマンドで作れます。
 
 以降のコマンドは、すべて `my_juiz_cpp` で実行します。
 
@@ -84,9 +115,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # juiz の版と、libjuiz_sdk を展開した場所
-set(JUIZ_VERSION "0.0.26")
-set(JUIZ_SDK_DIR "$ENV{HOME}/.juiz/sdk/${JUIZ_VERSION}" CACHE PATH "libjuiz_sdk のディレクトリ")
-find_library(JUIZ_SDK_LIBRARY juiz_sdk PATHS "${JUIZ_SDK_DIR}/lib" NO_DEFAULT_PATH REQUIRED)
+set(JUIZ_VERSION "0.0.27")
+if(WIN32)
+  file(TO_CMAKE_PATH "$ENV{USERPROFILE}/.juiz/sdk/${JUIZ_VERSION}" JUIZ_SDK_DEFAULT_DIR)
+else()
+  set(JUIZ_SDK_DEFAULT_DIR "$ENV{HOME}/.juiz/sdk/${JUIZ_VERSION}")
+endif()
+set(JUIZ_SDK_DIR "${JUIZ_SDK_DEFAULT_DIR}" CACHE PATH "libjuiz_sdk のディレクトリ")
+find_package(juiz_sdk ${JUIZ_VERSION} EXACT CONFIG REQUIRED PATHS "${JUIZ_SDK_DIR}" NO_DEFAULT_PATH)
 
 # プラグインはすべて build/plugins に出力する
 set(JUIZ_PLUGIN_DIR "${CMAKE_BINARY_DIR}/plugins")
@@ -94,13 +130,13 @@ set(JUIZ_PLUGIN_DIR "${CMAKE_BINARY_DIR}/plugins")
 # juiz のプラグイン (共有ライブラリ) を 1 つ追加する
 function(add_juiz_plugin NAME)
   add_library(${NAME} SHARED ${ARGN})
-  target_include_directories(${NAME} PRIVATE
-    "${JUIZ_SDK_DIR}/cjuiz/include"
-    "${JUIZ_SDK_DIR}/cppjuiz/include")
-  target_link_libraries(${NAME} PRIVATE "${JUIZ_SDK_LIBRARY}")
+  target_link_libraries(${NAME} PRIVATE juiz_sdk::juiz_sdk)
+  # $<1:...> で囲むと、Visual Studio でも build/plugins/Release のように構成名が足されない
   set_target_properties(${NAME} PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${JUIZ_PLUGIN_DIR}"
-    BUILD_RPATH "${JUIZ_SDK_DIR}/lib")
+    LIBRARY_OUTPUT_DIRECTORY "$<1:${JUIZ_PLUGIN_DIR}>"
+    RUNTIME_OUTPUT_DIRECTORY "$<1:${JUIZ_PLUGIN_DIR}>")
+  # Windows では juiz_sdk.dll をプラグインの隣に写す (Linux・macOS では何もしない)
+  juiz_sdk_copy_runtime(${NAME})
 endfunction()
 
 # 第 1 章: 引数に 1 を足す Process
@@ -114,19 +150,18 @@ add_juiz_plugin(increment_process_cpp process/increment_process_cpp/increment_pr
 | `cmake_minimum_required`・`project` | 使う CMake の版と、プロジェクトの名前です。言語は C++(`CXX`)だけです |
 | `CMAKE_CXX_STANDARD 17` | juiz の C++ ヘッダは C++17 を使うので、C++17 でコンパイルします |
 | `JUIZ_VERSION`・`JUIZ_SDK_DIR` | libjuiz_sdk を展開した場所です。**`juiz --version` と同じ版にしてください。** 別の場所に置いた場合は、`cmake -DJUIZ_SDK_DIR=<場所>` で変えられます |
-| `find_library(JUIZ_SDK_LIBRARY ...)` | `JUIZ_SDK_DIR/lib` から libjuiz_sdk を探します。見つからなければ、ここで止まって教えてくれます |
+| `find_package(juiz_sdk ...)` | `JUIZ_SDK_DIR` から libjuiz_sdk を探します。`EXACT` を付けているので、版が違えばここで止まって教えてくれます。見つかると `juiz_sdk::juiz_sdk` というターゲットができます |
 | `JUIZ_PLUGIN_DIR` | ビルドしたプラグインを置く場所です。プラグインを 1 か所にまとめておくと、`juiz` に場所を伝えやすくなります |
 | `function(add_juiz_plugin NAME)` | プラグインを 1 つ追加する関数です。Process や Container を足すたびに同じ設定を書かずに済むよう、まとめています |
-| `add_library(${NAME} SHARED ...)` | 共有ライブラリとしてビルドします。`juiz` が読み込めるのはこの形式です。ファイル名は `lib<NAME>.so`(macOS では `.dylib`)になります |
-| `target_include_directories` | juiz の C のヘッダ(`cjuiz/include`)と C++ のヘッダ(`cppjuiz/include`)を使えるようにします |
-| `target_link_libraries` | libjuiz_sdk にリンクします |
-| `LIBRARY_OUTPUT_DIRECTORY` | できた共有ライブラリを `build/plugins` に置きます |
-| `BUILD_RPATH` | プラグインが読み込まれたときに、libjuiz_sdk を `JUIZ_SDK_DIR/lib` から探すようにします。これがないと、`juiz` が読み込むときに libjuiz_sdk が見つからずに失敗します |
+| `add_library(${NAME} SHARED ...)` | 共有ライブラリとしてビルドします。`juiz` が読み込めるのはこの形式です。ファイル名は Linux では `lib<NAME>.so`、macOS では `lib<NAME>.dylib`、Windows では `<NAME>.dll` になります |
+| `target_link_libraries(... juiz_sdk::juiz_sdk)` | libjuiz_sdk にリンクします。juiz の C のヘッダと C++ のヘッダを使う設定も、このターゲットに入っています。Linux・macOS では、プラグインが libjuiz_sdk を `JUIZ_SDK_DIR` から探すようにもなります(rpath) |
+| `LIBRARY_OUTPUT_DIRECTORY`・`RUNTIME_OUTPUT_DIRECTORY` | できた共有ライブラリを `build/plugins` に置きます。Linux・macOS の共有ライブラリは前者、Windows の DLL は後者の設定で置き場所が決まります |
+| `juiz_sdk_copy_runtime` | Windows では、`juiz_sdk.dll` をプラグインの隣に写します。juiz はプラグインの DLL が使う DLL を、プラグインと同じ場所から探すからです。Linux・macOS では何もしません |
 | `add_juiz_plugin(increment_process_cpp ...)` | Process `increment_process_cpp` を、`process/increment_process_cpp/increment_process_cpp.cpp` からビルドします |
 
 <Aside type="tip">
 ターゲット名(`increment_process_cpp`)は、このあと `manifest()` に書く Process の型名と同じにしておきます。
-第 3 章で使う設定ファイルは、型名 `increment_process_cpp` から `libincrement_process_cpp.so` というファイル名を作って探すからです。
+第 3 章で使う設定ファイルは、型名 `increment_process_cpp` から `libincrement_process_cpp.so`(Windows では `increment_process_cpp.dll`)というファイル名を作って探すからです。
 </Aside>
 
 ## Process のコードを書く
@@ -166,18 +201,12 @@ Rust や Python と違い、C++ では型名と引数(名前・説明・既定�
 
 ## ビルドする
 
-```sh
-cmake -S . -B build
-cmake --build build
-```
-
-1 行目で `build` ディレクトリにビルドの準備をし、2 行目でビルドします。
-できあがった共有ライブラリは `build/plugins` に置かれます。
-
 <Tabs syncKey="platform">
 <TabItem label="Linux">
 
 ```sh
+cmake -S . -B build
+cmake --build build
 ls build/plugins
 # => libincrement_process_cpp.so
 ```
@@ -186,14 +215,32 @@ ls build/plugins
 <TabItem label="macOS">
 
 ```sh
+cmake -S . -B build
+cmake --build build
 ls build/plugins
 # => libincrement_process_cpp.dylib
 ```
 
 </TabItem>
+<TabItem label="Windows">
+
+```powershell
+cmake -S . -B build
+cmake --build build --config Release
+ls build\plugins
+# => increment_process_cpp.dll  juiz_sdk.dll  ...
+```
+
+Visual Studio のジェネレータは Debug と Release を作り分けるので、`--config Release` を付けます。
+`build\plugins` には、プラグインの DLL の隣に `juiz_sdk.dll` も写されます。
+
+</TabItem>
 </Tabs>
 
-`cmake -S . -B build` で `Could not find JUIZ_SDK_LIBRARY` と表示されたら、libjuiz_sdk を展開した場所と版を確かめてください。
+1 行目で `build` ディレクトリにビルドの準備をし、2 行目でビルドします。
+できあがった共有ライブラリは `build/plugins` に置かれます。
+
+`cmake -S . -B build` で `Could not find a configuration file for package "juiz_sdk"` や、版が合わないという表示が出たら、libjuiz_sdk を展開した場所と版を確かめてください。
 
 ## 動かす
 
@@ -211,6 +258,13 @@ juiz --process ./build/plugins/libincrement_process_cpp.so -l cpp -e -1 -d
 
 ```sh
 juiz --process ./build/plugins/libincrement_process_cpp.dylib -l cpp -e -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --process ./build/plugins/increment_process_cpp.dll -l cpp -e -1 -d
 ```
 
 </TabItem>
@@ -253,6 +307,11 @@ juiz process call "http://127.0.0.1:8000/process/increment_process_cpp0::increme
 ```
 
 `3` を渡して `4` が返ってきました。`-p` は結果を表示するオプションです。
+
+<Aside type="caution" title="Windows PowerShell 5.1 で JSON を渡すとき">
+Windows に最初から入っている Windows PowerShell 5.1 は、`'{"arg1": 3}'` の `"` を消して `juiz` に渡してしまいます。
+`'{\"arg1\": 3}'` のように `"` の前に `\` を書いてください。PowerShell 7.3 以降では、上のとおりに書けば動きます。
+</Aside>
 何度呼び出しても、同じ引数なら同じ結果が返ることも確かめてみてください。
 
 ### ブラウザから呼び出す

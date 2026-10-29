@@ -12,14 +12,17 @@ next:
   label: チュートリアルの進め方
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 C++ のサンプル集 [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) を使って、引数に 1 を足すだけの Process を動かしてみます。
 先に [インストール](/ja/getting-started/install/) で `juiz` コマンドを入れておいてください。
 
 ## サンプルをビルドする
 
-CMake と C++17 対応のコンパイラが必要です。`juiz` コマンドは pip と cargo のどちらで入れたものでも使えます。
+CMake と C++17 対応のコンパイラ(Windows は Visual Studio 2022 か Build Tools for Visual Studio 2022)が必要です。`juiz` コマンドは pip と cargo のどちらで入れたものでも使えます(Windows は pip で入れます)。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
 
 ```sh
 git clone https://github.com/OpenJUIZ/juiz_examples_cpp.git
@@ -27,6 +30,29 @@ cd juiz_examples_cpp
 cmake -S . -B build
 cmake --build build
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_cpp.git
+cd juiz_examples_cpp
+cmake -S . -B build
+cmake --build build
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+git clone https://github.com/OpenJUIZ/juiz_examples_cpp.git
+cd juiz_examples_cpp
+cmake -S . -B build
+cmake --build build --config Release
+```
+
+</TabItem>
+</Tabs>
 
 CMake が、`juiz` と同じ版の libjuiz_sdk とヘッダを [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から取得します。
 サンプルの型を作るのに `juiz` コマンドを使うので、`cmake` は `juiz` が使えるターミナル(pip で入れた場合は venv を有効にしたターミナル)で実行してください。
@@ -76,6 +102,11 @@ juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_c
 ```
 
 `3` を渡して `4` が返ってきました。
+
+<Aside type="caution" title="Windows PowerShell 5.1 で JSON を渡すとき">
+Windows に最初から入っている Windows PowerShell 5.1 は、`'{"arg1": 3}'` の `"` を消して `juiz` に渡してしまいます。
+`'{\"arg1\": 3}'` のように `"` の前に `\` を書いてください。PowerShell 7.3 以降では、上のとおりに書けば動きます。
+</Aside>
 
 ### ブラウザから呼び出す
 

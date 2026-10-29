@@ -101,6 +101,11 @@ juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_p
 # => CapsulePtr((value:Value(4), option: []))
 ```
 
+<Aside type="caution" title="Passing JSON in Windows PowerShell 5.1">
+Windows PowerShell 5.1, which comes with Windows, drops the `"` in `'{"arg1": 3}'` before passing it to `juiz`.
+Write a `\` before each `"`, as in `'{\"arg1\": 3}'`. In PowerShell 7.3 or later, the command above works as written.
+</Aside>
+
 You passed `3` and got `4` back.
 
 ### Call it from a browser

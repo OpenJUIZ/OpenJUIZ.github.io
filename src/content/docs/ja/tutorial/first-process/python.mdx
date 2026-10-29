@@ -242,6 +242,11 @@ juiz process call "http://127.0.0.1:8000/process/increment_process_python0::incr
 # => CapsulePtr((value:Value(4), option: []))
 ```
 
+<Aside type="caution" title="Windows PowerShell 5.1 で JSON を渡すとき">
+Windows に最初から入っている Windows PowerShell 5.1 は、`'{"arg1": 3}'` の `"` を消して `juiz` に渡してしまいます。
+`'{\"arg1\": 3}'` のように `"` の前に `\` を書いてください。PowerShell 7.3 以降では、上のとおりに書けば動きます。
+</Aside>
+
 `3` を渡して `4` が返ってきました。`-p` は結果を表示するオプションです。
 `juiz` を起動したターミナルには `increment_process_python: 3 -> 4` と表示されます。
 何度呼び出しても、同じ引数なら同じ結果が返ることも確かめてみてください。

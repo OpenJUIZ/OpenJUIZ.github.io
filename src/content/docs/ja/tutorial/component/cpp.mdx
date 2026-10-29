@@ -119,7 +119,7 @@ DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(component_manifest)
 add_juiz_component(example_component_cpp SOURCES example_component_cpp/example_component_cpp.cpp)
 ```
 
-1 つの共有ライブラリができます。ファイル名は Linux では `build/plugins/libexample_component_cpp.so`、macOS では `build/plugins/libexample_component_cpp.dylib` です。
+1 つの共有ライブラリができます。ファイル名は Linux では `build/plugins/libexample_component_cpp.so`、macOS では `build/plugins/libexample_component_cpp.dylib`、Windows では `build/plugins/example_component_cpp.dll` です。
 
 これまで型ごとに分かれていたものが、Component では1 つのライブラリに入っています。
 それぞれの Process や ContainerProcess の中身は、これまでと変わりません。Process は冪等な関数のまま、状態に触れるのは ContainerProcess だけ、という考え方もそのままです。
@@ -167,7 +167,7 @@ plugins:
 第 3 章では、`process_factories` と `container_factories` に型を 1 つずつ書き、ContainerProcess も Container の下に 1 つずつ書いていました。
 Component では、`components` に **Component の名前を 1 つ**書くだけです。キーの名前から読み込むファイルが決まるのは、第 3 章と同じです。
 
-Component 名 `example_component_cpp` なら、`./build/plugins` の中の `libexample_component_cpp.so`(macOS では `libexample_component_cpp.dylib`)が読み込まれます。設定ファイルには拡張子を書かないので、同じ設定ファイルがどの OS でも使えます。
+Component 名 `example_component_cpp` なら、`./build/plugins` の中の `libexample_component_cpp.so`(macOS では `libexample_component_cpp.dylib`、Windows では `example_component_cpp.dll`)が読み込まれます。設定ファイルには拡張子を書かないので、同じ設定ファイルがどの OS でも使えます。
 
 この 1 行で、Component の中にある Process・Container・ContainerProcess の型が、すべて読み込まれます。
 
@@ -245,6 +245,13 @@ juiz --component ./build/plugins/libexample_component_cpp.so -l cpp -1 -d
 
 ```sh
 juiz --component ./build/plugins/libexample_component_cpp.dylib -l cpp -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --component ./build/plugins/example_component_cpp.dll -l cpp -1 -d
 ```
 
 </TabItem>

@@ -50,10 +50,13 @@ Create the directories. Run all the following commands in `my_juiz_cpp`.
 
 ```sh
 cd my_juiz_cpp
-mkdir -p container/example_container_cpp
-mkdir -p container/example_container_cpp_increment
-mkdir -p container/example_container_cpp_get
+mkdir container
+mkdir container/example_container_cpp
+mkdir container/example_container_cpp_increment
+mkdir container/example_container_cpp_get
 ```
+
+The same commands work in PowerShell on Windows.
 
 ## Write the Container
 
@@ -209,6 +212,17 @@ ls build/plugins
 ```
 
 </TabItem>
+<TabItem label="Windows">
+
+```powershell
+cmake -S . -B build
+cmake --build build --config Release
+ls build/plugins
+# => example_container_cpp.dll  example_container_cpp_get.dll
+#    example_container_cpp_increment.dll  increment_process_cpp.dll  juiz_sdk.dll  ...
+```
+
+</TabItem>
 </Tabs>
 
 Everything, including the Process from chapter 1, ends up in `build/plugins`.
@@ -232,6 +246,14 @@ juiz --container ./build/plugins/libexample_container_cpp.so \
 ```sh
 juiz --container ./build/plugins/libexample_container_cpp.dylib \
      --container_process ./build/plugins/libexample_container_cpp_increment.dylib -l cpp -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --container ./build/plugins/example_container_cpp.dll `
+     --container_process ./build/plugins/example_container_cpp_increment.dll -l cpp -1 -d
 ```
 
 </TabItem>

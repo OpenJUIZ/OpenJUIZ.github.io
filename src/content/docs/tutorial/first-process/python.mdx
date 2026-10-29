@@ -242,6 +242,11 @@ juiz process call "http://127.0.0.1:8000/process/increment_process_python0::incr
 # => CapsulePtr((value:Value(4), option: []))
 ```
 
+<Aside type="caution" title="Passing JSON in Windows PowerShell 5.1">
+Windows PowerShell 5.1, which comes with Windows, drops the `"` in `'{"arg1": 3}'` before passing it to `juiz`.
+Write a `\` before each `"`, as in `'{\"arg1\": 3}'`. In PowerShell 7.3 or later, the command above works as written.
+</Aside>
+
 You passed `3` and got `4` back. `-p` prints the result.
 The terminal running `juiz` shows `increment_process_python: 3 -> 4`.
 Check that calling it again with the same argument always gives the same result.
