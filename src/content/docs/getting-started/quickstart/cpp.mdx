@@ -1,0 +1,105 @@
+---
+title: "Quick start: C++"
+description: Build the C++ examples and run a Process with juiz.
+sidebar:
+  order: 3
+  label: C++
+prev:
+  link: /getting-started/quickstart/
+  label: Quick start
+next:
+  link: /tutorial/
+  label: How this tutorial works
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Using the C++ examples [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp), you run a Process that just adds 1 to its argument.
+Install the `juiz` command first, as described in [Installation](/getting-started/install/).
+
+## Build the examples
+
+You need CMake and a C++17 compiler. The `juiz` command can be installed either with pip or with cargo.
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_cpp.git
+cd juiz_examples_cpp
+cmake -S . -B build
+cmake --build build
+```
+
+CMake downloads libjuiz_sdk and the headers of the same version as `juiz` from [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases).
+The examples use the `juiz` command to generate their types, so run `cmake` in a terminal where `juiz` is available (with the venv activated if you installed it with pip).
+Each example is built as a shared library in `build/plugins`.
+
+## The Process code
+
+This is the Process you will run.
+
+[`process/increment_process_cpp/increment_process_cpp.cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/process/increment_process_cpp/increment_process_cpp.cpp)
+
+```cpp
+#include "juiz/juiz.h"
+
+auto manifest() {
+    return ProcessManifest{"increment_process_cpp"}
+        .description("Adds 1 to arg1.")
+        .add_int_arg("arg1", "value to be incremented", 1);
+}
+
+std::optional<int64_t> increment_process_cpp(int64_t arg1) {
+    return arg1 + 1;
+}
+
+PROCESS_FACTORY(manifest, increment_process_cpp);
+```
+
+## Start it
+
+From the root of the repository, start `juiz` with the configuration file. The configuration file looks for plugins by paths relative to the repository root.
+
+```sh
+juiz -f increment_process.conf -d
+```
+
+With `-d`, juiz starts the HTTP broker on port 8000 and keeps running (stop it with Ctrl+C).
+
+## Call it
+
+Leave `juiz` running, open another terminal in the same directory, and call the Process.
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment0::increment_process_cpp"]
+juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_cpp" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+You passed `3` and got `4` back.
+
+### Call it from a browser
+
+Open the following URL in a browser to call the Process from Swagger UI and check the result.
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+Open `PATCH /api/process/call`, press "Try it out", enter `core://core/process/increment0::increment_process_cpp` as identifier and `{"arg1": 3}` as the request body, and press "Execute".
+
+### Look at it in the web UI
+
+Open the following URL to see the running Processes and connections in the web UI. See [Web UI](/guides/web-ui/) for details.
+
+```
+http://127.0.0.1:8000/ui/
+```
+
+## Next steps
+
+Once it runs, move on to [How this tutorial works](/tutorial/). It starts with writing a Process from scratch.
+Quick start for other languages:
+
+- [Rust](/getting-started/quickstart/rust/)
+- [Python](/getting-started/quickstart/python/)
+- [Haskell](/getting-started/quickstart/haskell/)

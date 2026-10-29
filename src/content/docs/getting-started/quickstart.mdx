@@ -1,0 +1,30 @@
+---
+title: Quick start
+description: Build the examples and run a Process with juiz. Pick your language.
+sidebar:
+  order: 2
+  label: Choose a language
+next: false
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Using the examples for each language, you run a Process that just adds 1 to its argument and call it from outside.
+Install the `juiz` command first, as described in [Installation](/getting-started/install/).
+
+The steps are split by language. Pick the one you use.
+
+<CardGrid>
+	<LinkCard title="Rust" href="/getting-started/quickstart/rust/" description="Build juiz_examples_rust with cargo and run it." />
+	<LinkCard title="Python" href="/getting-started/quickstart/python/" description="Run juiz_examples_python with pip only. No Rust needed." />
+	<LinkCard title="C++" href="/getting-started/quickstart/cpp/" description="Build juiz_examples_cpp with CMake and run it." />
+	<LinkCard title="Haskell" href="/getting-started/quickstart/haskell/" description="Build juiz_examples_haskell with build.sh and run it." />
+</CardGrid>
+
+The steps are the same in every language:
+
+1. Get the examples and build them (Python needs no build)
+2. Start them with `juiz -f increment_process.conf -d`
+3. Call the Process with `juiz process call` or from a browser (Swagger UI and the web UI)
+
+Once it runs, learn how to write a Process from scratch in the [tutorial](/tutorial/).

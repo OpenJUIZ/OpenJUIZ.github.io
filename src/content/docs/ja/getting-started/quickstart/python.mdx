@@ -1,0 +1,103 @@
+---
+title: "クイックスタート: Python"
+description: Python のサンプル集をビルドして、juiz で Process を動かします。
+sidebar:
+  order: 2
+  label: Python
+prev:
+  link: /ja/getting-started/quickstart/
+  label: クイックスタート
+next:
+  link: /ja/tutorial/
+  label: チュートリアルの進め方
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Python のサンプル集 [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) を使って、引数に 1 を足すだけの Process を動かしてみます。
+先に [インストール](/ja/getting-started/install/) で `juiz` コマンドを入れておいてください。
+
+## サンプルをビルドする
+
+Python のサンプルはビルドが要りません。Rust のツールチェーンも要りません。
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git
+cd juiz_examples_python
+python3 -m venv .venv
+source .venv/bin/activate        # Windows では .venv\Scripts\activate
+pip install -r requirements.txt  # juiz-cli(juiz コマンドと pyjuiz)が入る
+```
+
+以降の手順は、この venv を有効にしたターミナルで実行してください。
+
+<Aside type="note">
+`cargo install juiz_app` で入れた `juiz` を使う場合は、`requirements.txt` の代わりに `pip install pyjuiz==0.0.26` で pyjuiz だけを入れてください。
+</Aside>
+
+## Process のコード
+
+動かすのは、次の Process です。
+
+[`process/increment_process_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/process/increment_process_python.py)
+
+```python
+from juiz import juiz_process
+
+
+@juiz_process
+def increment_process_python(arg1: int = 0) -> int:
+    """引数に 1 を足して返す"""
+    print(f"increment_process_python: {arg1} -> {arg1 + 1}")
+    return arg1 + 1
+```
+
+## 起動する
+
+リポジトリのルートで、設定ファイルを指定して `juiz` を起動します。設定ファイルは、リポジトリのルートからの相対パスでプラグインを探します。
+
+```sh
+juiz -f increment_process.conf -d
+```
+
+`-d` を付けると、HTTP ブローカーを 8000 番ポートで立ち上げて待機します(Ctrl+C で終了)。
+
+## 呼び出す
+
+`juiz` を起動したまま、別のターミナルを開いて、同じディレクトリで呼び出します(venv を有効にしてから)。
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment0::increment_process_python"]
+juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_python" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+`3` を渡して `4` が返ってきました。
+
+### ブラウザから呼び出す
+
+ブラウザで次の URL を開くと、Swagger UI から Process を呼び出して結果を確かめられます。
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+`PATCH /api/process/call` を開き、「Try it out」を押して、identifier に `core://core/process/increment0::increment_process_python`、Request body に `{"arg1": 3}` を入れて「Execute」を押します。
+
+### 管理画面で見る
+
+次の URL を開くと、動いている Process や接続を管理画面で確かめられます。詳しくは [管理画面](/ja/guides/web-ui/) を見てください。
+
+```
+http://127.0.0.1:8000/ui/
+```
+
+## 次に進む
+
+動かせたら、[チュートリアルの進め方](/ja/tutorial/) に進みましょう。Process を 1 から書くところから、順に学べます。
+ほかの言語のクイックスタート:
+
+- [Rust](/ja/getting-started/quickstart/rust/)
+- [C++](/ja/getting-started/quickstart/cpp/)
+- [Haskell](/ja/getting-started/quickstart/haskell/)

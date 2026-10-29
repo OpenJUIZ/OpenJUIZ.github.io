@@ -1,0 +1,30 @@
+---
+title: クイックスタート
+description: サンプル集をビルドして、juiz で Process を動かします。使う言語を選んでください。
+sidebar:
+  order: 2
+  label: 言語を選ぶ
+next: false
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+各言語のサンプル集を使って、引数に 1 を足すだけの Process を動かし、外から呼び出してみます。
+先に [インストール](/ja/getting-started/install/) で `juiz` コマンドを入れておいてください。
+
+手順は言語ごとに分かれています。使う言語を選んでください。
+
+<CardGrid>
+	<LinkCard title="Rust" href="/ja/getting-started/quickstart/rust/" description="juiz_examples_rust を cargo でビルドして動かします。" />
+	<LinkCard title="Python" href="/ja/getting-started/quickstart/python/" description="juiz_examples_python を pip だけで動かします。Rust は要りません。" />
+	<LinkCard title="C++" href="/ja/getting-started/quickstart/cpp/" description="juiz_examples_cpp を CMake でビルドして動かします。" />
+	<LinkCard title="Haskell" href="/ja/getting-started/quickstart/haskell/" description="juiz_examples_haskell を build.sh でビルドして動かします。" />
+</CardGrid>
+
+どの言語でも、やることは同じです。
+
+1. サンプル集を取得して、ビルドする(Python はビルド不要)
+2. `juiz -f increment_process.conf -d` で起動する
+3. `juiz process call` やブラウザ(Swagger UI・管理画面)から呼び出す
+
+動かせたら、[チュートリアル](/ja/tutorial/) で、Process を 1 から書く方法を学びましょう。

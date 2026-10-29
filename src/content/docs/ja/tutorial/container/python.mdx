@@ -1,0 +1,251 @@
+---
+title: "2. 状態を持つ(Python)"
+description: 第 1 章のプロジェクトにカウンタの Container と ContainerProcess を足し、状態の扱い方を学びます。
+sidebar:
+  order: 2
+  label: Python
+prev:
+  link: /ja/tutorial/first-process/python/
+  label: "1. はじめての Process(Python)"
+next:
+  link: /ja/tutorial/config-file/
+  label: "3. 設定ファイルでまとめて起動する"
+---
+
+import { Aside, FileTree } from '@astrojs/starlight/components';
+
+第 1 章の Process は、同じ引数を渡せばいつも同じ結果を返す冪等な関数でした。
+しかし、ロボットや IoT の部品を作っていると、カウンタの値やモータの現在位置、カメラの接続のように「覚えておきたいもの」が必ず出てきます。
+この章では、整数を 1 つ覚えておくカウンタを、第 1 章で作ったプロジェクト `my_juiz_python` に足していきます。
+できあがるものは、サンプル集 [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) の `container/` と同じです。
+
+<Aside type="tip" title="この章で学ぶこと">
+- 状態は **Container** に置き、Process には持たせないこと
+- 状態に触れるのは、Container に結びついた **ContainerProcess** だけであること
+- 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられること
+</Aside>
+
+## プロジェクトの形
+
+この章では、第 1 章のプロジェクトに `container/` を足して、次の形にします。
+`pyproject.toml` は変えません。Container も ContainerProcess も、第 1 章で入れた pyjuiz だけで書けます。
+
+<FileTree>
+- my_juiz_python/
+  - pyproject.toml 第 1 章のまま
+  - example_container.conf 起動用の設定ファイル(新しく作る)
+  - process/
+    - increment_process_python.py 第 1 章で作った Process
+  - container/
+    - example_container_python.py Container(カウンタの値)
+    - example_container_python_increment.py ContainerProcess(値を足す)
+    - example_container_python_get.py ContainerProcess(値を読む)
+</FileTree>
+
+ディレクトリを作り、第 1 章の venv を有効にします。以降のコマンドは、すべて `my_juiz_python` で実行します。
+
+```sh
+cd my_juiz_python
+source .venv/bin/activate        # Windows では .venv\Scripts\activate
+mkdir container
+```
+
+## Container を書く
+
+Container は、状態そのものです。値を入れておく入れ物と、それを作る関数だけを書きます。
+
+```python title="container/example_container_python.py"
+from juiz import juiz_container
+
+
+class PyContainer:
+    def __init__(self, value: int):
+        self.value = value
+
+
+@juiz_container
+def example_container_python(initial_value: int = 0) -> PyContainer:
+    """整数値を 1 つ保持する Container"""
+    return PyContainer(initial_value)
+```
+
+| 部分 | 意味 |
+| --- | --- |
+| `class PyContainer` | 状態を入れておくクラスです。ふつうの Python のクラスでかまいません |
+| `@juiz_container` | この関数を Container の作り方にします。関数名 `example_container_python` が Container の**型名**になります |
+| `initial_value: int = 0` | Container を作るときに受け取る値です。設定ファイルから渡せます(第 3 章) |
+| `-> PyContainer` | 作った Container のオブジェクトを返します |
+
+第 1 章と同じく、**ファイル名と関数名(型名)はそろえます。**
+Container には、値を変えたり読んだりする処理は書いていません。Container は「何を覚えておくか」だけを表します。
+
+## ContainerProcess を書く
+
+状態を変えたり読んだりする処理は、ContainerProcess に書きます。
+ContainerProcess は、**最初の引数に Container を受け取る** Process です。どの Container と組になるかは、Container の型名で指定します。
+
+### increment: 値を足す
+
+```python title="container/example_container_python_increment.py"
+from juiz import juiz_container_process
+
+
+@juiz_container_process(container_type="example_container_python")
+def example_container_python_increment(container, arg1: int = 1) -> int:
+    """Container の値に arg1 を足して、足した後の値を返す"""
+    container.value = container.value + arg1
+    return container.value
+```
+
+| 部分 | 意味 |
+| --- | --- |
+| `@juiz_container_process(...)` | この関数を ContainerProcess にします。関数名 `example_container_python_increment` が型名になります |
+| `container_type="example_container_python"` | 結びつける Container の型名です |
+| `container` | 最初の引数には、Container を作る関数が返した `PyContainer` のオブジェクトが渡されます。この引数だけは型ヒントが要りません |
+| `arg1: int = 1` | 2 番目以降の引数は、第 1 章の Process と同じように呼び出すときに渡します |
+
+### get: 値を読む
+
+```python title="container/example_container_python_get.py"
+from juiz import juiz_container_process
+
+
+@juiz_container_process(container_type="example_container_python")
+def example_container_python_get(container) -> int:
+    """Container の値を返す"""
+    return container.value
+```
+
+`get` は Container 以外の引数を持たず、値を返すだけです。
+
+こうして、状態(Container)と振る舞い(ContainerProcess)を別々に書きます。
+状態を変えたり読んだりできるのは、その Container に結びついた ContainerProcess だけです。
+「この値はどこで書き換わるのか」を知りたいときは、ContainerProcess を見ればよいことになります。
+
+## 動かす
+
+まずは第 1 章と同じように、ファイルを指定して `juiz` を起動します。
+Container は `--container`、ContainerProcess は `--container_process` で読み込みます。Python なのでビルドは要りません。
+
+```sh
+juiz --container ./container/example_container_python.py \
+     --container_process ./container/example_container_python_increment.py -l python -1 -d
+```
+
+`-1` を付けると、読み込んだ Container の型からインスタンスを 1 つ作り、そこに ContainerProcess のインスタンスを 1 つ結びつけます。
+インスタンス名は第 1 章と同じく型名の後ろに `0` を付けた名前で、Container は `example_container_python0`、ContainerProcess は `example_container_python_increment0` になります。
+Container は、引数の既定値どおり値 0 から始まります。
+
+## 外から呼び出す
+
+`juiz` を起動したまま、別のターミナルを開いて venv を有効にします。まず、動いている ContainerProcess の一覧を見ます。
+
+```sh
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0"]
+```
+
+ContainerProcess の ID は「インスタンス名`::`型名`:`Container のインスタンス名」の形をしていて、どの Container に結びついているかが ID からわかります。
+
+`increment` を、同じ引数で 2 回呼び出してみましょう。
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+同じ `{"arg1": 5}` を渡しているのに、1 回目と 2 回目で結果が違います。
+第 1 章の Process と違って、ContainerProcess の結果は引数だけでなく Container の状態にも左右されるからです。
+
+## 2 つの ContainerProcess で Container を共有する
+
+次は、`increment` が変えた値を `get` で読んでみます。
+コマンドラインからは ContainerProcess を 1 つしか読み込めないので、「どの Container に、どの ContainerProcess を結びつけるか」を設定ファイルに書きます。
+`my_juiz_python/example_container.conf` を、次の内容で作ってください。
+
+```yaml title="example_container.conf"
+name: example_container
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  container_factories:
+    example_container_python:
+      language: python
+      path: "./container"
+      processes:
+        example_container_python_increment:
+          path: "./container"
+        example_container_python_get:
+          path: "./container"
+containers:
+  - type_name: example_container_python
+    name: container0
+    processes:
+      - type_name: example_container_python_increment
+        name: increment0
+      - type_name: example_container_python_get
+        name: get0
+```
+
+設定ファイルには、次のことが書かれています。
+
+- Container の型と ContainerProcess の型を、どこから読み込むか(`plugins`)。型名に `.py` を付けたファイルを、`path` のディレクトリから探します
+- Container のインスタンス `container0` を 1 つ作ること(`containers`)
+- `container0` に結びつけて、`increment` のインスタンス `increment0` と、`get` のインスタンス `get0` を作ること
+
+設定ファイルの書き方は、次の第 3 章で詳しく扱います。ここでは「1 つの Container に、2 つの ContainerProcess がぶら下がっている」という形だけ押さえておいてください。
+
+起動中の `juiz` を Ctrl+C で止めてから、設定ファイルを指定して起動し直します。
+
+```sh
+juiz -f example_container.conf -d
+```
+
+一覧を見ると、今度は ContainerProcess が 2 つあります(表示される順番は実行ごとに変わることがあります)。
+
+```sh
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_python_get:container0"]
+```
+
+`get` で今の値を見てから、`increment` を 2 回呼び出し、もう一度 `get` で値を見てみましょう。
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_python_get:container0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_python_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+`increment` が変えた値を、別の ContainerProcess である `get` が読めています。2 つの ContainerProcess は、同じ Container を共有しています。
+
+### ブラウザから呼び出す
+
+第 1 章と同じく、Swagger UI(`http://127.0.0.1:8000/docs/`)からも呼び出せます。
+`PATCH /api/container_process/call` を開いて、identifier には、`juiz container-process list` で表示された ID の先頭 `http://127.0.0.1:8000` を `core://core` に置き換えた ID を入力します。
+
+- identifier: `core://core/container_process/get0::example_container_python_get:container0`
+- Request body: `{}`
+
+## やってみよう
+
+- `increment` に負の数(`{"arg1": -3}` など)を渡して、値が減ることを確かめてみましょう。
+- `juiz` を Ctrl+C で止めてから起動し直し、`get` を呼び出してみましょう。値は最初に戻っています。状態は、動いている Container の中にだけあることがわかります。
+- 値を 0 に戻す ContainerProcess(`example_container_python_reset`)を足してみましょう。`get` と同じ形のファイルを作り、`container.value = 0` にして値を返します。`example_container.conf` に書き足すのを忘れないでください。
+
+## まとめ
+
+- 状態は Container に置きます。Container には「何を覚えておくか」だけを書き、処理は書きません。
+- 状態を読み書きするのは、Container に結びついた ContainerProcess だけです。ContainerProcess は最初の引数で Container を受け取ります。
+- 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられます。それらは同じ状態を共有します。
+- ContainerProcess の結果は、引数だけでなく Container の状態にも左右されます。冪等な Process と、状態を扱う ContainerProcess を分けておくことで、状態がどこで変わるのかがはっきりします。
+
+次の章では、この章で使った設定ファイルの書き方を学び、第 1 章の Process とこの章の Container を 1 つの設定ファイルでまとめて起動します。[設定ファイルでまとめて起動する](/ja/tutorial/config-file/) に進みましょう。

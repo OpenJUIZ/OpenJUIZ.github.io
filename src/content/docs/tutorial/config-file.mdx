@@ -3,6 +3,9 @@ title: 3. Starting everything from a configuration file
 description: Start the Process from chapter 1 and the Container from chapter 2 with one configuration file, and learn the difference between loading and instantiating.
 sidebar:
   order: 3
+prev:
+  link: /tutorial/container/
+  label: "2. Keeping state: Container and ContainerProcess"
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
@@ -18,12 +21,12 @@ In this chapter you write the Process and Container so far into one configuratio
 - `p_apply` gives initial values to a Process's arguments
 </Aside>
 
-## Prepare the samples
+## Prepare the project
 
-Keep using the example repository you cloned and built in chapter 1.
-If you have not done that yet, follow [Prepare the samples in chapter 1](/tutorial/first-process/#prepare-the-samples).
+Keep using the project you created in chapters 1 and 2 (`my_juiz_rust` for Rust, `my_juiz_python` for Python, `my_juiz_cpp` for C++).
+The file names and locations match the examples, so you can also follow along with a clone of the examples ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp)) built the same way.
 
-In this chapter you create a new configuration file named `tutorial.conf` at the root of the example repository.
+In this chapter you create a new configuration file named `tutorial.conf` at the root of the project.
 
 ## Write the configuration file
 
@@ -343,7 +346,6 @@ containers:
 ```
 
 `create_container` takes `3` out of the `CapsuleMap` it receives with `args.get_int("value")`.
-This is also why `example_container.conf` in chapter 2 said `value: 10`.
 
 </TabItem>
 </Tabs>
@@ -531,7 +533,7 @@ You notice the typo when `juiz` starts, not later while it is running.
 
 - Remove `processes` and `containers`, keep only `plugins`, start `juiz` and run `juiz process list`. It returns an empty list `[]`. Loading alone does not create any instances.
 - Add another Container (for example `counter1`) to `containers`, with its own `increment` / `get`. `counter0` and `counter1` hold separate values. The Container name is part of a ContainerProcess ID, so names like `increment0` can be the same under each Container.
-- Add `decrement_process` from the example repository to `plugins` and `processes`, and run the Process that subtracts 1 alongside the others.
+- If you wrote the Process that subtracts 1 (`decrement_process`) in "Try it yourself" of chapter 1, add it to `plugins` and `processes` and run it alongside the others.
 
 ## Summary
 

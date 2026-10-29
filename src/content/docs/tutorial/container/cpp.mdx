@@ -1,0 +1,328 @@
+---
+title: "2. Keeping state (C++)"
+description: Add a counter Container and ContainerProcesses to the CMake project from chapter 1, and learn how to handle state.
+sidebar:
+  order: 3
+  label: C++
+prev:
+  link: /tutorial/first-process/cpp/
+  label: "1. Your first Process (C++)"
+next:
+  link: /tutorial/config-file/
+  label: "3. Starting everything from a configuration file"
+---
+
+import { Aside, FileTree } from '@astrojs/starlight/components';
+
+The Process in chapter 1 was an idempotent function that always returns the same result for the same arguments.
+But when you build parts for robots and IoT devices, you always end up with things you want to remember: a counter value, the current position of a motor, a connection to a camera.
+In this chapter you add a counter that remembers one integer to `my_juiz_cpp`, the project you created in chapter 1.
+What you build is the same as `container/` in the [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) examples.
+
+<Aside type="tip" title="What you will learn">
+- State lives in a **Container**, never in a Process
+- Only the **ContainerProcesses** bound to a Container touch its state
+- One Container can have several ContainerProcesses with different roles
+- How to write `CMakeLists.txt` so that ContainerProcesses share the Container class
+</Aside>
+
+## Project layout
+
+In this chapter you add `container/` to the project from chapter 1, giving this layout.
+
+<FileTree>
+- my_juiz_cpp/
+  - CMakeLists.txt add three plugins
+  - example_container.conf configuration file for starting it (new)
+  - process/
+    - increment_process_cpp/ the Process from chapter 1
+  - container/
+    - example_container_cpp/ Container (the counter value)
+      - example_container_cpp.h the Container class
+      - example_container_cpp.cpp
+    - example_container_cpp_increment/ ContainerProcess (adds to the value)
+      - example_container_cpp_increment.cpp
+    - example_container_cpp_get/ ContainerProcess (reads the value)
+      - example_container_cpp_get.cpp
+</FileTree>
+
+Create the directories. Run all the following commands in `my_juiz_cpp`.
+
+```sh
+cd my_juiz_cpp
+mkdir -p container/example_container_cpp
+mkdir -p container/example_container_cpp_increment
+mkdir -p container/example_container_cpp_get
+```
+
+## Write the Container
+
+A Container is the state itself. You write only the box that holds the value and the function that creates it.
+
+Write the class that holds the state in a header, because the ContainerProcesses also read and write its fields.
+
+```cpp title="container/example_container_cpp/example_container_cpp.h"
+#pragma once
+
+#include <cstdint>
+
+// The state held by the Container,
+// shared by the Container and the ContainerProcesses that operate on it.
+class ExampleContainer {
+public:
+    int64_t value;
+    ExampleContainer(int64_t v) : value(v) {}
+};
+```
+
+```cpp title="container/example_container_cpp/example_container_cpp.cpp"
+#include "juiz/juiz.h"
+#include "example_container_cpp.h"
+
+// A Container that holds one integer value
+auto manifest() {
+    return ContainerManifest("example_container_cpp")
+        .description("Holds an integer value.");
+}
+
+// Creates the Container from the items (such as value) written under containers in the configuration file
+ExampleContainer* create_container(juiz::CapsuleMap args) {
+    int64_t initial_value = 0;
+    if (args.has("value")) {
+        initial_value = args.get_int("value");
+    }
+    return new ExampleContainer(initial_value);
+}
+
+CONTAINER_FACTORY(manifest, create_container);
+```
+
+| Part | Meaning |
+| --- | --- |
+| `ContainerManifest("example_container_cpp")` | The description of the Container. The string becomes the Container **type name** |
+| `create_container(juiz::CapsuleMap args)` | The function that creates the Container. `args` holds the items written for the Container in the configuration file (chapter 3). Here `value`, if present, becomes the initial value |
+| `return new ExampleContainer(...)` | Returns a pointer to the created Container |
+| `CONTAINER_FACTORY(manifest, create_container)` | Exposes it so `juiz` can load it |
+
+The Container has no code that changes or reads the value. A Container only says "what to remember".
+
+## Write the ContainerProcesses
+
+The code that changes or reads the state goes into ContainerProcesses.
+A ContainerProcess is a Process that **receives the Container as its first argument**. You choose which Container it pairs with by the Container's type name.
+
+### increment: add to the value
+
+```cpp title="container/example_container_cpp_increment/example_container_cpp_increment.cpp"
+#include "juiz/juiz.h"
+#include "example_container_cpp.h"
+
+// A ContainerProcess that adds arg1 to the Container's value and returns the new value
+auto manifest() {
+    return ProcessManifest("example_container_cpp_increment")
+        .description("Adds arg1 to the value of the container.")
+        .container_type("example_container_cpp")
+        .add_int_arg("arg1", "value to be added", 1);
+}
+
+std::optional<int64_t> example_container_cpp_increment(ExampleContainer* container, int64_t arg1) {
+    container->value += arg1;
+    return container->value;
+}
+
+CONTAINER_PROCESS_FACTORY(ExampleContainer, manifest, example_container_cpp_increment);
+```
+
+| Part | Meaning |
+| --- | --- |
+| `#include "example_container_cpp.h"` | Includes the Container class. You add the include path in `CMakeLists.txt` (below) |
+| `.container_type("example_container_cpp")` | The type name of the Container to bind to |
+| `ExampleContainer* container` | The first argument receives a pointer to the Container, followed by the arguments declared in `manifest()` |
+| `CONTAINER_PROCESS_FACTORY(ExampleContainer, ...)` | Use `CONTAINER_PROCESS_FACTORY` instead of `PROCESS_FACTORY`, and pass the Container class too |
+
+### get: read the value
+
+```cpp title="container/example_container_cpp_get/example_container_cpp_get.cpp"
+#include "juiz/juiz.h"
+#include "example_container_cpp.h"
+
+// A ContainerProcess that returns the Container's value
+auto manifest() {
+    return ProcessManifest("example_container_cpp_get")
+        .description("Returns the value of the container.")
+        .container_type("example_container_cpp");
+}
+
+std::optional<int64_t> example_container_cpp_get(ExampleContainer* container) {
+    return container->value;
+}
+
+CONTAINER_PROCESS_FACTORY(ExampleContainer, manifest, example_container_cpp_get);
+```
+
+`get` has no arguments besides the Container and just returns the value.
+
+This is how you write state (the Container) and behavior (the ContainerProcesses) separately.
+Only the ContainerProcesses bound to a Container can change or read its state.
+When you want to know "where does this value change?", you only need to look at the ContainerProcesses.
+
+## Add them to CMakeLists.txt
+
+Add the following lines to the end of `CMakeLists.txt`. They use the `add_juiz_plugin` function from chapter 1, so each plugin takes one line.
+
+```cmake title="CMakeLists.txt (append to the end)"
+# Chapter 2: the counter Container and its ContainerProcesses
+add_juiz_plugin(example_container_cpp container/example_container_cpp/example_container_cpp.cpp)
+add_juiz_plugin(example_container_cpp_increment container/example_container_cpp_increment/example_container_cpp_increment.cpp)
+add_juiz_plugin(example_container_cpp_get container/example_container_cpp_get/example_container_cpp_get.cpp)
+
+# The ContainerProcesses also use the Container class (example_container_cpp.h)
+foreach(target example_container_cpp example_container_cpp_increment example_container_cpp_get)
+  target_include_directories(${target} PRIVATE container/example_container_cpp)
+endforeach()
+```
+
+The `foreach` part adds `container/example_container_cpp` to the include path of the three plugins, so every file can include the class with `#include "example_container_cpp.h"`.
+
+## Build it
+
+```sh
+cmake -S . -B build
+cmake --build build
+ls build/plugins
+# => libexample_container_cpp.so  libexample_container_cpp_get.so
+#    libexample_container_cpp_increment.so  libincrement_process_cpp.so
+```
+
+On macOS the extension is `.dylib`. Everything, including the Process from chapter 1, ends up in `build/plugins`.
+
+## Run it
+
+First, start `juiz` with the files, as in chapter 1.
+Load the Container with `--container` and the ContainerProcess with `--container_process`.
+
+```sh
+juiz --container ./build/plugins/libexample_container_cpp.so \
+     --container_process ./build/plugins/libexample_container_cpp_increment.so -l cpp -1 -d
+```
+
+On macOS the extension is `.dylib`.
+
+With `-1`, juiz creates one instance from the loaded Container type and binds one ContainerProcess instance to it.
+As in chapter 1, the instance names are the type names followed by `0`: the Container is `example_container_cpp0` and the ContainerProcess is `example_container_cpp_increment0`.
+The Container starts at 0.
+
+## Call it from outside
+
+Leave `juiz` running and open another terminal. First, list the running ContainerProcesses.
+
+```sh
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0"]
+```
+
+A ContainerProcess ID has the form "instance name`::`type name`:`Container instance name", so you can tell from the ID which Container it is bound to.
+
+Call `increment` twice with the same argument.
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+You passed the same `{"arg1": 5}` both times, but the results differ.
+Unlike the Process in chapter 1, the result of a ContainerProcess depends not only on its arguments but also on the state of the Container.
+
+## Share a Container between two ContainerProcesses
+
+Next, read the value changed by `increment` with `get`.
+The command line can load only one ContainerProcess, so write "which ContainerProcesses to bind to which Container" in a configuration file.
+Create `my_juiz_cpp/example_container.conf` with the following content.
+
+```yaml title="example_container.conf"
+name: example_container
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  container_factories:
+    example_container_cpp:
+      language: "c++"
+      path: "./build/plugins"
+      processes:
+        example_container_cpp_increment:
+          path: "./build/plugins"
+        example_container_cpp_get:
+          path: "./build/plugins"
+containers:
+  - type_name: example_container_cpp
+    name: container0
+    processes:
+      - type_name: example_container_cpp_increment
+        name: increment0
+      - type_name: example_container_cpp_get
+        name: get0
+```
+
+The configuration file says:
+
+- Where to load the Container type and the ContainerProcess types from (`plugins`). juiz builds a file name such as `libexample_container_cpp.so` from the type name and looks for it in the `path` directory. The language is written `language: "c++"` (note that this differs from `-l cpp` on the command line)
+- Create one Container instance, `container0` (`containers`)
+- Bind an `increment` instance `increment0` and a `get` instance `get0` to `container0`
+
+Chapter 3 covers how to write configuration files in detail. For now, just note the shape: "one Container with two ContainerProcesses hanging from it".
+
+Stop the running `juiz` with Ctrl+C, then start it again with the configuration file.
+
+```sh
+juiz -f example_container.conf -d
+```
+
+The list now has two ContainerProcesses (the order may change from run to run).
+
+```sh
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:container0"]
+```
+
+Check the current value with `get`, call `increment` twice, then check the value with `get` again.
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:container0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+`get`, a different ContainerProcess, reads the value that `increment` changed. The two ContainerProcesses share the same Container.
+
+### Call it from a browser
+
+As in chapter 1, you can also call them from Swagger UI (`http://127.0.0.1:8000/docs/`).
+Open `PATCH /api/container_process/call` and, as identifier, enter the ID shown by `juiz container-process list` with the leading `http://127.0.0.1:8000` replaced by `core://core`.
+
+- identifier: `core://core/container_process/get0::example_container_cpp_get:container0`
+- Request body: `{}`
+
+## Try it yourself
+
+- Pass a negative number to `increment` (such as `{"arg1": -3}`) and check that the value goes down.
+- Stop `juiz` with Ctrl+C, start it again and call `get`. The value is back at the start. The state exists only inside the running Container.
+- Add a ContainerProcess that resets the value to 0 (`example_container_cpp_reset`). Create a file shaped like `get`, set `container->value = 0;` and return the value. Do not forget to add it to both `CMakeLists.txt` and `example_container.conf`.
+
+## Summary
+
+- State lives in a Container. A Container only says "what to remember"; it has no logic.
+- Only the ContainerProcesses bound to a Container read and write its state. A ContainerProcess receives the Container as its first argument.
+- In C++, write the Container class in a header, and make it visible to the ContainerProcesses in `CMakeLists.txt`.
+- One Container can have several ContainerProcesses with different roles, and they share the same state.
+- The result of a ContainerProcess depends on the Container's state as well as its arguments. Keeping idempotent Processes separate from state-handling ContainerProcesses makes it clear where state changes.
+
+In the next chapter you learn how to write the configuration file used in this chapter, and start the Process from chapter 1 and the Container from this chapter together from one configuration file. Move on to [Starting everything from a configuration file](/tutorial/config-file/).

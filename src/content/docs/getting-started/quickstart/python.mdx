@@ -1,0 +1,103 @@
+---
+title: "Quick start: Python"
+description: Build the Python examples and run a Process with juiz.
+sidebar:
+  order: 2
+  label: Python
+prev:
+  link: /getting-started/quickstart/
+  label: Quick start
+next:
+  link: /tutorial/
+  label: How this tutorial works
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Using the Python examples [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python), you run a Process that just adds 1 to its argument.
+Install the `juiz` command first, as described in [Installation](/getting-started/install/).
+
+## Build the examples
+
+The Python examples need no build, and no Rust toolchain.
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git
+cd juiz_examples_python
+python3 -m venv .venv
+source .venv/bin/activate        # on Windows: .venv\Scripts\activate
+pip install -r requirements.txt  # installs juiz-cli (the juiz command and pyjuiz)
+```
+
+Run the following steps in a terminal where this venv is activated.
+
+<Aside type="note">
+If you use the `juiz` installed with `cargo install juiz_app`, install only pyjuiz with `pip install pyjuiz==0.0.26` instead of `requirements.txt`.
+</Aside>
+
+## The Process code
+
+This is the Process you will run.
+
+[`process/increment_process_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/process/increment_process_python.py)
+
+```python
+from juiz import juiz_process
+
+
+@juiz_process
+def increment_process_python(arg1: int = 0) -> int:
+    """引数に 1 を足して返す"""
+    print(f"increment_process_python: {arg1} -> {arg1 + 1}")
+    return arg1 + 1
+```
+
+## Start it
+
+From the root of the repository, start `juiz` with the configuration file. The configuration file looks for plugins by paths relative to the repository root.
+
+```sh
+juiz -f increment_process.conf -d
+```
+
+With `-d`, juiz starts the HTTP broker on port 8000 and keeps running (stop it with Ctrl+C).
+
+## Call it
+
+Leave `juiz` running, open another terminal in the same directory (and activate the venv), and call the Process.
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment0::increment_process_python"]
+juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_python" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+You passed `3` and got `4` back.
+
+### Call it from a browser
+
+Open the following URL in a browser to call the Process from Swagger UI and check the result.
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+Open `PATCH /api/process/call`, press "Try it out", enter `core://core/process/increment0::increment_process_python` as identifier and `{"arg1": 3}` as the request body, and press "Execute".
+
+### Look at it in the web UI
+
+Open the following URL to see the running Processes and connections in the web UI. See [Web UI](/guides/web-ui/) for details.
+
+```
+http://127.0.0.1:8000/ui/
+```
+
+## Next steps
+
+Once it runs, move on to [How this tutorial works](/tutorial/). It starts with writing a Process from scratch.
+Quick start for other languages:
+
+- [Rust](/getting-started/quickstart/rust/)
+- [C++](/getting-started/quickstart/cpp/)
+- [Haskell](/getting-started/quickstart/haskell/)

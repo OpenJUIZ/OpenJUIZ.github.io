@@ -1,0 +1,366 @@
+---
+title: "2. 状態を持つ(Rust)"
+description: 第 1 章のワークスペースにカウンタの Container と ContainerProcess のクレートを足し、状態の扱い方を学びます。
+sidebar:
+  order: 1
+  label: Rust
+prev:
+  link: /ja/tutorial/first-process/rust/
+  label: "1. はじめての Process(Rust)"
+next:
+  link: /ja/tutorial/config-file/
+  label: "3. 設定ファイルでまとめて起動する"
+---
+
+import { Aside, FileTree } from '@astrojs/starlight/components';
+
+第 1 章の Process は、同じ引数を渡せばいつも同じ結果を返す冪等な関数でした。
+しかし、ロボットや IoT の部品を作っていると、カウンタの値やモータの現在位置、カメラの接続のように「覚えておきたいもの」が必ず出てきます。
+この章では、整数を 1 つ覚えておくカウンタを、第 1 章で作ったワークスペース `my_juiz_rust` に足していきます。
+できあがるものは、サンプル集 [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust) の `container/` と同じです。
+
+<Aside type="tip" title="この章で学ぶこと">
+- 状態は **Container** に置き、Process には持たせないこと
+- 状態に触れるのは、Container に結びついた **ContainerProcess** だけであること
+- 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられること
+- ContainerProcess のクレートから Container のクレートを使う `Cargo.toml` の書き方
+</Aside>
+
+## プロジェクトの形
+
+この章では、第 1 章のワークスペースに `container/` を足して、次の形にします。
+
+<FileTree>
+- my_juiz_rust/
+  - Cargo.toml ワークスペースの設定(members を足す)
+  - example_container.conf 起動用の設定ファイル(新しく作る)
+  - process/
+    - increment_process/ 第 1 章で作った Process
+  - container/
+    - example_container/ Container(カウンタの値)
+      - Cargo.toml
+      - src/
+        - lib.rs
+    - example_container_increment/ ContainerProcess(値を足す)
+      - Cargo.toml
+      - src/
+        - lib.rs
+    - example_container_get/ ContainerProcess(値を読む)
+      - Cargo.toml
+      - src/
+        - lib.rs
+</FileTree>
+
+| 役割 | クレート |
+| --- | --- |
+| Container | `example_container`: カウンタの値を 1 つ持つ |
+| ContainerProcess | `example_container_increment`: Container の値に `arg1` を足して、足した後の値を返す |
+| ContainerProcess | `example_container_get`: Container の値をそのまま返す |
+
+ディレクトリを作ります。以降のコマンドは、すべて `my_juiz_rust` で実行します。
+
+```sh
+cd my_juiz_rust
+mkdir -p container/example_container/src
+mkdir -p container/example_container_increment/src
+mkdir -p container/example_container_get/src
+```
+
+ワークスペースの `Cargo.toml` の `members` に、3 つのクレートを足します。
+
+```toml title="Cargo.toml" ins={5-7}
+[workspace]
+resolver = "2"
+members = [
+    "process/increment_process",
+    "container/example_container",
+    "container/example_container_increment",
+    "container/example_container_get",
+]
+
+[workspace.dependencies]
+juiz_sdk = "0.0.26"
+```
+
+## Container を書く
+
+Container は、状態そのものです。値を入れておく入れ物と、それを作る関数だけを書きます。
+
+```toml title="container/example_container/Cargo.toml"
+[package]
+name = "example_container"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+juiz_sdk = { workspace = true }
+```
+
+第 1 章の Process との違いは、`crate-type` に `"rlib"` が増えていることです。
+
+| `crate-type` | 使い道 |
+| --- | --- |
+| `"cdylib"` | `juiz` がプラグインとして読み込む共有ライブラリ(`libexample_container.so`) |
+| `"rlib"` | ほかの Rust のクレートから `use` できるふつうのライブラリ |
+
+ContainerProcess は、Container の構造体 `ExampleContainer` の中身を読み書きします。そのため、ContainerProcess のクレートから、このクレートを Rust のライブラリとして使えるようにしておく必要があります。
+
+```rust title="container/example_container/src/lib.rs"
+use juiz_sdk::prelude::*;
+
+#[repr(Rust)]
+pub struct ExampleContainer {
+    pub value: i64,
+}
+
+#[juiz_container]
+fn example_container(initial_value: i64) -> JuizResult<Box<ExampleContainer>> {
+    Ok(Box::new(ExampleContainer {
+        value: initial_value,
+    }))
+}
+```
+
+| 部分 | 意味 |
+| --- | --- |
+| `pub struct ExampleContainer` | 状態を入れておく構造体です。ContainerProcess から使うので、構造体もフィールドも `pub` にします |
+| `#[juiz_container]` | この関数を Container の作り方にします。関数名 `example_container` が Container の**型名**になります |
+| `initial_value: i64` | Container を作るときに受け取る値です。設定ファイルから渡せます(第 3 章) |
+| `JuizResult<Box<ExampleContainer>>` | 作った Container を `Box` に入れて返します |
+
+Container には、値を変えたり読んだりする処理は書いていません。Container は「何を覚えておくか」だけを表します。
+
+## ContainerProcess を書く
+
+状態を変えたり読んだりする処理は、ContainerProcess に書きます。
+ContainerProcess は、**最初の引数に Container を受け取る** Process です。どの Container と組になるかは、Container の型名で指定します。
+
+### increment: 値を足す
+
+```toml title="container/example_container_increment/Cargo.toml"
+[package]
+name = "example_container_increment"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+juiz_sdk = { workspace = true }
+example_container = { path = "../example_container" }
+```
+
+`[dependencies]` の `example_container = { path = "../example_container" }` で、同じワークスペースの Container のクレートを使います。上で `rlib` を足したのは、このためです。
+
+```rust title="container/example_container_increment/src/lib.rs"
+use example_container::ExampleContainer;
+use juiz_sdk::prelude::*;
+
+#[juiz_container_process(
+    container_type = "example_container"
+    description = "Container Process for example_container. This process will add given value to container."
+    arguments = {
+        default = {
+            arg1 = 1
+        }
+    }
+)]
+fn example_container_increment(
+    container: &mut ContainerImpl<ExampleContainer>,
+    arg1: i64,
+) -> JuizResult<Capsule> {
+    container.value = container.value + arg1;
+    return Ok(jvalue!(container.value).into());
+}
+```
+
+| 部分 | 意味 |
+| --- | --- |
+| `use example_container::ExampleContainer;` | Container のクレートから構造体を読み込みます |
+| `#[juiz_container_process(...)]` | この関数を ContainerProcess にします。関数名 `example_container_increment` が型名になります |
+| `container_type = "example_container"` | 結びつける Container の型名です |
+| `description`・`arguments` | ContainerProcess の説明と、引数の既定値(`arg1` は 1)です。省略もできます |
+| `container: &mut ContainerImpl<ExampleContainer>` | 最初の引数で Container を受け取ります。`container.value` のように中の値を読み書きできます |
+| `arg1: i64` | 2 番目以降の引数は、第 1 章の Process と同じように呼び出すときに渡します |
+
+### get: 値を読む
+
+```toml title="container/example_container_get/Cargo.toml"
+[package]
+name = "example_container_get"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+juiz_sdk = { workspace = true }
+example_container = { path = "../example_container" }
+```
+
+```rust title="container/example_container_get/src/lib.rs"
+use example_container::ExampleContainer;
+use juiz_sdk::prelude::*;
+
+#[juiz_container_process(container_type = "example_container")]
+fn example_container_get(container: &mut ContainerImpl<ExampleContainer>) -> JuizResult<Capsule> {
+    println!("example_container_get() called");
+    return Ok(jvalue!(container.value).into());
+}
+```
+
+`get` は Container 以外の引数を持たず、値を返すだけです。
+
+こうして、状態(Container)と振る舞い(ContainerProcess)を別々に書きます。
+状態を変えたり読んだりできるのは、その Container に結びついた ContainerProcess だけです。
+「この値はどこで書き換わるのか」を知りたいときは、ContainerProcess を見ればよいことになります。
+
+## ビルドする
+
+```sh
+cargo build
+ls target/debug/*.so
+# => target/debug/libexample_container.so  target/debug/libexample_container_get.so
+#    target/debug/libexample_container_increment.so  target/debug/libincrement_process.so
+```
+
+macOS では拡張子が `.dylib` になります。第 1 章の Process も含めて、すべて `target/debug` にそろいます。
+
+## 動かす
+
+まずは第 1 章と同じように、ファイルを指定して `juiz` を起動します。
+Container は `--container`、ContainerProcess は `--container_process` で読み込みます。
+
+```sh
+juiz --container ./target/debug/libexample_container.so \
+     --container_process ./target/debug/libexample_container_increment.so -1 -d
+```
+
+macOS では拡張子が `.dylib` になります。
+
+`-1` を付けると、読み込んだ Container の型からインスタンスを 1 つ作り、そこに ContainerProcess のインスタンスを 1 つ結びつけます。
+インスタンス名は第 1 章と同じく型名の後ろに `0` を付けた名前で、Container は `example_container0`、ContainerProcess は `example_container_increment0` になります。
+Container は値 0 から始まります。
+
+## 外から呼び出す
+
+`juiz` を起動したまま、別のターミナルを開きます。まず、動いている ContainerProcess の一覧を見ます。
+
+```sh
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0"]
+```
+
+ContainerProcess の ID は「インスタンス名`::`型名`:`Container のインスタンス名」の形をしていて、どの Container に結びついているかが ID からわかります。
+
+`increment` を、同じ引数で 2 回呼び出してみましょう。
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+同じ `{"arg1": 5}` を渡しているのに、1 回目と 2 回目で結果が違います。
+第 1 章の Process と違って、ContainerProcess の結果は引数だけでなく Container の状態にも左右されるからです。
+
+<Aside>
+引数に既定値があっても、呼び出すときは引数を省略せずに渡してください。
+</Aside>
+
+## 2 つの ContainerProcess で Container を共有する
+
+次は、`increment` が変えた値を `get` で読んでみます。
+コマンドラインからは ContainerProcess を 1 つしか読み込めないので、「どの Container に、どの ContainerProcess を結びつけるか」を設定ファイルに書きます。
+`my_juiz_rust/example_container.conf` を、次の内容で作ってください。
+
+```yaml title="example_container.conf"
+name: example_container
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  container_factories:
+    example_container:
+      path: "./target/debug"
+      processes:
+        example_container_increment:
+          path: "./target/debug"
+        example_container_get:
+          path: "./target/debug"
+containers:
+  - type_name: example_container
+    name: container0
+    processes:
+      - type_name: example_container_increment
+        name: increment0
+      - type_name: example_container_get
+        name: get0
+```
+
+設定ファイルには、次のことが書かれています。
+
+- Container の型と ContainerProcess の型を、どこから読み込むか(`plugins`)。型名から `libexample_container.so` のようなファイル名を作って、`path` のディレクトリから探します
+- Container のインスタンス `container0` を 1 つ作ること(`containers`)
+- `container0` に結びつけて、`increment` のインスタンス `increment0` と、`get` のインスタンス `get0` を作ること
+
+設定ファイルの書き方は、次の第 3 章で詳しく扱います。ここでは「1 つの Container に、2 つの ContainerProcess がぶら下がっている」という形だけ押さえておいてください。
+
+起動中の `juiz` を Ctrl+C で止めてから、設定ファイルを指定して起動し直します。
+
+```sh
+juiz -f example_container.conf -d
+```
+
+一覧を見ると、今度は ContainerProcess が 2 つあります(表示される順番は実行ごとに変わることがあります)。
+
+```sh
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_get:container0"]
+```
+
+`get` で今の値を見てから、`increment` を 2 回呼び出し、もう一度 `get` で値を見てみましょう。
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+`increment` が変えた値を、別の ContainerProcess である `get` が読めています。2 つの ContainerProcess は、同じ Container を共有しています。
+
+### ブラウザから呼び出す
+
+第 1 章と同じく、Swagger UI(`http://127.0.0.1:8000/docs/`)からも呼び出せます。
+`PATCH /api/container_process/call` を開いて、identifier には、`juiz container-process list` で表示された ID の先頭 `http://127.0.0.1:8000` を `core://core` に置き換えた ID を入力します。
+
+- identifier: `core://core/container_process/get0::example_container_get:container0`
+- Request body: `{}`
+
+## やってみよう
+
+- `increment` に負の数(`{"arg1": -3}` など)を渡して、値が減ることを確かめてみましょう。
+- `juiz` を Ctrl+C で止めてから起動し直し、`get` を呼び出してみましょう。値は最初に戻っています。状態は、動いている Container の中にだけあることがわかります。
+- 値を 0 に戻す ContainerProcess(`example_container_reset`)を足してみましょう。`get` と同じ形のクレートを作り、`container.value = 0;` にして値を返します。ワークスペースの `members` と `example_container.conf` の両方に書き足すのを忘れないでください。
+
+## まとめ
+
+- 状態は Container に置きます。Container には「何を覚えておくか」だけを書き、処理は書きません。
+- 状態を読み書きするのは、Container に結びついた ContainerProcess だけです。ContainerProcess は最初の引数で Container を受け取ります。
+- Rust では、Container のクレートを `crate-type = ["cdylib", "rlib"]` にして、ContainerProcess のクレートから `path` で依存します。
+- 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられます。それらは同じ状態を共有します。
+- ContainerProcess の結果は、引数だけでなく Container の状態にも左右されます。冪等な Process と、状態を扱う ContainerProcess を分けておくことで、状態がどこで変わるのかがはっきりします。
+
+次の章では、この章で使った設定ファイルの書き方を学び、第 1 章の Process とこの章の Container を 1 つの設定ファイルでまとめて起動します。[設定ファイルでまとめて起動する](/ja/tutorial/config-file/) に進みましょう。

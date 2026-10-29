@@ -3,6 +3,9 @@ title: 3. 設定ファイルでまとめて起動する
 description: 第 1 章の Process と第 2 章の Container を 1 つの設定ファイルで起動し、読み込みと実体化の違いを学びます。
 sidebar:
   order: 3
+prev:
+  link: /ja/tutorial/container/
+  label: "2. 状態を持つ: Container と ContainerProcess"
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
@@ -18,12 +21,12 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 - `p_apply` で Process の引数に初期値を与えられること
 </Aside>
 
-## サンプルを用意する
+## プロジェクトを用意する
 
-第 1 章でクローンしてビルドしたサンプル集をそのまま使います。
-まだの場合は、[第 1 章の「サンプルを用意する」](/ja/tutorial/first-process/#サンプルを用意する) の手順を済ませてください。
+第 1 章・第 2 章で作ったプロジェクト(Rust は `my_juiz_rust`、Python は `my_juiz_python`、C++ は `my_juiz_cpp`)をそのまま使います。
+ファイルの名前と置き場所はサンプル集とそろえてあるので、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp))をクローンしてビルドしたものでも、同じ手順で進められます。
 
-この章では、サンプル集のルートに `tutorial.conf` という設定ファイルを新しく作ります。
+この章では、プロジェクトのルートに `tutorial.conf` という設定ファイルを新しく作ります。
 
 ## 設定ファイルを書く
 
@@ -343,7 +346,6 @@ containers:
 ```
 
 `create_container` が受け取る `CapsuleMap` から、`args.get_int("value")` で `3` を取り出します。
-第 2 章で使った `example_container.conf` に `value: 10` と書かれていたのも、この仕組みです。
 
 </TabItem>
 </Tabs>
@@ -531,7 +533,7 @@ Caused by:
 
 - `processes` と `containers` を消して `plugins` だけ残した設定ファイルで起動し、`juiz process list` を見てみましょう。空のリスト `[]` が返ります。読み込んだだけでは、インスタンスは作られないことがわかります。
 - `containers` にもう 1 つ Container(たとえば `counter1`)と、それに結びつく `increment` / `get` を書き足してみましょう。`counter0` と `counter1` は別々の値を持ちます。ContainerProcess の ID には Container の名前が入るので、`increment0` のような名前は Container ごとに同じでもかまいません。
-- サンプル集の `decrement_process` を `plugins` と `processes` に書き足して、1 を引く Process も一緒に動かしてみましょう。
+- 第 1 章の「やってみよう」で 1 を引く Process(`decrement_process`)を作っていたら、`plugins` と `processes` に書き足して、一緒に動かしてみましょう。
 
 ## まとめ
 

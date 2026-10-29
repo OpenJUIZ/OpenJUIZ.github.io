@@ -1,0 +1,96 @@
+---
+title: "クイックスタート: Rust"
+description: Rust のサンプル集をビルドして、juiz で Process を動かします。
+sidebar:
+  order: 1
+  label: Rust
+prev:
+  link: /ja/getting-started/quickstart/
+  label: クイックスタート
+next:
+  link: /ja/tutorial/
+  label: チュートリアルの進め方
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Rust のサンプル集 [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust) を使って、引数に 1 を足すだけの Process を動かしてみます。
+先に [インストール](/ja/getting-started/install/) で `juiz` コマンドを入れておいてください。
+
+## サンプルをビルドする
+
+`juiz` コマンドは `cargo install juiz_app` で入れたものを使います。pip で入れた `juiz` では、手元でビルドした Rust のプラグインを読み込めません([インストール](/ja/getting-started/install/))。
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_rust.git
+cd juiz_examples_rust
+cargo build
+```
+
+各サンプルは共有ライブラリとして `target/debug` にビルドされ、juiz がプラグインとして読み込みます。
+
+## Process のコード
+
+動かすのは、次の Process です。
+
+[`process/increment_process/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/process/increment_process/src/lib.rs)
+
+```rust
+use juiz_sdk::prelude::*;
+
+#[juiz_process]
+fn increment_process(arg1: i64) -> JuizResult<Capsule> {
+    log::trace!("increment_process({:?}) called", arg1);
+    return Ok(jvalue!(arg1 + 1).into());
+}
+```
+
+## 起動する
+
+リポジトリのルートで、設定ファイルを指定して `juiz` を起動します。設定ファイルは、リポジトリのルートからの相対パスでプラグインを探します。
+
+```sh
+juiz -f increment_process.conf -d
+```
+
+`-d` を付けると、HTTP ブローカーを 8000 番ポートで立ち上げて待機します(Ctrl+C で終了)。
+
+## 呼び出す
+
+`juiz` を起動したまま、別のターミナルを開いて、同じディレクトリで呼び出します。
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment0::increment_process"]
+juiz process call "http://127.0.0.1:8000/process/increment0::increment_process" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+`3` を渡して `4` が返ってきました。
+
+### ブラウザから呼び出す
+
+ブラウザで次の URL を開くと、Swagger UI から Process を呼び出して結果を確かめられます。
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+`PATCH /api/process/call` を開き、「Try it out」を押して、identifier に `core://core/process/increment0::increment_process`、Request body に `{"arg1": 3}` を入れて「Execute」を押します。
+
+### 管理画面で見る
+
+次の URL を開くと、動いている Process や接続を管理画面で確かめられます。詳しくは [管理画面](/ja/guides/web-ui/) を見てください。
+
+```
+http://127.0.0.1:8000/ui/
+```
+
+## 次に進む
+
+動かせたら、[チュートリアルの進め方](/ja/tutorial/) に進みましょう。Process を 1 から書くところから、順に学べます。
+ほかの言語のクイックスタート:
+
+- [Python](/ja/getting-started/quickstart/python/)
+- [C++](/ja/getting-started/quickstart/cpp/)
+- [Haskell](/ja/getting-started/quickstart/haskell/)

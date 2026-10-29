@@ -1,0 +1,96 @@
+---
+title: "Quick start: Rust"
+description: Build the Rust examples and run a Process with juiz.
+sidebar:
+  order: 1
+  label: Rust
+prev:
+  link: /getting-started/quickstart/
+  label: Quick start
+next:
+  link: /tutorial/
+  label: How this tutorial works
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Using the Rust examples [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust), you run a Process that just adds 1 to its argument.
+Install the `juiz` command first, as described in [Installation](/getting-started/install/).
+
+## Build the examples
+
+Use the `juiz` command installed with `cargo install juiz_app`. The `juiz` installed with pip cannot load Rust plugins you build yourself (see [Installation](/getting-started/install/)).
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_rust.git
+cd juiz_examples_rust
+cargo build
+```
+
+Each example is built as a shared library in `target/debug`, which juiz loads as a plugin.
+
+## The Process code
+
+This is the Process you will run.
+
+[`process/increment_process/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/process/increment_process/src/lib.rs)
+
+```rust
+use juiz_sdk::prelude::*;
+
+#[juiz_process]
+fn increment_process(arg1: i64) -> JuizResult<Capsule> {
+    log::trace!("increment_process({:?}) called", arg1);
+    return Ok(jvalue!(arg1 + 1).into());
+}
+```
+
+## Start it
+
+From the root of the repository, start `juiz` with the configuration file. The configuration file looks for plugins by paths relative to the repository root.
+
+```sh
+juiz -f increment_process.conf -d
+```
+
+With `-d`, juiz starts the HTTP broker on port 8000 and keeps running (stop it with Ctrl+C).
+
+## Call it
+
+Leave `juiz` running, open another terminal in the same directory, and call the Process.
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment0::increment_process"]
+juiz process call "http://127.0.0.1:8000/process/increment0::increment_process" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+You passed `3` and got `4` back.
+
+### Call it from a browser
+
+Open the following URL in a browser to call the Process from Swagger UI and check the result.
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+Open `PATCH /api/process/call`, press "Try it out", enter `core://core/process/increment0::increment_process` as identifier and `{"arg1": 3}` as the request body, and press "Execute".
+
+### Look at it in the web UI
+
+Open the following URL to see the running Processes and connections in the web UI. See [Web UI](/guides/web-ui/) for details.
+
+```
+http://127.0.0.1:8000/ui/
+```
+
+## Next steps
+
+Once it runs, move on to [How this tutorial works](/tutorial/). It starts with writing a Process from scratch.
+Quick start for other languages:
+
+- [Python](/getting-started/quickstart/python/)
+- [C++](/getting-started/quickstart/cpp/)
+- [Haskell](/getting-started/quickstart/haskell/)

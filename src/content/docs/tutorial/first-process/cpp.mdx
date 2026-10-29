@@ -1,0 +1,269 @@
+---
+title: "1. Your first Process (C++)"
+description: Create a CMake project from scratch, write a Process in C++ that adds 1 to its argument, and run it.
+sidebar:
+  order: 3
+  label: C++
+prev:
+  link: /tutorial/first-process/
+  label: "1. Your first Process"
+next:
+  link: /tutorial/container/cpp/
+  label: "2. Keeping state (C++)"
+---
+
+import { Aside, FileTree } from '@astrojs/starlight/components';
+
+In this chapter you create a CMake project from an empty directory, write a Process in C++ that adds 1 to its argument and returns it, and run it.
+What you build is the same as `process/increment_process_cpp` in the [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) examples.
+
+<Aside type="tip" title="What you will learn">
+- How to set up a CMake project for writing Processes (how to write `CMakeLists.txt`)
+- A Process is an idempotent function that takes arguments and returns a result
+- A Process has a "type name" and an "instance name"
+- How to call a Process from outside and get the result back (call)
+</Aside>
+
+## Before you start
+
+Prepare the following (Linux or macOS).
+
+- The `juiz` command, installed either with pip or with cargo as described in [Installation](/getting-started/install/)
+- CMake 3.16 or later and a C++17 compiler
+- libjuiz_sdk and its headers, at the same version as `juiz`
+
+C++ Processes are built against libjuiz_sdk, the shared library of functions that pass values to and from juiz.
+Check the version of `juiz`, then extract libjuiz_sdk of the same version into `~/.juiz/sdk/<version>` (to download it by hand, see [Installation](/getting-started/install/#c-and-haskell-libjuiz_sdk)).
+
+```sh
+juiz --version
+# => juiz 0.0.26
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.26
+ls ~/.juiz/sdk/0.0.26
+# => cjuiz  cppjuiz  lib  ...
+```
+
+## Project layout
+
+In this chapter you create a project laid out like this.
+
+<FileTree>
+- my_juiz_cpp/
+  - CMakeLists.txt build settings
+  - process/
+    - increment_process_cpp/
+      - increment_process_cpp.cpp the Process code
+</FileTree>
+
+In juiz, each Process is built as its own shared library (`.so` or `.dylib`), and the `juiz` command loads it as a plugin.
+Chapter 2 adds a Container to this project.
+
+First, create the directories.
+
+```sh
+mkdir my_juiz_cpp
+cd my_juiz_cpp
+mkdir -p process/increment_process_cpp
+```
+
+Run all the following commands in `my_juiz_cpp`.
+
+## Write CMakeLists.txt
+
+Create `my_juiz_cpp/CMakeLists.txt` with the following content.
+
+```cmake title="CMakeLists.txt"
+cmake_minimum_required(VERSION 3.16)
+project(my_juiz_cpp CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# The juiz version and where libjuiz_sdk is extracted
+set(JUIZ_VERSION "0.0.26")
+set(JUIZ_SDK_DIR "$ENV{HOME}/.juiz/sdk/${JUIZ_VERSION}" CACHE PATH "libjuiz_sdk directory")
+find_library(JUIZ_SDK_LIBRARY juiz_sdk PATHS "${JUIZ_SDK_DIR}/lib" NO_DEFAULT_PATH REQUIRED)
+
+# Put all plugins in build/plugins
+set(JUIZ_PLUGIN_DIR "${CMAKE_BINARY_DIR}/plugins")
+
+# Add one juiz plugin (shared library)
+function(add_juiz_plugin NAME)
+  add_library(${NAME} SHARED ${ARGN})
+  target_include_directories(${NAME} PRIVATE
+    "${JUIZ_SDK_DIR}/cjuiz/include"
+    "${JUIZ_SDK_DIR}/cppjuiz/include")
+  target_link_libraries(${NAME} PRIVATE "${JUIZ_SDK_LIBRARY}")
+  set_target_properties(${NAME} PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${JUIZ_PLUGIN_DIR}"
+    BUILD_RPATH "${JUIZ_SDK_DIR}/lib")
+endfunction()
+
+# Chapter 1: a Process that adds 1 to its argument
+add_juiz_plugin(increment_process_cpp process/increment_process_cpp/increment_process_cpp.cpp)
+```
+
+Let's go through it from the top.
+
+| Part | Meaning |
+| --- | --- |
+| `cmake_minimum_required`, `project` | The CMake version you need and the name of the project. The only language is C++ (`CXX`) |
+| `CMAKE_CXX_STANDARD 17` | The juiz C++ headers use C++17, so compile as C++17 |
+| `JUIZ_VERSION`, `JUIZ_SDK_DIR` | Where libjuiz_sdk is extracted. **Use the same version as `juiz --version`.** If you put it somewhere else, change it with `cmake -DJUIZ_SDK_DIR=<path>` |
+| `find_library(JUIZ_SDK_LIBRARY ...)` | Looks for libjuiz_sdk in `JUIZ_SDK_DIR/lib`. If it is not there, CMake stops here and tells you |
+| `JUIZ_PLUGIN_DIR` | Where the built plugins go. Keeping all plugins in one place makes it easy to tell `juiz` where they are |
+| `function(add_juiz_plugin NAME)` | A function that adds one plugin, so you do not repeat the same settings every time you add a Process or Container |
+| `add_library(${NAME} SHARED ...)` | Builds a shared library, the format `juiz` can load. The file is named `lib<NAME>.so` (`.dylib` on macOS) |
+| `target_include_directories` | Makes the juiz C headers (`cjuiz/include`) and C++ headers (`cppjuiz/include`) available |
+| `target_link_libraries` | Links to libjuiz_sdk |
+| `LIBRARY_OUTPUT_DIRECTORY` | Puts the built shared library in `build/plugins` |
+| `BUILD_RPATH` | Makes the plugin look for libjuiz_sdk in `JUIZ_SDK_DIR/lib` when it is loaded. Without it, `juiz` fails to load the plugin because it cannot find libjuiz_sdk |
+| `add_juiz_plugin(increment_process_cpp ...)` | Builds the Process `increment_process_cpp` from `process/increment_process_cpp/increment_process_cpp.cpp` |
+
+<Aside type="tip">
+Give the target (`increment_process_cpp`) the same name as the Process type name you are about to write in `manifest()`.
+The configuration file you use in chapter 3 builds the file name `libincrement_process_cpp.so` from the type name `increment_process_cpp` and looks for it.
+</Aside>
+
+## Write the Process code
+
+Create `process/increment_process_cpp/increment_process_cpp.cpp` with the following content. It is a Process that adds 1 to the argument `arg1` and returns it.
+
+```cpp title="process/increment_process_cpp/increment_process_cpp.cpp"
+#include "juiz/juiz.h"
+
+// A Process that adds 1 to arg1 and returns it
+//
+// manifest() declares the name and arguments (name, description, default) of the Process,
+// and PROCESS_FACTORY exposes it as a function juiz can call.
+auto manifest() {
+    return ProcessManifest{"increment_process_cpp"}
+        .description("Adds 1 to arg1.")
+        .add_int_arg("arg1", "value to be incremented", 1);
+}
+
+std::optional<int64_t> increment_process_cpp(int64_t arg1) {
+    return arg1 + 1;
+}
+
+PROCESS_FACTORY(manifest, increment_process_cpp);
+```
+
+| Part | Meaning |
+| --- | --- |
+| `#include "juiz/juiz.h"` | The juiz C++ header, found in the `cppjuiz/include` added in `CMakeLists.txt` |
+| `manifest()` | The description of the Process. The string in `ProcessManifest{"increment_process_cpp"}` becomes the Process **type name** |
+| `.add_int_arg("arg1", "value to be incremented", 1)` | Declares an integer argument `arg1`, with a description and a default value (1) |
+| `increment_process_cpp(int64_t arg1)` | The body of the Process. Arguments are passed in the order declared in `manifest()` |
+| `std::optional<int64_t>` | The return value. Returning `std::nullopt` when you cannot return a value makes the call an error |
+| `PROCESS_FACTORY(manifest, increment_process_cpp)` | Pairs `manifest()` with the body and exposes them so `juiz` can load them |
+
+Unlike Rust and Python, in C++ you write the type name and the arguments (name, description, default) in `manifest()` yourself.
+
+## Build it
+
+```sh
+cmake -S . -B build
+cmake --build build
+```
+
+The first line prepares the build in the `build` directory, and the second line builds.
+The shared library is placed in `build/plugins`.
+
+```sh
+ls build/plugins
+# => libincrement_process_cpp.so (libincrement_process_cpp.dylib on macOS)
+```
+
+If `cmake -S . -B build` prints `Could not find JUIZ_SDK_LIBRARY`, check where you extracted libjuiz_sdk and its version.
+
+## Run it
+
+Start `juiz`, passing the file with `--process`.
+
+```sh
+juiz --process ./build/plugins/libincrement_process_cpp.so -l cpp -e -1 -d
+```
+
+On macOS the extension is `.dylib`.
+
+The options mean the following.
+
+| Option | Meaning |
+| --- | --- |
+| `--process <path>` | Load a Process file |
+| `-l <language>` | The language of the file (`rust` / `python` / `cpp`; the default is `rust`). Use `-l cpp` for C++ |
+| `-1` | Create one instance from the loaded Process |
+| `-e` | Run the created instance once with the default arguments |
+| `-d` | Start the HTTP broker on port 8000 and keep running (stop with Ctrl+C) |
+
+Notice that "loading" and "creating an instance" are separate steps.
+When juiz loads a file, it learns the Process **type** (how to make one). With `-1`, it creates one **instance** from that type.
+The instance name is the type name followed by `0` (`increment_process_cpp0`).
+You can also create several instances with different names from the same type (covered in chapter 3).
+
+## Call it from outside
+
+Leave `juiz` running, open another terminal and call the Process.
+First, list the running Processes.
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment_process_cpp0::increment_process_cpp"]
+```
+
+The URL shown is the **ID** of this Process.
+`http://127.0.0.1:8000` is where the Process lives (the broker), and the part after `process/` is "instance name`::`type name".
+With [namespaces](/guides/namespace/), a namespace such as `robot1/` comes before the instance name. Without them, it looks as above.
+
+Call the Process with this ID and arguments (call). Arguments are passed as JSON.
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/increment_process_cpp0::increment_process_cpp" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+You passed `3` and got `4` back. `-p` prints the result.
+Check that calling it again with the same argument always gives the same result.
+
+### Call it from a browser
+
+The HTTP broker started with `-d` also serves Swagger UI. Open the following URL in a browser.
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+Open `PATCH /api/process/call`, press "Try it out", enter the following, and press "Execute" to get the result.
+
+- identifier: `core://core/process/increment_process_cpp0::increment_process_cpp`
+- Request body: `{"arg1": 3}`
+
+<Aside>
+In Swagger UI, use an ID of the form `core://core/...`, which points to a Process inside the broker itself.
+</Aside>
+
+Both the `juiz` command and Swagger UI just call the same API over HTTP.
+That means any program that speaks HTTP, in any language, can call a Process and get the result back.
+This is **call**, the way of using juiz like a server and client.
+
+## A Process is an idempotent function
+
+`increment_process_cpp` only takes an argument and returns a result.
+It does not read or write any outside state, so the same argument always gives the same result (it is idempotent).
+Thanks to this, Processes are easy to test, and they behave the same when you later connect them or move them to another machine.
+
+## Try it yourself
+
+- Change the body to return twice the argument instead of adding 1. Rebuild with `cmake --build build` and restart `juiz`; `{"arg1": 3}` should now give `6`.
+- Add `decrement_process_cpp`, a Process that subtracts 1. Create `process/decrement_process_cpp/decrement_process_cpp.cpp` and add one line, `add_juiz_plugin(decrement_process_cpp ...)`, to `CMakeLists.txt`. The answer is in [`process/decrement_process_cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/tree/main/process/decrement_process_cpp) of the examples.
+
+## Summary
+
+- A C++ Process is built as a shared library linked to libjuiz_sdk. Use libjuiz_sdk of the same version as `juiz`.
+- With a function like `add_juiz_plugin` in `CMakeLists.txt`, adding a Process takes one line.
+- A Process is an idempotent function that only takes arguments and returns a result. In C++ you write the type name and arguments in `manifest()` and expose it with `PROCESS_FACTORY`.
+- juiz loads a file to learn a Process **type**, and creates named **instances** from it.
+- A running Process has an ID shaped like a URL, and you can call it from outside with that ID and arguments (call).
+
+In the next chapter you add a counter Container to this project and learn how to write building blocks that keep state. Move on to [Keeping state: Container and ContainerProcess (C++)](/tutorial/container/cpp/).
