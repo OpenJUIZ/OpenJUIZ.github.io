@@ -338,7 +338,7 @@ Leave `juiz` running and open another terminal. First, list the running Containe
 
 ```sh
 juiz container-process list
-# => ["core://core/container_process/example_container_increment0::example_container_increment:example_container0"]
+# => ["http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0"]
 ```
 
 </TabItem>
@@ -346,7 +346,7 @@ juiz container-process list
 
 ```sh
 juiz container-process list
-# => ["core://core/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0"]
+# => ["http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0"]
 ```
 
 </TabItem>
@@ -354,14 +354,14 @@ juiz container-process list
 
 ```sh
 juiz container-process list
-# => ["core://core/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0"]
+# => ["http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0"]
 ```
 
 </TabItem>
 </Tabs>
 
 A ContainerProcess ID has the form "instance name`::`type name`:`Container instance name", so the ID tells you which Container it is bound to.
-The list shows IDs in the `core://core/...` form, which points inside the broker itself. To call from outside, replace the beginning with `http://127.0.0.1:8000`, as in chapter 1.
+As with the Process in chapter 1, the list shows IDs in the `http://127.0.0.1:8000/...` form. To call from outside, use this ID as is.
 
 Call `increment` twice with the same argument.
 
@@ -450,7 +450,7 @@ The list now shows two ContainerProcesses.
 
 ```sh
 juiz container-process list
-# => ["core://core/container_process/increment0::example_container_increment:container0", "core://core/container_process/get0::example_container_get:container0"]
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_get:container0"]
 ```
 
 </TabItem>
@@ -458,7 +458,7 @@ juiz container-process list
 
 ```sh
 juiz container-process list
-# => ["core://core/container_process/increment0::example_container_python_increment:container0", "core://core/container_process/get0::example_container_python_get:container0"]
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_python_get:container0"]
 ```
 
 </TabItem>
@@ -466,7 +466,7 @@ juiz container-process list
 
 ```sh
 juiz container-process list
-# => ["core://core/container_process/increment0::example_container_cpp_increment:container0", "core://core/container_process/get0::example_container_cpp_get:container0"]
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:container0"]
 ```
 
 </TabItem>
@@ -528,7 +528,7 @@ The C++ example's configuration file says `value: 10`, so the Container starts a
 ### Call it from a browser
 
 As in chapter 1, you can also call them from Swagger UI (`http://127.0.0.1:8000/docs/`).
-To call a ContainerProcess, open `PATCH /api/container_process/call` and enter the `core://core/...` ID shown by `juiz container-process list` as the identifier, unchanged.
+To call a ContainerProcess, open `PATCH /api/container_process/call` and enter as the identifier the ID shown by `juiz container-process list`, with its beginning `http://127.0.0.1:8000` replaced by `core://core`.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">

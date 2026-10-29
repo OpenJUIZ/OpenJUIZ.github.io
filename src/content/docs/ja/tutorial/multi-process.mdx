@@ -267,7 +267,7 @@ listener_cpp: Hello, Juiz!
 
 ```sh
 juiz -s http://127.0.0.1:8001 connection list
-# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker, arg=arg1, dst=ProcessIdentifier(http://127.0.0.1:8000/process/listener0::listener)]
+# => ["connection://core://core/process/talker0::talker|arg1|http://127.0.0.1:8000/process/listener0::listener"]
 ```
 
 </TabItem>
@@ -275,7 +275,7 @@ juiz -s http://127.0.0.1:8001 connection list
 
 ```sh
 juiz -s http://127.0.0.1:8001 connection list
-# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_python0::talker_python, arg=arg1, dst=ProcessIdentifier(http://127.0.0.1:8000/process/listener_python0::listener_python)]
+# => ["connection://core://core/process/talker_python0::talker_python|arg1|http://127.0.0.1:8000/process/listener_python0::listener_python"]
 ```
 
 </TabItem>
@@ -283,7 +283,7 @@ juiz -s http://127.0.0.1:8001 connection list
 
 ```sh
 juiz -s http://127.0.0.1:8001 connection list
-# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_cpp0::talker_cpp, arg=arg1, dst=ProcessIdentifier(http://127.0.0.1:8000/process/listener_cpp0::listener_cpp)]
+# => ["connection://core://core/process/talker_cpp0::talker_cpp|arg1|http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"]
 ```
 
 </TabItem>

@@ -19,7 +19,7 @@ juiz では、juiz どうしや外のプログラムとやりとりする通信�
 
 <Aside type="caution" title="juiz 0.0.18 以降が必要です">
 QUIC ブローカーは juiz 0.0.18 から `juiz` コマンドに組み込まれています。`cargo install juiz_app` で入れた場合も、pip の `juiz-cli` で入れた場合も、そのまま使えます。
-`juiz --version` ではなく、`cargo install --list` や `pip show juiz-cli` で版を確かめてください。0.0.17 以前では、QUIC ブローカーを juiz のソースからビルドしてプラグインとして読み込む必要があります。
+版は `juiz --version` で確かめられます(古い版で正しく表示されないときは、`cargo install --list` や `pip show juiz-cli` で確かめてください)。0.0.17 以前では、QUIC ブローカーを juiz のソースからビルドしてプラグインとして読み込む必要があります。
 </Aside>
 
 ## QUIC ブローカーとは
@@ -268,7 +268,7 @@ juiz connection create -t push \
 
 ```sh
 juiz -s qmp://127.0.0.1:5001 connection list
-# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker, arg=arg1, dst=ProcessIdentifier(qmp://127.0.0.1:5000/process/listener0::listener)]
+# => ["connection://core://core/process/talker0::talker|arg1|qmp://127.0.0.1:5000/process/listener0::listener"]
 ```
 
 </TabItem>
@@ -276,7 +276,7 @@ juiz -s qmp://127.0.0.1:5001 connection list
 
 ```sh
 juiz -s qmp://127.0.0.1:5001 connection list
-# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_python0::talker_python, arg=arg1, dst=ProcessIdentifier(qmp://127.0.0.1:5000/process/listener_python0::listener_python)]
+# => ["connection://core://core/process/talker_python0::talker_python|arg1|qmp://127.0.0.1:5000/process/listener_python0::listener_python"]
 ```
 
 </TabItem>
@@ -284,7 +284,7 @@ juiz -s qmp://127.0.0.1:5001 connection list
 
 ```sh
 juiz -s qmp://127.0.0.1:5001 connection list
-# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_cpp0::talker_cpp, arg=arg1, dst=ProcessIdentifier(qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp)]
+# => ["connection://core://core/process/talker_cpp0::talker_cpp|arg1|qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp"]
 ```
 
 </TabItem>

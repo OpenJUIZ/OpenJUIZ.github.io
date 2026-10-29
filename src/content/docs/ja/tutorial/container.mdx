@@ -338,7 +338,7 @@ Container は、引数の既定値どおり値 0 から始まります。
 
 ```sh
 juiz container-process list
-# => ["core://core/container_process/example_container_increment0::example_container_increment:example_container0"]
+# => ["http://127.0.0.1:8000/container_process/example_container_increment0::example_container_increment:example_container0"]
 ```
 
 </TabItem>
@@ -346,7 +346,7 @@ juiz container-process list
 
 ```sh
 juiz container-process list
-# => ["core://core/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0"]
+# => ["http://127.0.0.1:8000/container_process/example_container_python_increment0::example_container_python_increment:example_container_python0"]
 ```
 
 </TabItem>
@@ -354,14 +354,14 @@ juiz container-process list
 
 ```sh
 juiz container-process list
-# => ["core://core/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0"]
+# => ["http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0"]
 ```
 
 </TabItem>
 </Tabs>
 
 ContainerProcess の ID は「インスタンス名`::`型名`:`Container のインスタンス名」の形をしていて、どの Container に結びついているかが ID からわかります。
-一覧には、ブローカー自身の中を指す `core://core/...` の形で表示されます。外から呼び出すときは、第 1 章と同じように先頭を `http://127.0.0.1:8000` に置き換えた ID を使います。
+一覧には、第 1 章の Process と同じく `http://127.0.0.1:8000/...` の形の ID が表示されます。外から呼び出すときは、この ID をそのまま使います。
 
 `increment` を、同じ引数で 2 回呼び出してみましょう。
 
@@ -450,7 +450,7 @@ juiz -f example_container.conf -d
 
 ```sh
 juiz container-process list
-# => ["core://core/container_process/increment0::example_container_increment:container0", "core://core/container_process/get0::example_container_get:container0"]
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_get:container0"]
 ```
 
 </TabItem>
@@ -458,7 +458,7 @@ juiz container-process list
 
 ```sh
 juiz container-process list
-# => ["core://core/container_process/increment0::example_container_python_increment:container0", "core://core/container_process/get0::example_container_python_get:container0"]
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_python_get:container0"]
 ```
 
 </TabItem>
@@ -466,7 +466,7 @@ juiz container-process list
 
 ```sh
 juiz container-process list
-# => ["core://core/container_process/increment0::example_container_cpp_increment:container0", "core://core/container_process/get0::example_container_cpp_get:container0"]
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:container0"]
 ```
 
 </TabItem>
@@ -528,7 +528,7 @@ C++ のサンプルの設定ファイルには `value: 10` と書いてあるの
 ### ブラウザから呼び出す
 
 第 1 章と同じく、Swagger UI(`http://127.0.0.1:8000/docs/`)からも呼び出せます。
-ContainerProcess を呼び出すときは、`PATCH /api/container_process/call` を開いて、identifier に `juiz container-process list` で表示された `core://core/...` の ID をそのまま入力します。
+ContainerProcess を呼び出すときは、`PATCH /api/container_process/call` を開いて、identifier には、`juiz container-process list` で表示された ID の先頭 `http://127.0.0.1:8000` を `core://core` に置き換えた ID を入力します。
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">

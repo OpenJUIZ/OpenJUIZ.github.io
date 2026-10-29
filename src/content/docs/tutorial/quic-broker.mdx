@@ -19,7 +19,7 @@ In this chapter you connect the talker and the listener as in chapter 6, but thr
 
 <Aside type="caution" title="Requires juiz 0.0.18 or later">
 Since juiz 0.0.18, the QUIC broker is built into the `juiz` command. It works as is whether you installed `juiz` with `cargo install juiz_app` or with pip (`juiz-cli`).
-Check the version with `cargo install --list` or `pip show juiz-cli`, not `juiz --version`. With 0.0.17 and earlier, you have to build the QUIC broker from the juiz source and load it as a plugin.
+Check the version with `juiz --version` (if an old version does not show it correctly, use `cargo install --list` or `pip show juiz-cli`). With 0.0.17 and earlier, you have to build the QUIC broker from the juiz source and load it as a plugin.
 </Aside>
 
 ## What is the QUIC broker?
@@ -268,7 +268,7 @@ The listener in terminal 1 starts printing. Ask the talker side, which holds the
 
 ```sh
 juiz -s qmp://127.0.0.1:5001 connection list
-# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker, arg=arg1, dst=ProcessIdentifier(qmp://127.0.0.1:5000/process/listener0::listener)]
+# => ["connection://core://core/process/talker0::talker|arg1|qmp://127.0.0.1:5000/process/listener0::listener"]
 ```
 
 </TabItem>
@@ -276,7 +276,7 @@ juiz -s qmp://127.0.0.1:5001 connection list
 
 ```sh
 juiz -s qmp://127.0.0.1:5001 connection list
-# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_python0::talker_python, arg=arg1, dst=ProcessIdentifier(qmp://127.0.0.1:5000/process/listener_python0::listener_python)]
+# => ["connection://core://core/process/talker_python0::talker_python|arg1|qmp://127.0.0.1:5000/process/listener_python0::listener_python"]
 ```
 
 </TabItem>
@@ -284,7 +284,7 @@ juiz -s qmp://127.0.0.1:5001 connection list
 
 ```sh
 juiz -s qmp://127.0.0.1:5001 connection list
-# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker_cpp0::talker_cpp, arg=arg1, dst=ProcessIdentifier(qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp)]
+# => ["connection://core://core/process/talker_cpp0::talker_cpp|arg1|qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp"]
 ```
 
 </TabItem>

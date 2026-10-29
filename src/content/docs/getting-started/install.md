@@ -111,7 +111,7 @@ To set it up by hand, add `cjuiz/include` and `cppjuiz/include` of the archive t
 
 ### Haskell
 
-Write components with [hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz). You need GHC 9.6 or later and cabal (Linux, macOS).
+Write components with [hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz). You need GHC 9.4.7 or later and cabal (Linux, macOS).
 hsjuiz is waiting to be published on Hackage, so for now get the juiz source at the tag of the same version as `juiz` and use its `bindings/hsjuiz`. In the `cabal.project` of your package, write where the hsjuiz source and libjuiz_sdk are.
 
 ```sh

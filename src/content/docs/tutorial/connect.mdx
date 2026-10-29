@@ -404,7 +404,7 @@ From another terminal, you can also list the connections and ECs.
 
 ```sh
 juiz connection list
-# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker, arg=arg1, dst=ProcessIdentifier(core://core/process/listener0::listener)]
+# => ["connection://core://core/process/talker0::talker|arg1|core://core/process/listener0::listener"]
 juiz ec list
 # => ["http://127.0.0.1:8000/execution_context/ec0::main_loop_ec"]
 ```
@@ -414,7 +414,7 @@ juiz ec list
 
 ```sh
 juiz connection list
-# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker_python, arg=arg1, dst=ProcessIdentifier(core://core/process/listener0::listener_python)]
+# => ["connection://core://core/process/talker0::talker_python|arg1|core://core/process/listener0::listener_python"]
 juiz ec list
 # => ["http://127.0.0.1:8000/execution_context/ec0::main_loop_ec"]
 ```
@@ -424,7 +424,7 @@ juiz ec list
 
 ```sh
 juiz connection list
-# => [ConnectionID(src=ProcessIdentifier(core://core/process/talker0::talker_cpp, arg=arg1, dst=ProcessIdentifier(core://core/process/listener0::listener_cpp)]
+# => ["connection://core://core/process/talker0::talker_cpp|arg1|core://core/process/listener0::listener_cpp"]
 juiz ec list
 # => ["http://127.0.0.1:8000/execution_context/ec0::main_loop_ec"]
 ```
