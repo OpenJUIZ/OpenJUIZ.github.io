@@ -12,14 +12,17 @@ next:
   label: How this tutorial works
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 Using the C++ examples [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp), you run a Process that just adds 1 to its argument.
 Install the `juiz` command first, as described in [Installation](/getting-started/install/).
 
 ## Build the examples
 
-You need CMake and a C++17 compiler. The `juiz` command can be installed either with pip or with cargo.
+You need CMake and a C++17 compiler (on Windows, Visual Studio 2022 or Build Tools for Visual Studio 2022). The `juiz` command can be installed either with pip or with cargo (on Windows, install it with pip).
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
 
 ```sh
 git clone https://github.com/OpenJUIZ/juiz_examples_cpp.git
@@ -27,6 +30,29 @@ cd juiz_examples_cpp
 cmake -S . -B build
 cmake --build build
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_cpp.git
+cd juiz_examples_cpp
+cmake -S . -B build
+cmake --build build
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+git clone https://github.com/OpenJUIZ/juiz_examples_cpp.git
+cd juiz_examples_cpp
+cmake -S . -B build
+cmake --build build --config Release
+```
+
+</TabItem>
+</Tabs>
 
 CMake downloads libjuiz_sdk and the headers of the same version as `juiz` from [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases).
 The examples use the `juiz` command to generate their types, so run `cmake` in a terminal where `juiz` is available (with the venv activated if you installed it with pip).
@@ -74,6 +100,11 @@ juiz process list
 juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_cpp" '{"arg1": 3}' -p
 # => CapsulePtr((value:Value(4), option: []))
 ```
+
+<Aside type="caution" title="Passing JSON in Windows PowerShell 5.1">
+Windows PowerShell 5.1, which comes with Windows, drops the `"` in `'{"arg1": 3}'` before passing it to `juiz`.
+Write a `\` before each `"`, as in `'{\"arg1\": 3}'`. In PowerShell 7.3 or later, the command above works as written.
+</Aside>
 
 You passed `3` and got `4` back.
 

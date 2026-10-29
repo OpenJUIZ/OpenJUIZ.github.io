@@ -186,7 +186,7 @@ option:
 </TabItem>
 <TabItem label="C++">
 
-型名 `increment_process_cpp` なら、`./build/plugins` の中の `libincrement_process_cpp.so`(macOS では `.dylib`)が読み込まれます。
+型名 `increment_process_cpp` なら、`./build/plugins` の中の `libincrement_process_cpp.so`(macOS では `libincrement_process_cpp.dylib`、Windows では `increment_process_cpp.dll`)が読み込まれます。
 `language: "c++"` を必ず書いてください(コマンドラインの `-l cpp` とは書き方が違います)。ContainerProcess の言語は、親の Container と同じになります。
 
 </TabItem>

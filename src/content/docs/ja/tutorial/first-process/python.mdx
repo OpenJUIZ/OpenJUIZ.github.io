@@ -69,7 +69,7 @@ version = "0.1.0"
 description = "juiz のチュートリアルで作る Python の Process"
 requires-python = ">=3.10"
 dependencies = [
-    "juiz-cli==0.0.26",
+    "juiz-cli==0.0.27",
 ]
 
 [build-system]
@@ -92,7 +92,7 @@ version = "0.1.0"
 description = "juiz のチュートリアルで作る Python の Process"
 requires-python = ">=3.10"
 dependencies = [
-    "pyjuiz==0.0.26",
+    "pyjuiz==0.0.27",
 ]
 
 [build-system]
@@ -157,7 +157,7 @@ pip install -e .
 
 ```sh
 juiz --version
-# => juiz 0.0.26
+# => juiz 0.0.27
 ```
 
 以降の手順は、この venv を有効にしたターミナルで実行してください。新しいターミナルを開いたら、`my_juiz_python` で `source .venv/bin/activate` を実行します。
@@ -241,6 +241,11 @@ juiz process list
 juiz process call "http://127.0.0.1:8000/process/increment_process_python0::increment_process_python" '{"arg1": 3}' -p
 # => CapsulePtr((value:Value(4), option: []))
 ```
+
+<Aside type="caution" title="Windows PowerShell 5.1 で JSON を渡すとき">
+Windows に最初から入っている Windows PowerShell 5.1 は、`'{"arg1": 3}'` の `"` を消して `juiz` に渡してしまいます。
+`'{\"arg1\": 3}'` のように `"` の前に `\` を書いてください。PowerShell 7.3 以降では、上のとおりに書けば動きます。
+</Aside>
 
 `3` を渡して `4` が返ってきました。`-p` は結果を表示するオプションです。
 `juiz` を起動したターミナルには `increment_process_python: 3 -> 4` と表示されます。

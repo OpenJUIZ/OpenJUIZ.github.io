@@ -59,9 +59,14 @@ ls build/plugins/*.dylib
 </TabItem>
 <TabItem label="Windows">
 
-<Aside type="caution" title="Windows is not supported yet">
-The C++ examples and the libjuiz_sdk archives do not support Windows yet ([juiz#273](https://github.com/OpenJUIZ/juiz/issues/273) tracks it). On Ubuntu under WSL, you can follow the Linux steps.
-</Aside>
+On Windows (Visual Studio generators), build with `--config Release` instead of the `cmake --build build` above.
+`juiz_sdk.dll` is placed next to the plugins too.
+
+```powershell
+cmake --build build --config Release
+ls build/plugins/*.dll
+# => build\plugins\juiz_sdk.dll  build\plugins\listener_cpp.dll  build\plugins\talker_cpp.dll  ...
+```
 
 </TabItem>
 </Tabs>

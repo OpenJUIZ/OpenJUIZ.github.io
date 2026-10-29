@@ -50,10 +50,13 @@ import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 ```sh
 cd my_juiz_cpp
-mkdir -p container/example_container_cpp
-mkdir -p container/example_container_cpp_increment
-mkdir -p container/example_container_cpp_get
+mkdir container
+mkdir container/example_container_cpp
+mkdir container/example_container_cpp_increment
+mkdir container/example_container_cpp_get
 ```
+
+Windows の PowerShell でも、同じコマンドで作れます。
 
 ## Container を書く
 
@@ -209,6 +212,17 @@ ls build/plugins
 ```
 
 </TabItem>
+<TabItem label="Windows">
+
+```powershell
+cmake -S . -B build
+cmake --build build --config Release
+ls build\plugins
+# => example_container_cpp.dll  example_container_cpp_get.dll
+#    example_container_cpp_increment.dll  increment_process_cpp.dll  juiz_sdk.dll  ...
+```
+
+</TabItem>
 </Tabs>
 
 第 1 章の Process も含めて、すべて `build/plugins` にそろいます。
@@ -232,6 +246,14 @@ juiz --container ./build/plugins/libexample_container_cpp.so \
 ```sh
 juiz --container ./build/plugins/libexample_container_cpp.dylib \
      --container_process ./build/plugins/libexample_container_cpp_increment.dylib -l cpp -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --container ./build/plugins/example_container_cpp.dll `
+     --container_process ./build/plugins/example_container_cpp_increment.dll -l cpp -1 -d
 ```
 
 </TabItem>
@@ -298,7 +320,7 @@ containers:
 
 設定ファイルには、次のことが書かれています。
 
-- Container の型と ContainerProcess の型を、どこから読み込むか(`plugins`)。型名から `libexample_container_cpp.so` のようなファイル名を作って、`path` のディレクトリから探します。言語は `language: "c++"` と書きます(コマンドラインの `-l cpp` とは書き方が違うので注意してください)
+- Container の型と ContainerProcess の型を、どこから読み込むか(`plugins`)。型名から `libexample_container_cpp.so`(Windows では `example_container_cpp.dll`)のようなファイル名を作って、`path` のディレクトリから探します。言語は `language: "c++"` と書きます(コマンドラインの `-l cpp` とは書き方が違うので注意してください)
 - Container のインスタンス `container0` を 1 つ作ること(`containers`)
 - `container0` に結びつけて、`increment` のインスタンス `increment0` と、`get` のインスタンス `get0` を作ること
 

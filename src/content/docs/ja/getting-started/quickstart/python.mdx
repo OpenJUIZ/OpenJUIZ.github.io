@@ -60,7 +60,7 @@ pip install -r requirements.txt  # juiz-cli(juiz コマンドと pyjuiz)が入�
 以降の手順は、この venv を有効にしたターミナルで実行してください。
 
 <Aside type="note">
-`cargo install juiz_app` で入れた `juiz` を使う場合は、`requirements.txt` の代わりに `pip install pyjuiz==0.0.26` で pyjuiz だけを入れてください。
+`cargo install juiz_app` で入れた `juiz` を使う場合は、`requirements.txt` の代わりに `pip install pyjuiz==0.0.27` で pyjuiz だけを入れてください。
 </Aside>
 
 ## Process のコード
@@ -100,6 +100,11 @@ juiz process list
 juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_python" '{"arg1": 3}' -p
 # => CapsulePtr((value:Value(4), option: []))
 ```
+
+<Aside type="caution" title="Windows PowerShell 5.1 で JSON を渡すとき">
+Windows に最初から入っている Windows PowerShell 5.1 は、`'{"arg1": 3}'` の `"` を消して `juiz` に渡してしまいます。
+`'{\"arg1\": 3}'` のように `"` の前に `\` を書いてください。PowerShell 7.3 以降では、上のとおりに書けば動きます。
+</Aside>
 
 `3` を渡して `4` が返ってきました。
 

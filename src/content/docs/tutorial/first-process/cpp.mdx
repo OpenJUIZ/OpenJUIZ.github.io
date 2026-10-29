@@ -26,26 +26,54 @@ What you build is the same as `process/increment_process_cpp` in the [juiz_examp
 
 ## Before you start
 
-Prepare the following (Linux or macOS).
+Prepare the following (Linux, macOS, or Windows).
 
-- The `juiz` command, installed either with pip or with cargo as described in [Installation](/getting-started/install/)
-- CMake 3.16 or later and a C++17 compiler
+- The `juiz` command, installed either with pip or with cargo as described in [Installation](/getting-started/install/) (on Windows, install it with pip)
+- CMake 3.16 or later and a C++17 compiler (on Windows, Visual Studio 2022 or Build Tools for Visual Studio 2022 with "Desktop development with C++")
 - libjuiz_sdk and its headers, at the same version as `juiz`
 
-<Aside type="caution" title="Windows is not supported yet">
-The C++ steps are for Linux and macOS. The libjuiz_sdk archives and the C++ examples do not support Windows yet ([juiz#273](https://github.com/OpenJUIZ/juiz/issues/273) tracks it). On Ubuntu under WSL, you can follow the Linux steps.
-</Aside>
-
 C++ Processes are built against libjuiz_sdk, the shared library of functions that pass values to and from juiz.
-Check the version of `juiz`, then extract libjuiz_sdk of the same version into `~/.juiz/sdk/<version>` (to download it by hand, see [Language packages](/getting-started/packages/#c-and-haskell-libjuiz_sdk)).
+Check the version of `juiz`, then extract libjuiz_sdk of the same version into `~/.juiz/sdk/<version>` (`%USERPROFILE%\.juiz\sdk\<version>` on Windows; to download it by hand, see [Language packages](/getting-started/packages/#c-and-haskell-libjuiz_sdk)).
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
 
 ```sh
 juiz --version
-# => juiz 0.0.26
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.26
-ls ~/.juiz/sdk/0.0.26
+# => juiz 0.0.27
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.27
+ls ~/.juiz/sdk/0.0.27
 # => cjuiz  cppjuiz  lib  ...
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --version
+# => juiz 0.0.27
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.27
+ls ~/.juiz/sdk/0.0.27
+# => cjuiz  cppjuiz  lib  ...
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+Run these in PowerShell.
+
+```powershell
+juiz --version
+# => juiz 0.0.27
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.0.27
+ls $env:USERPROFILE\.juiz\sdk\0.0.27
+# => bin  cjuiz  cppjuiz  lib  ...
+```
+
+On Windows, libjuiz_sdk is `bin\juiz_sdk.dll`. `lib` holds the import library `juiz_sdk.dll.lib` used for linking.
+
+</TabItem>
+</Tabs>
 
 ## Project layout
 
@@ -59,7 +87,7 @@ In this chapter you create a project laid out like this.
       - increment_process_cpp.cpp the Process code
 </FileTree>
 
-In juiz, each Process is built as its own shared library (`.so` or `.dylib`), and the `juiz` command loads it as a plugin.
+In juiz, each Process is built as its own shared library (`.so`, `.dylib`, or `.dll`), and the `juiz` command loads it as a plugin.
 Chapter 2 adds a Container to this project.
 
 First, create the directories.
@@ -67,8 +95,11 @@ First, create the directories.
 ```sh
 mkdir my_juiz_cpp
 cd my_juiz_cpp
-mkdir -p process/increment_process_cpp
+mkdir process
+mkdir process/increment_process_cpp
 ```
+
+The same commands work in PowerShell on Windows.
 
 Run all the following commands in `my_juiz_cpp`.
 
@@ -84,9 +115,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # The juiz version and where libjuiz_sdk is extracted
-set(JUIZ_VERSION "0.0.26")
-set(JUIZ_SDK_DIR "$ENV{HOME}/.juiz/sdk/${JUIZ_VERSION}" CACHE PATH "libjuiz_sdk directory")
-find_library(JUIZ_SDK_LIBRARY juiz_sdk PATHS "${JUIZ_SDK_DIR}/lib" NO_DEFAULT_PATH REQUIRED)
+set(JUIZ_VERSION "0.0.27")
+if(WIN32)
+  file(TO_CMAKE_PATH "$ENV{USERPROFILE}/.juiz/sdk/${JUIZ_VERSION}" JUIZ_SDK_DEFAULT_DIR)
+else()
+  set(JUIZ_SDK_DEFAULT_DIR "$ENV{HOME}/.juiz/sdk/${JUIZ_VERSION}")
+endif()
+set(JUIZ_SDK_DIR "${JUIZ_SDK_DEFAULT_DIR}" CACHE PATH "libjuiz_sdk directory")
+find_package(juiz_sdk ${JUIZ_VERSION} EXACT CONFIG REQUIRED PATHS "${JUIZ_SDK_DIR}" NO_DEFAULT_PATH)
 
 # Put all plugins in build/plugins
 set(JUIZ_PLUGIN_DIR "${CMAKE_BINARY_DIR}/plugins")
@@ -94,13 +130,13 @@ set(JUIZ_PLUGIN_DIR "${CMAKE_BINARY_DIR}/plugins")
 # Add one juiz plugin (shared library)
 function(add_juiz_plugin NAME)
   add_library(${NAME} SHARED ${ARGN})
-  target_include_directories(${NAME} PRIVATE
-    "${JUIZ_SDK_DIR}/cjuiz/include"
-    "${JUIZ_SDK_DIR}/cppjuiz/include")
-  target_link_libraries(${NAME} PRIVATE "${JUIZ_SDK_LIBRARY}")
+  target_link_libraries(${NAME} PRIVATE juiz_sdk::juiz_sdk)
+  # Wrapping in $<1:...> keeps Visual Studio from adding the configuration (build/plugins/Release)
   set_target_properties(${NAME} PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${JUIZ_PLUGIN_DIR}"
-    BUILD_RPATH "${JUIZ_SDK_DIR}/lib")
+    LIBRARY_OUTPUT_DIRECTORY "$<1:${JUIZ_PLUGIN_DIR}>"
+    RUNTIME_OUTPUT_DIRECTORY "$<1:${JUIZ_PLUGIN_DIR}>")
+  # On Windows, copy juiz_sdk.dll next to the plugin (does nothing on Linux and macOS)
+  juiz_sdk_copy_runtime(${NAME})
 endfunction()
 
 # Chapter 1: a Process that adds 1 to its argument
@@ -114,19 +150,18 @@ Let's go through it from the top.
 | `cmake_minimum_required`, `project` | The CMake version you need and the name of the project. The only language is C++ (`CXX`) |
 | `CMAKE_CXX_STANDARD 17` | The juiz C++ headers use C++17, so compile as C++17 |
 | `JUIZ_VERSION`, `JUIZ_SDK_DIR` | Where libjuiz_sdk is extracted. **Use the same version as `juiz --version`.** If you put it somewhere else, change it with `cmake -DJUIZ_SDK_DIR=<path>` |
-| `find_library(JUIZ_SDK_LIBRARY ...)` | Looks for libjuiz_sdk in `JUIZ_SDK_DIR/lib`. If it is not there, CMake stops here and tells you |
+| `find_package(juiz_sdk ...)` | Looks for libjuiz_sdk in `JUIZ_SDK_DIR`. With `EXACT`, CMake stops here and tells you if the version differs. When found, it defines the target `juiz_sdk::juiz_sdk` |
 | `JUIZ_PLUGIN_DIR` | Where the built plugins go. Keeping all plugins in one place makes it easy to tell `juiz` where they are |
 | `function(add_juiz_plugin NAME)` | A function that adds one plugin, so you do not repeat the same settings every time you add a Process or Container |
-| `add_library(${NAME} SHARED ...)` | Builds a shared library, the format `juiz` can load. The file is named `lib<NAME>.so` (`.dylib` on macOS) |
-| `target_include_directories` | Makes the juiz C headers (`cjuiz/include`) and C++ headers (`cppjuiz/include`) available |
-| `target_link_libraries` | Links to libjuiz_sdk |
-| `LIBRARY_OUTPUT_DIRECTORY` | Puts the built shared library in `build/plugins` |
-| `BUILD_RPATH` | Makes the plugin look for libjuiz_sdk in `JUIZ_SDK_DIR/lib` when it is loaded. Without it, `juiz` fails to load the plugin because it cannot find libjuiz_sdk |
+| `add_library(${NAME} SHARED ...)` | Builds a shared library, the format `juiz` can load. The file is named `lib<NAME>.so` on Linux, `lib<NAME>.dylib` on macOS, and `<NAME>.dll` on Windows |
+| `target_link_libraries(... juiz_sdk::juiz_sdk)` | Links to libjuiz_sdk. The target also carries the juiz C and C++ header directories. On Linux and macOS, it also makes the plugin look for libjuiz_sdk in `JUIZ_SDK_DIR` (rpath) |
+| `LIBRARY_OUTPUT_DIRECTORY`, `RUNTIME_OUTPUT_DIRECTORY` | Put the built shared library in `build/plugins`. Shared libraries on Linux and macOS follow the former, DLLs on Windows the latter |
+| `juiz_sdk_copy_runtime` | On Windows, copies `juiz_sdk.dll` next to the plugin, because juiz looks for the DLLs a plugin uses in the plugin's directory. Does nothing on Linux and macOS |
 | `add_juiz_plugin(increment_process_cpp ...)` | Builds the Process `increment_process_cpp` from `process/increment_process_cpp/increment_process_cpp.cpp` |
 
 <Aside type="tip">
 Give the target (`increment_process_cpp`) the same name as the Process type name you are about to write in `manifest()`.
-The configuration file you use in chapter 3 builds the file name `libincrement_process_cpp.so` from the type name `increment_process_cpp` and looks for it.
+The configuration file you use in chapter 3 builds the file name `libincrement_process_cpp.so` (`increment_process_cpp.dll` on Windows) from the type name `increment_process_cpp` and looks for it.
 </Aside>
 
 ## Write the Process code
@@ -166,18 +201,12 @@ Unlike Rust and Python, in C++ you write the type name and the arguments (name, 
 
 ## Build it
 
-```sh
-cmake -S . -B build
-cmake --build build
-```
-
-The first line prepares the build in the `build` directory, and the second line builds.
-The shared library is placed in `build/plugins`.
-
 <Tabs syncKey="platform">
 <TabItem label="Linux">
 
 ```sh
+cmake -S . -B build
+cmake --build build
 ls build/plugins
 # => libincrement_process_cpp.so
 ```
@@ -186,14 +215,32 @@ ls build/plugins
 <TabItem label="macOS">
 
 ```sh
+cmake -S . -B build
+cmake --build build
 ls build/plugins
 # => libincrement_process_cpp.dylib
 ```
 
 </TabItem>
+<TabItem label="Windows">
+
+```powershell
+cmake -S . -B build
+cmake --build build --config Release
+ls build\plugins
+# => increment_process_cpp.dll  juiz_sdk.dll  ...
+```
+
+The Visual Studio generators build Debug and Release separately, so add `--config Release`.
+`juiz_sdk.dll` is also copied into `build\plugins`, next to the plugin DLL.
+
+</TabItem>
 </Tabs>
 
-If `cmake -S . -B build` prints `Could not find JUIZ_SDK_LIBRARY`, check where you extracted libjuiz_sdk and its version.
+The first command prepares the build in the `build` directory, and the second one builds.
+The shared library is placed in `build/plugins`.
+
+If `cmake -S . -B build` prints `Could not find a configuration file for package "juiz_sdk"` or says the version does not match, check where you extracted libjuiz_sdk and its version.
 
 ## Run it
 
@@ -211,6 +258,13 @@ juiz --process ./build/plugins/libincrement_process_cpp.so -l cpp -e -1 -d
 
 ```sh
 juiz --process ./build/plugins/libincrement_process_cpp.dylib -l cpp -e -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --process ./build/plugins/increment_process_cpp.dll -l cpp -e -1 -d
 ```
 
 </TabItem>
@@ -254,6 +308,11 @@ juiz process call "http://127.0.0.1:8000/process/increment_process_cpp0::increme
 
 You passed `3` and got `4` back. `-p` prints the result.
 Check that calling it again with the same argument always gives the same result.
+
+<Aside type="caution" title="Passing JSON in Windows PowerShell 5.1">
+Windows PowerShell 5.1, which comes with Windows, drops the `"` in `'{"arg1": 3}'` before passing it to `juiz`.
+Write a `\` before each `"`, as in `'{\"arg1\": 3}'`. In PowerShell 7.3 or later, the command above works as written.
+</Aside>
 
 ### Call it from a browser
 

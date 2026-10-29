@@ -119,7 +119,7 @@ The build is one line in [`component/CMakeLists.txt`](https://github.com/OpenJUI
 add_juiz_component(example_component_cpp SOURCES example_component_cpp/example_component_cpp.cpp)
 ```
 
-This produces a single shared library: `build/plugins/libexample_component_cpp.so` on Linux and `build/plugins/libexample_component_cpp.dylib` on macOS.
+This produces a single shared library: `build/plugins/libexample_component_cpp.so` on Linux, `build/plugins/libexample_component_cpp.dylib` on macOS, and `build/plugins/example_component_cpp.dll` on Windows.
 
 What used to be split per type now lives in one library.
 The bodies of the Processes and ContainerProcesses are unchanged. Processes are still idempotent functions, and only ContainerProcesses touch state.
@@ -167,7 +167,7 @@ plugins:
 In chapter 3 you listed types one by one in `process_factories` and `container_factories`, and each ContainerProcess under its Container.
 With a Component, you write **just one Component name** in `components`. As in chapter 3, the key determines which file is loaded.
 
-For the Component name `example_component_cpp`, juiz loads `libexample_component_cpp.so` (`libexample_component_cpp.dylib` on macOS) from `./build/plugins`. The configuration file has no file extension in it, so the same file works on every OS.
+For the Component name `example_component_cpp`, juiz loads `libexample_component_cpp.so` (`libexample_component_cpp.dylib` on macOS, `example_component_cpp.dll` on Windows) from `./build/plugins`. The configuration file has no file extension in it, so the same file works on every OS.
 
 That one entry loads every Process, Container and ContainerProcess type in the Component.
 
@@ -245,6 +245,13 @@ juiz --component ./build/plugins/libexample_component_cpp.so -l cpp -1 -d
 
 ```sh
 juiz --component ./build/plugins/libexample_component_cpp.dylib -l cpp -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --component ./build/plugins/example_component_cpp.dll -l cpp -1 -d
 ```
 
 </TabItem>

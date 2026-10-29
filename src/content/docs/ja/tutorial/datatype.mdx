@@ -21,7 +21,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 <Aside type="caution" title="juiz 0.0.23 以降が必要です">
 データ型は juiz 0.0.23 から使えます。`juiz` コマンド(`juiz_app` か `juiz-cli`)と pyjuiz を 0.0.23 以降にしてください。
-`cargo install juiz_app --version 0.0.26 --locked`、`pip install pyjuiz==0.0.26` のように入れられます。
+`cargo install juiz_app --version 0.0.27 --locked`、`pip install pyjuiz==0.0.27` のように入れられます。
 </Aside>
 
 ## サンプルを用意する
@@ -35,7 +35,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 cd juiz_examples_rust
 git pull
 cargo build
-pip install pyjuiz==0.0.26   # この章では Python の Process も一緒に動かす
+pip install pyjuiz==0.0.27   # この章では Python の Process も一緒に動かす
 ```
 
 </TabItem>
@@ -45,7 +45,7 @@ pip install pyjuiz==0.0.26   # この章では Python の Process も一緒に�
 cd juiz_examples_python
 git pull
 source .venv/bin/activate
-pip install -r requirements.txt  # juiz-cli 0.0.26 が入る
+pip install -r requirements.txt  # juiz-cli 0.0.27 が入る
 ```
 
 </TabItem>
@@ -56,10 +56,11 @@ cd juiz_examples_cpp
 git pull
 cmake -S . -B build
 cmake --build build
-pip install pyjuiz==0.0.26   # この章では Python の Process も一緒に動かす
+pip install pyjuiz==0.0.27   # この章では Python の Process も一緒に動かす
 ```
 
 C++ の型は、CMake がインストール済みの `juiz` コマンド(`juiz idl`)で作ります。先に `juiz` を入れておいてください(見つからないと CMake がエラーで止まります)。
+Windows では `cmake --build build --config Release` でビルドします。pip で入れた `juiz`(juiz-cli)には pyjuiz も入っているので、`pip install pyjuiz` は要りません。
 
 </TabItem>
 </Tabs>

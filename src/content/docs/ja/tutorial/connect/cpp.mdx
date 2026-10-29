@@ -59,9 +59,14 @@ ls build/plugins/*.dylib
 </TabItem>
 <TabItem label="Windows">
 
-<Aside type="caution" title="Windows は準備中です">
-C++ のサンプル集と libjuiz_sdk の配布は、まだ Windows に対応していません([juiz#273](https://github.com/OpenJUIZ/juiz/issues/273) で対応します)。WSL の Ubuntu なら、Linux の手順で進められます。
-</Aside>
+Windows(Visual Studio のジェネレータ)では、上の `cmake --build build` の代わりに `--config Release` を付けてビルドします。
+プラグインの隣には `juiz_sdk.dll` も置かれます。
+
+```powershell
+cmake --build build --config Release
+ls build/plugins/*.dll
+# => build\plugins\juiz_sdk.dll  build\plugins\listener_cpp.dll  build\plugins\talker_cpp.dll  ...
+```
 
 </TabItem>
 </Tabs>

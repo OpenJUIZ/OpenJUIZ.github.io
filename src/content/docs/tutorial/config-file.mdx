@@ -186,7 +186,7 @@ Always write `language: python`. ContainerProcesses use the same language as the
 </TabItem>
 <TabItem label="C++">
 
-For the type name `increment_process_cpp`, juiz loads `libincrement_process_cpp.so` (`.dylib` on macOS) from `./build/plugins`.
+For the type name `increment_process_cpp`, juiz loads `libincrement_process_cpp.so` (`libincrement_process_cpp.dylib` on macOS, `increment_process_cpp.dll` on Windows) from `./build/plugins`.
 Always write `language: "c++"` (note that this differs from `-l cpp` on the command line). ContainerProcesses use the same language as their parent Container.
 
 </TabItem>
