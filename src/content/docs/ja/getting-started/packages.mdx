@@ -19,7 +19,7 @@ juiz_sdk の版は、`cargo install juiz_app` で入れた `juiz` と合わせ�
 crate-type = ["cdylib"]
 
 [dependencies]
-juiz_sdk = "0.0.26"
+juiz_sdk = "0.0.27"
 ```
 
 `Cargo.toml` の書き方は、[チュートリアル第 1 章(Rust)](/ja/tutorial/first-process/rust/) で 1 行ずつ説明しています。
@@ -39,7 +39,7 @@ pyjuiz は `juiz-cli` と一緒に入っています。追加で入れるもの�
 [インストール](/ja/getting-started/install/) の「Python の Process も使う場合」のとおり、`juiz` と同じ版の pyjuiz だけを入れます。
 
 ```sh
-pip install pyjuiz==0.0.26
+pip install pyjuiz==0.0.27
 ```
 
 </TabItem>
@@ -57,16 +57,16 @@ libjuiz_sdk とヘッダは、OS・CPU ごとのアーカイブにして [GitHub
 <TabItem label="Linux">
 
 ```sh
-juiz --version      # 例: juiz 0.0.26
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.26
+juiz --version      # 例: juiz 0.0.27
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.27
 ```
 
 </TabItem>
 <TabItem label="macOS">
 
 ```sh
-juiz --version      # 例: juiz 0.0.26
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.26
+juiz --version      # 例: juiz 0.0.27
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.27
 ```
 
 </TabItem>
@@ -87,49 +87,49 @@ juiz --version      # 例: juiz 0.0.27
 <Tabs syncKey="os">
 <TabItem label="Linux (x86_64)">
 
-ダウンロード: [juiz_sdk-0.0.26-x86_64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.26/juiz_sdk-0.0.26-x86_64-unknown-linux-gnu.tar.gz)
+ダウンロード: [juiz_sdk-0.0.27-x86_64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.27/juiz_sdk-0.0.27-x86_64-unknown-linux-gnu.tar.gz)
 
 ```sh
 mkdir -p ~/.juiz/sdk
-tar xzf juiz_sdk-0.0.26-x86_64-unknown-linux-gnu.tar.gz
-mv juiz_sdk-0.0.26-x86_64-unknown-linux-gnu ~/.juiz/sdk/0.0.26
-# => ~/.juiz/sdk/0.0.26/lib/libjuiz_sdk.so
+tar xzf juiz_sdk-0.0.27-x86_64-unknown-linux-gnu.tar.gz
+mv juiz_sdk-0.0.27-x86_64-unknown-linux-gnu ~/.juiz/sdk/0.0.27
+# => ~/.juiz/sdk/0.0.27/lib/libjuiz_sdk.so
 ```
 
 </TabItem>
 <TabItem label="Linux (aarch64)">
 
-ダウンロード: [juiz_sdk-0.0.26-aarch64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.26/juiz_sdk-0.0.26-aarch64-unknown-linux-gnu.tar.gz)
+ダウンロード: [juiz_sdk-0.0.27-aarch64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.27/juiz_sdk-0.0.27-aarch64-unknown-linux-gnu.tar.gz)
 
 ```sh
 mkdir -p ~/.juiz/sdk
-tar xzf juiz_sdk-0.0.26-aarch64-unknown-linux-gnu.tar.gz
-mv juiz_sdk-0.0.26-aarch64-unknown-linux-gnu ~/.juiz/sdk/0.0.26
-# => ~/.juiz/sdk/0.0.26/lib/libjuiz_sdk.so
+tar xzf juiz_sdk-0.0.27-aarch64-unknown-linux-gnu.tar.gz
+mv juiz_sdk-0.0.27-aarch64-unknown-linux-gnu ~/.juiz/sdk/0.0.27
+# => ~/.juiz/sdk/0.0.27/lib/libjuiz_sdk.so
 ```
 
 </TabItem>
 <TabItem label="macOS (Apple シリコン)">
 
-ダウンロード: [juiz_sdk-0.0.26-aarch64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.26/juiz_sdk-0.0.26-aarch64-apple-darwin.tar.gz)
+ダウンロード: [juiz_sdk-0.0.27-aarch64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.27/juiz_sdk-0.0.27-aarch64-apple-darwin.tar.gz)
 
 ```sh
 mkdir -p ~/.juiz/sdk
-tar xzf juiz_sdk-0.0.26-aarch64-apple-darwin.tar.gz
-mv juiz_sdk-0.0.26-aarch64-apple-darwin ~/.juiz/sdk/0.0.26
-# => ~/.juiz/sdk/0.0.26/lib/libjuiz_sdk.dylib
+tar xzf juiz_sdk-0.0.27-aarch64-apple-darwin.tar.gz
+mv juiz_sdk-0.0.27-aarch64-apple-darwin ~/.juiz/sdk/0.0.27
+# => ~/.juiz/sdk/0.0.27/lib/libjuiz_sdk.dylib
 ```
 
 </TabItem>
 <TabItem label="macOS (Intel)">
 
-ダウンロード: [juiz_sdk-0.0.26-x86_64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.26/juiz_sdk-0.0.26-x86_64-apple-darwin.tar.gz)
+ダウンロード: [juiz_sdk-0.0.27-x86_64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.27/juiz_sdk-0.0.27-x86_64-apple-darwin.tar.gz)
 
 ```sh
 mkdir -p ~/.juiz/sdk
-tar xzf juiz_sdk-0.0.26-x86_64-apple-darwin.tar.gz
-mv juiz_sdk-0.0.26-x86_64-apple-darwin ~/.juiz/sdk/0.0.26
-# => ~/.juiz/sdk/0.0.26/lib/libjuiz_sdk.dylib
+tar xzf juiz_sdk-0.0.27-x86_64-apple-darwin.tar.gz
+mv juiz_sdk-0.0.27-x86_64-apple-darwin ~/.juiz/sdk/0.0.27
+# => ~/.juiz/sdk/0.0.27/lib/libjuiz_sdk.dylib
 ```
 
 </TabItem>
@@ -184,51 +184,51 @@ CMake を使わない場合は、インクルードパスに `cjuiz/include` と
 hsjuiz は Hackage への公開を待っているので、いまは juiz のソースを `juiz` と同じ版のタグで取得し、その `bindings/hsjuiz` から使います。自分のパッケージの `cabal.project` に、hsjuiz のソースと libjuiz_sdk の場所を書きます。
 
 ```sh
-git clone --depth 1 --branch v0.0.26 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.26
+git clone --depth 1 --branch v0.0.27 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.27
 ```
 
 <Tabs syncKey="os">
 <TabItem label="Linux (x86_64)">
 
 ```txt title="cabal.project"
-packages: . /home/me/juiz-0.0.26/bindings/hsjuiz
+packages: . /home/me/juiz-0.0.27/bindings/hsjuiz
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.0.26/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.26/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.0.27/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.27/lib
 ```
 
 </TabItem>
 <TabItem label="Linux (aarch64)">
 
 ```txt title="cabal.project"
-packages: . /home/me/juiz-0.0.26/bindings/hsjuiz
+packages: . /home/me/juiz-0.0.27/bindings/hsjuiz
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.0.26/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.26/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.0.27/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.27/lib
 ```
 
 </TabItem>
 <TabItem label="macOS (Apple シリコン)">
 
 ```txt title="cabal.project"
-packages: . /Users/me/juiz-0.0.26/bindings/hsjuiz
+packages: . /Users/me/juiz-0.0.27/bindings/hsjuiz
 
 package hsjuiz
-  extra-lib-dirs: /Users/me/.juiz/sdk/0.0.26/lib
-  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.0.26/lib
+  extra-lib-dirs: /Users/me/.juiz/sdk/0.0.27/lib
+  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.0.27/lib
 ```
 
 </TabItem>
 <TabItem label="macOS (Intel)">
 
 ```txt title="cabal.project"
-packages: . /Users/me/juiz-0.0.26/bindings/hsjuiz
+packages: . /Users/me/juiz-0.0.27/bindings/hsjuiz
 
 package hsjuiz
-  extra-lib-dirs: /Users/me/.juiz/sdk/0.0.26/lib
-  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.0.26/lib
+  extra-lib-dirs: /Users/me/.juiz/sdk/0.0.27/lib
+  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.0.27/lib
 ```
 
 </TabItem>
