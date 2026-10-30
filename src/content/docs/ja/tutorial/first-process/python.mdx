@@ -69,7 +69,7 @@ version = "0.1.0"
 description = "juiz のチュートリアルで作る Python の Process"
 requires-python = ">=3.10"
 dependencies = [
-    "juiz-cli==0.0.27",
+    "juiz-cli==0.0.28",
 ]
 
 [build-system]
@@ -92,7 +92,7 @@ version = "0.1.0"
 description = "juiz のチュートリアルで作る Python の Process"
 requires-python = ">=3.10"
 dependencies = [
-    "pyjuiz==0.0.27",
+    "pyjuiz==0.0.28",
 ]
 
 [build-system]
@@ -104,8 +104,6 @@ py-modules = []
 ```
 
 `juiz-cli` も入れると `juiz` コマンドが 2 つになり、どちらが動くかが PATH の順番で決まってしまいます。
-
-Windows では、cargo で入れた `juiz` が venv のパッケージを読み込めません([juiz#296](https://github.com/OpenJUIZ/juiz/issues/296))。`juiz` を起動するターミナルでは、venv を有効にしたあと、`my_juiz_python` で `$env:PYTHONPATH = "$PWD\.venv\Lib\site-packages"` を実行してください。juiz 0.0.28 以降では不要になる予定です。
 
 </TabItem>
 </Tabs>
@@ -159,7 +157,7 @@ pip install -e .
 
 ```sh
 juiz --version
-# => juiz 0.0.27
+# => juiz 0.0.28
 ```
 
 以降の手順は、この venv を有効にしたターミナルで実行してください。新しいターミナルを開いたら、`my_juiz_python` で `source .venv/bin/activate`(Windows では `.venv\Scripts\activate`)を実行します。

@@ -85,7 +85,7 @@ Rust でも書く場合は、「cargo で入れる」の手順を使ってくだ
 crates.io で公開されている `juiz_app` をインストールします。Windows の PowerShell でも、同じコマンドで入れられます。
 
 ```sh
-cargo install juiz_app --version 0.0.27 --locked
+cargo install juiz_app --version 0.0.28 --locked
 ```
 
 `juiz` コマンドが `~/.cargo/bin`(Windows では `%USERPROFILE%\.cargo\bin`)に入ります。
@@ -101,7 +101,7 @@ cargo install juiz_app --version 0.0.27 --locked
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-pip install pyjuiz==0.0.27
+pip install pyjuiz==0.0.28
 ```
 
 </TabItem>
@@ -110,7 +110,7 @@ pip install pyjuiz==0.0.27
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-pip install pyjuiz==0.0.27
+pip install pyjuiz==0.0.28
 ```
 
 </TabItem>
@@ -119,24 +119,16 @@ pip install pyjuiz==0.0.27
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
-pip install pyjuiz==0.0.27
-$env:PYTHONPATH = "$PWD\.venv\Lib\site-packages"
+pip install pyjuiz==0.0.28
 ```
-
-最後の行は、下の注意にある問題を避けるためのものです。
 
 </TabItem>
 </Tabs>
 
-<Aside type="caution" title="Windows で cargo の juiz と Python を使うとき">
-Windows では、cargo で入れた `juiz` が、有効にした venv のパッケージ(pyjuiz など)を読み込めません([juiz#296](https://github.com/OpenJUIZ/juiz/issues/296))。Python の Process を読み込むところで `ModuleNotFoundError: No module named 'juiz'` になります。
-`juiz` を起動するターミナルで、venv の `Lib\site-packages` を環境変数 `PYTHONPATH` に入れてください。`$PWD` は今いるディレクトリなので、`.venv` を作ったディレクトリで実行します。
+`juiz` は、起動したターミナルで有効にしている venv のパッケージを読み込みます。
 
-```powershell
-$env:PYTHONPATH = "$PWD\.venv\Lib\site-packages"
-```
-
-この設定は、そのターミナルを閉じると消えます。juiz 0.0.28 以降では不要になる予定です。
+<Aside type="note" title="0.0.27 以前の juiz を Windows で使うとき">
+0.0.27 以前の `juiz` は、Windows では有効にした venv のパッケージを読み込めません([juiz#296](https://github.com/OpenJUIZ/juiz/issues/296))。`juiz` を起動するターミナルで、venv を作ったディレクトリで `$env:PYTHONPATH = "$PWD\.venv\Lib\site-packages"` を実行してから起動してください。
 </Aside>
 
 <Aside type="caution">

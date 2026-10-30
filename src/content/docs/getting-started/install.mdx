@@ -85,7 +85,7 @@ Requirements:
 Install `juiz_app` from crates.io. The same command works in PowerShell on Windows.
 
 ```sh
-cargo install juiz_app --version 0.0.27 --locked
+cargo install juiz_app --version 0.0.28 --locked
 ```
 
 The `juiz` command is installed into `~/.cargo/bin` (`%USERPROFILE%\.cargo\bin` on Windows).
@@ -101,7 +101,7 @@ The `juiz` command embeds the Python it found at build time, so create the venv 
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-pip install pyjuiz==0.0.27
+pip install pyjuiz==0.0.28
 ```
 
 </TabItem>
@@ -110,7 +110,7 @@ pip install pyjuiz==0.0.27
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-pip install pyjuiz==0.0.27
+pip install pyjuiz==0.0.28
 ```
 
 </TabItem>
@@ -119,24 +119,16 @@ pip install pyjuiz==0.0.27
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
-pip install pyjuiz==0.0.27
-$env:PYTHONPATH = "$PWD\.venv\Lib\site-packages"
+pip install pyjuiz==0.0.28
 ```
-
-The last line works around the issue described in the caution below.
 
 </TabItem>
 </Tabs>
 
-<Aside type="caution" title="Using cargo's juiz with Python on Windows">
-On Windows, a `juiz` installed with cargo cannot load packages (such as pyjuiz) from the activated venv ([juiz#296](https://github.com/OpenJUIZ/juiz/issues/296)). Loading a Python Process fails with `ModuleNotFoundError: No module named 'juiz'`.
-In the terminal where you start `juiz`, put the venv's `Lib\site-packages` into the `PYTHONPATH` environment variable. `$PWD` is the current directory, so run this in the directory where you created `.venv`.
+`juiz` loads packages from the venv that is active in the terminal where you start it.
 
-```powershell
-$env:PYTHONPATH = "$PWD\.venv\Lib\site-packages"
-```
-
-The setting is lost when you close the terminal. It is planned to become unnecessary in juiz 0.0.28 and later.
+<Aside type="note" title="Using juiz 0.0.27 or earlier on Windows">
+On Windows, `juiz` 0.0.27 and earlier cannot load packages from the activated venv ([juiz#296](https://github.com/OpenJUIZ/juiz/issues/296)). In the terminal where you start `juiz`, run `$env:PYTHONPATH = "$PWD\.venv\Lib\site-packages"` in the directory where you created the venv, then start `juiz`.
 </Aside>
 
 <Aside type="caution">
