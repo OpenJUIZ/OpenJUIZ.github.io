@@ -27,7 +27,8 @@ cd juiz_examples_rust
 cargo build
 ```
 
-Each example is built as a shared library in `target/debug`, which juiz loads as a plugin.
+The same commands work in PowerShell on Windows.
+Each example is built as a shared library in `target/debug`, which juiz loads as a plugin (`lib<name>.so` on Linux, `lib<name>.dylib` on macOS, and `<name>.dll` on Windows).
 
 ## The Process code
 
@@ -67,6 +68,11 @@ juiz process call "http://127.0.0.1:8000/process/increment0::increment_process" 
 ```
 
 You passed `3` and got `4` back.
+
+<Aside type="caution" title="Passing JSON in Windows PowerShell 5.1">
+Windows PowerShell 5.1, which comes with Windows, drops the `"` in `'{"arg1": 3}'` before passing it to `juiz`.
+Write a `\` before each `"`, as in `'{\"arg1\": 3}'`. In PowerShell 7.3 or later, the command above works as written.
+</Aside>
 
 ### Call it from a browser
 

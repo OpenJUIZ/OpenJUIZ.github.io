@@ -35,6 +35,7 @@ cd juiz_examples_rust
 cargo build
 ```
 
+Windows の PowerShell でも、同じコマンドで実行できます。
 各サンプルは共有ライブラリとして `target/debug` にビルドされます。ファイル名は OS によって違います。
 
 <Tabs syncKey="platform">
@@ -56,7 +57,12 @@ ls target/debug/*.dylib
 </TabItem>
 <TabItem label="Windows">
 
-Windows の Rust の手順は、まだ用意していません(`cargo install juiz_app` は Linux と macOS を案内しています)。WSL の Ubuntu なら、Linux の手順で進められます。
+```powershell
+ls target\debug\*.dll
+# => listener.dll  talker.dll  ...
+```
+
+Windows では、ファイル名の先頭に `lib` が付きません。
 
 </TabItem>
 </Tabs>
@@ -248,10 +254,32 @@ juiz ec list
 EC を止めた状態で、talker を外から call してみましょう。
 `talker_listener.conf` をコピーして `auto_start: false` に書き換えた設定ファイルを作り、それで起動し直します。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 sed 's/auto_start: true/auto_start: false/' talker_listener.conf > talker_listener_stop.conf
 juiz -f talker_listener_stop.conf -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+sed 's/auto_start: true/auto_start: false/' talker_listener.conf > talker_listener_stop.conf
+juiz -f talker_listener_stop.conf -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+(Get-Content talker_listener.conf) -replace 'auto_start: true', 'auto_start: false' | Set-Content talker_listener_stop.conf
+juiz -f talker_listener_stop.conf -d
+```
+
+</TabItem>
+</Tabs>
 
 今度は、起動しても何も表示されません。EC が動いていないので、誰も Process を実行しないからです。
 別のターミナルから talker と listener を call します。

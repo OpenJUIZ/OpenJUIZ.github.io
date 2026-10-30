@@ -169,7 +169,13 @@ juiz --container ./target/debug/libexample_container.dylib \
 </TabItem>
 <TabItem label="Windows">
 
-Steps for Rust on Windows are not available yet (`cargo install juiz_app` is documented for Linux and macOS). On Ubuntu under WSL, you can follow the Linux steps.
+```powershell
+juiz --container ./target/debug/example_container.dll `
+     --container_process ./target/debug/example_container_increment.dll `
+     -l rust -e -1 -d
+```
+
+On Windows, the file names do not start with `lib`.
 
 </TabItem>
 </Tabs>

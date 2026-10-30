@@ -52,6 +52,13 @@ juiz --process ./target/debug/liblistener.dylib -1 -d
 ```
 
 </TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --process ./target/debug/listener.dll -1 -d
+```
+
+</TabItem>
 </Tabs>
 
 </TabItem>
@@ -142,6 +149,13 @@ juiz --process ./target/debug/libtalker.so -1 -r 1.0 -d
 
 ```sh
 juiz --process ./target/debug/libtalker.dylib -1 -r 1.0 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --process ./target/debug/talker.dll -1 -r 1.0 -d
 ```
 
 </TabItem>
@@ -257,12 +271,38 @@ ID の `http://127.0.0.1:8000` や `http://127.0.0.1:8001` の部分が、その
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz connection create -t push \
   "http://127.0.0.1:8001/process/talker0::talker" \
   arg1 \
   "http://127.0.0.1:8000/process/listener0::listener"
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker0::talker" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener0::listener"
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz connection create -t push `
+  "http://127.0.0.1:8001/process/talker0::talker" `
+  arg1 `
+  "http://127.0.0.1:8000/process/listener0::listener"
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">
@@ -542,12 +582,38 @@ talker を起動し直したので、つながりも消えています(つなが
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz connection create -t push \
   "http://127.0.0.1:8001/process/talker0::talker" \
   arg1 \
   "http://127.0.0.1:8000/process/listener0::listener"
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker0::talker" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener0::listener"
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz connection create -t push `
+  "http://127.0.0.1:8001/process/talker0::talker" `
+  arg1 `
+  "http://127.0.0.1:8000/process/listener0::listener"
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">

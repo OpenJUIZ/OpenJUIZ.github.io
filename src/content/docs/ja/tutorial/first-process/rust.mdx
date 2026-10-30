@@ -26,11 +26,8 @@ import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 ## 準備
 
-[インストール](/ja/getting-started/install/) の「cargo で入れる」の手順で、Rust と `juiz` コマンドを入れておいてください。
-
-<Aside type="note" title="Windows の場合">
-Rust の手順は Linux と macOS 向けです(`cargo install juiz_app` は Linux と macOS を案内しています)。WSL の Ubuntu なら、Linux の手順で進められます。
-</Aside>
+[インストール](/ja/getting-started/install/) の「cargo で入れる」の手順で、Rust と `juiz` コマンドを入れておいてください(Linux・macOS・Windows)。
+Windows では PowerShell で進めます。OS によってコマンドが違うところは、タブで書き分けています。
 
 ```sh
 juiz --version
@@ -53,7 +50,7 @@ Rust で書いたプラグインは、`cargo install juiz_app` で入れた `jui
         - lib.rs Process のコード
 </FileTree>
 
-juiz では、Process をひとつずつ共有ライブラリ(`.so` や `.dylib`)としてビルドし、`juiz` コマンドがそれをプラグインとして読み込みます。
+juiz では、Process をひとつずつ共有ライブラリ(`.so`・`.dylib`・`.dll`)としてビルドし、`juiz` コマンドがそれをプラグインとして読み込みます。
 Process を 1 つ書くごとにクレートが 1 つ増えるので、最初から Cargo の **ワークスペース** にしておき、その中に Process のクレートを並べていきます。
 第 2 章では、このワークスペースに Container のクレートを足します。
 
@@ -64,6 +61,8 @@ mkdir my_juiz_rust
 cd my_juiz_rust
 mkdir -p process/increment_process/src
 ```
+
+Windows の PowerShell でも、同じコマンドで作れます。
 
 以降のコマンドは、すべて `my_juiz_rust` で実行します。
 
@@ -112,7 +111,7 @@ juiz_sdk = { workspace = true }
 
 | 項目 | 意味 |
 | --- | --- |
-| `name` | クレートの名前です。ビルドしてできる共有ライブラリのファイル名(`libincrement_process.so`)になります |
+| `name` | クレートの名前です。ビルドしてできる共有ライブラリのファイル名になります。Linux では `libincrement_process.so`、macOS では `libincrement_process.dylib`、Windows では先頭に `lib` が付かず `increment_process.dll` です |
 | `edition` | Rust のエディションです |
 | `[lib]` の `crate-type = ["cdylib"]` | このクレートを、ほかの言語からも読み込める共有ライブラリ(C 形式の動的ライブラリ)としてビルドします。`juiz` が読み込めるのはこの形式です |
 | `juiz_sdk = { workspace = true }` | ワークスペースの `[workspace.dependencies]` に書いた版の `juiz_sdk` を使います |
@@ -121,7 +120,7 @@ juiz_sdk = { workspace = true }
 
 <Aside type="tip">
 クレートの名前は、このあと書く関数名(Process の型名)と同じにしておきます。
-第 3 章で使う設定ファイルは、型名 `increment_process` から `libincrement_process.so` というファイル名を作って探すからです。
+第 3 章で使う設定ファイルは、型名 `increment_process` から `libincrement_process.so`(Windows では `increment_process.dll`)というファイル名を作って探すからです。
 </Aside>
 
 ## Process のコードを書く
@@ -174,6 +173,17 @@ ls target/debug/libincrement_process.*
 ```
 
 </TabItem>
+<TabItem label="Windows">
+
+```powershell
+ls target\debug\increment_process.dll
+# => increment_process.dll
+```
+
+Windows では、ファイル名の先頭に `lib` が付きません。
+同じ場所に `increment_process.dll.lib` や `increment_process.pdb` もできますが、`juiz` が読み込むのは `.dll` です。
+
+</TabItem>
 </Tabs>
 
 ワークスペースにしたので、クレートが増えても、ルートで `cargo build` を 1 回実行すれば全部ビルドされ、成果物も同じ `target/debug` にそろいます。
@@ -194,6 +204,13 @@ juiz --process ./target/debug/libincrement_process.so -e -1 -d
 
 ```sh
 juiz --process ./target/debug/libincrement_process.dylib -e -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --process ./target/debug/increment_process.dll -e -1 -d
 ```
 
 </TabItem>
@@ -237,6 +254,11 @@ juiz process call "http://127.0.0.1:8000/process/increment_process0::increment_p
 ```
 
 `3` を渡して `4` が返ってきました。`-p` は結果を表示するオプションです。
+
+<Aside type="caution" title="Windows PowerShell 5.1 で JSON を渡すとき">
+Windows に最初から入っている Windows PowerShell 5.1 は、`'{"arg1": 3}'` の `"` を消して `juiz` に渡してしまいます。
+`'{\"arg1\": 3}'` のように `"` の前に `\` を書いてください。PowerShell 7.3 以降では、上のとおりに書けば動きます。
+</Aside>
 何度呼び出しても、同じ引数なら同じ結果が返ることも確かめてみてください。
 
 ### ブラウザから呼び出す
