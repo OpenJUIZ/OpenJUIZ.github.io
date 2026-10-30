@@ -118,8 +118,9 @@ Compare it with the configuration file from chapter 3.
 ```yaml
 plugins:
   components:
-    example_component:
-      path: "./target/debug"
+    example_component_python:
+      language: python
+      path: "./component"
 ```
 
 In chapter 3 you listed types one by one in `process_factories` and `container_factories`, and each ContainerProcess under its Container.
@@ -189,7 +190,7 @@ In other words, Processes, Containers and ContainerProcesses are "units for runn
 - Add another instance of `example_component_python_increment` to `processes`. As in chapter 3, you can create any number of instances from types loaded from a Component.
 - Add another Container (for example `container1`) and its ContainerProcesses to `containers`. `container0` and `container1` hold separate values.
 - Add `connections` and `ecs` from chapter 4 and connect the first Process's output to `arg1` of the second Process you added. Types from a Component connect the same way as any other. `plugins` can list `components` and `process_factories` side by side, so you can also connect to a Process from a separate file, such as `increment_process` from chapter 3.
-- You can also load a Component from the command line without a configuration file. With `-1`, juiz creates one instance of every type in the Component (named "type name + `0`" as in chapter 1). Some `ERROR` lines are printed at startup, but it works anyway.
+- You can also load a Component from the command line without a configuration file. With `-1`, juiz creates one instance of every type in the Component (named "type name + `0`" as in chapter 1).
 
 ```sh
 juiz --component ./component/example_component_python.py -l python -1 -d

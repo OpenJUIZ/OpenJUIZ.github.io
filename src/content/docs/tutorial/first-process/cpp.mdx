@@ -29,7 +29,7 @@ What you build is the same as `process/increment_process_cpp` in the [juiz_examp
 Prepare the following (Linux, macOS, or Windows).
 
 - The `juiz` command, installed either with pip or with cargo as described in [Installation](/getting-started/install/) (on Windows, install it with pip)
-- CMake 3.16 or later and a C++17 compiler (on Windows, Visual Studio 2022 or Build Tools for Visual Studio 2022 with "Desktop development with C++")
+- CMake 3.16 or later and a C++17 compiler (on Windows, Visual Studio 2022 or Build Tools for Visual Studio 2022 with "Desktop development with C++"; 2019 has also been confirmed to work)
 - libjuiz_sdk and its headers, at the same version as `juiz`
 
 C++ Processes are built against libjuiz_sdk, the shared library of functions that pass values to and from juiz.
@@ -343,7 +343,7 @@ Thanks to this, Processes are easy to test, and they behave the same when you la
 
 ## Try it yourself
 
-- Change the body to return twice the argument instead of adding 1. Rebuild with `cmake --build build` and restart `juiz`; `{"arg1": 3}` should now give `6`.
+- Change the body to return twice the argument instead of adding 1. Rebuild with `cmake --build build` (on Windows, `cmake --build build --config Release`) and restart `juiz`; `{"arg1": 3}` should now give `6`.
 - Add `decrement_process_cpp`, a Process that subtracts 1. Create `process/decrement_process_cpp/decrement_process_cpp.cpp` and add one line, `add_juiz_plugin(decrement_process_cpp ...)`, to `CMakeLists.txt`. The answer is in [`process/decrement_process_cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/tree/main/process/decrement_process_cpp) of the examples.
 
 ## Summary

@@ -29,7 +29,7 @@ import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 次のものを用意してください(Linux・macOS・Windows)。
 
 - `juiz` コマンド。[インストール](/ja/getting-started/install/) の、pip と cargo のどちらの入れ方でもかまいません(Windows は pip で入れます)
-- CMake 3.16 以降と、C++17 対応のコンパイラ(Windows は Visual Studio 2022 か Build Tools for Visual Studio 2022 の「C++ によるデスクトップ開発」)
+- CMake 3.16 以降と、C++17 対応のコンパイラ(Windows は Visual Studio 2022 か Build Tools for Visual Studio 2022 の「C++ によるデスクトップ開発」。2019 でも動作を確認しています)
 - `juiz` と同じ版の libjuiz_sdk とヘッダ
 
 C++ の Process は、libjuiz_sdk(juiz と値を受け渡す関数の共有ライブラリ)にリンクしてビルドします。
@@ -343,7 +343,7 @@ Swagger UI で呼び出すときは、ブローカー自身の中にある Proce
 
 ## やってみよう
 
-- 本体を書き換えて、1 を足す代わりに 2 倍にして返すようにしてみましょう。`cmake --build build` でビルドし直して `juiz` を起動し直すと、`{"arg1": 3}` に対して `6` が返ってくるはずです。
+- 本体を書き換えて、1 を足す代わりに 2 倍にして返すようにしてみましょう。`cmake --build build`(Windows では `cmake --build build --config Release`)でビルドし直して `juiz` を起動し直すと、`{"arg1": 3}` に対して `6` が返ってくるはずです。
 - 1 を引く Process `decrement_process_cpp` を足してみましょう。`process/decrement_process_cpp/decrement_process_cpp.cpp` を作り、`CMakeLists.txt` に `add_juiz_plugin(decrement_process_cpp ...)` を 1 行足します。答えはサンプル集の [`process/decrement_process_cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/tree/main/process/decrement_process_cpp) にあります。
 
 ## まとめ

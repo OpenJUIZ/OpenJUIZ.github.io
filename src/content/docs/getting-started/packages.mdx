@@ -180,12 +180,14 @@ You can also let CMake fetch libjuiz_sdk, as [cmake/Juiz.cmake](https://github.c
 
 ## Haskell
 
-Write components with [hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz). You need GHC 9.4.7 or later and cabal (Linux, macOS).
+Write components with [hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz). You need GHC 9.4.7 or later and cabal (Linux, macOS; Windows is supported from 0.0.27 and needs GHC 9.6 or later).
 hsjuiz is waiting to be published on Hackage, so for now get the juiz source at the tag of the same version as `juiz` and use its `bindings/hsjuiz`. In the `cabal.project` of your package, write where the hsjuiz source and libjuiz_sdk are.
 
 ```sh
 git clone --depth 1 --branch v0.0.27 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.27
 ```
+
+The commands for Windows are in the "Windows" tab below.
 
 <Tabs syncKey="os">
 <TabItem label="Linux (x86_64)">
@@ -234,13 +236,55 @@ package hsjuiz
 </TabItem>
 <TabItem label="Windows">
 
-Haskell components do not run on Windows yet.
+From 0.0.27 you can write components in Haskell on Windows (x86_64) too. You need GHC 9.6 or later (juiz's CI checks it with GHC 9.6.7).
+
+The import library of libjuiz_sdk that Rust builds is named `juiz_sdk.dll.lib`, which GHC's `-ljuiz_sdk` cannot find.
+Copy it into a separate directory under the name `juiz_sdk.lib`.
+
+```powershell
+git clone --depth 1 --branch v0.0.27 https://github.com/OpenJUIZ/juiz.git $env:USERPROFILE\juiz-0.0.27
+mkdir $env:USERPROFILE\.juiz\sdk\0.0.27\import -Force
+Copy-Item $env:USERPROFILE\.juiz\sdk\0.0.27\lib\juiz_sdk.dll.lib $env:USERPROFILE\.juiz\sdk\0.0.27\import\juiz_sdk.lib
+```
+
+```txt title="cabal.project"
+packages: . C:/Users/me/juiz-0.0.27/bindings/hsjuiz
+
+package hsjuiz
+  extra-lib-dirs: C:/Users/me/.juiz/sdk/0.0.27/import, C:/Users/me/.juiz/sdk/0.0.27/bin
+```
+
+`import` is where `juiz_sdk.lib` for linking is, and `bin` is where GHC loads `juiz_sdk.dll` from when it runs Template Haskell.
+Windows has no rpath. juiz looks for the `juiz_sdk.dll` a plugin uses in the plugin's directory (and in `PATH`), so copy `bin\juiz_sdk.dll` next to the DLL you built.
+
+GHC on Windows has no Haskell shared libraries, so the RTS and the packages you depend on are linked statically into the DLL.
+In your package's `.cabal`, write `options: standalone` in each `foreign-library`, and pass a `.def` file listing the exported functions with `mod-def-file` (cabal does not accept them in a `common` stanza).
+
+```text title="your-package.cabal (excerpt)"
+foreign-library increment_process_hs
+    type:             native-shared
+    if os(windows)
+        options:      standalone
+        mod-def-file: increment_process_hs.def
+    ...
+```
+
+```text title="increment_process_hs.def"
+EXPORTS
+    juiz_hs_init
+    manifest_entry_point
+    process_factory_entry_point
+```
+
+The library you get is `<name>.dll`, without `lib`. Unlike Linux and macOS, each DLL has its own RTS, so put a Container and its ContainerProcesses into one Component (one DLL) with `juizComponent`.
+Also, running a `case` that branches on a value of a type with 8 or more constructors (including `show` from `deriving Show`) is known to crash the process ([issue #262](https://github.com/OpenJUIZ/juiz/issues/262)).
+See the ["Windows" section of the hsjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz#windows) for details.
 
 </TabItem>
 </Tabs>
 
-Replace `/home/me` or `/Users/me` with your home directory (`~` cannot be used in `cabal.project`).
-The rpath is needed because GHC loads libjuiz_sdk together with hsjuiz when it runs Template Haskell.
+Replace `/home/me`, `/Users/me` or `C:/Users/me` with your home directory (`~` cannot be used in `cabal.project`).
+On Linux and macOS, the rpath is needed because GHC loads libjuiz_sdk together with hsjuiz when it runs Template Haskell.
 The `build.sh` of the [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) examples does everything from getting libjuiz_sdk and hsjuiz to building the examples, so you can also use it as a template.
 
 See the [hsjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) for how to write them.

@@ -487,6 +487,9 @@ juiz connection create -t push \
 </TabItem>
 <TabItem label="Python">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz connection create -t push \
   "qmp://127.0.0.1:5001/process/talker_python0::talker_python" \
@@ -495,7 +498,33 @@ juiz connection create -t push \
 ```
 
 </TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz connection create -t push \
+  "qmp://127.0.0.1:5001/process/talker_python0::talker_python" \
+  arg1 \
+  "qmp://127.0.0.1:5000/process/listener_python0::listener_python"
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz connection create -t push `
+  "qmp://127.0.0.1:5001/process/talker_python0::talker_python" `
+  arg1 `
+  "qmp://127.0.0.1:5000/process/listener_python0::listener_python"
+```
+
+</TabItem>
+</Tabs>
+
+</TabItem>
 <TabItem label="C++">
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
 
 ```sh
 juiz connection create -t push \
@@ -503,6 +532,29 @@ juiz connection create -t push \
   arg1 \
   "qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp"
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz connection create -t push \
+  "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" \
+  arg1 \
+  "qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp"
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz connection create -t push `
+  "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" `
+  arg1 `
+  "qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp"
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 </Tabs>
@@ -547,7 +599,7 @@ Calls work the same way. With a `qmp://` ID, the call goes through the QUIC brok
 
 ```sh
 juiz process call "qmp://127.0.0.1:5001/process/talker0::talker" '{}' -p
-# => CapsulePtr((value:Value("Hello World"), option: []))
+# => CapsulePtr((value:Value("Hello World"), option: [function_name:call,class_name:process,]))
 ```
 
 </TabItem>
@@ -555,7 +607,7 @@ juiz process call "qmp://127.0.0.1:5001/process/talker0::talker" '{}' -p
 
 ```sh
 juiz process call "qmp://127.0.0.1:5001/process/talker_python0::talker_python" '{}' -p
-# => CapsulePtr((value:Value("Hello, World!"), option: []))
+# => CapsulePtr((value:Value("Hello, World!"), option: [function_name:call,class_name:process,]))
 ```
 
 </TabItem>
@@ -563,11 +615,13 @@ juiz process call "qmp://127.0.0.1:5001/process/talker_python0::talker_python" '
 
 ```sh
 juiz process call "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" '{}' -p
-# => CapsulePtr((value:Value("Hello, Juiz!"), option: []))
+# => CapsulePtr((value:Value("Hello, Juiz!"), option: [function_name:call,class_name:process,]))
 ```
 
 </TabItem>
 </Tabs>
+
+A call through the HTTP broker returned `option: []`, but through the QUIC broker the result comes back with `function_name` and `class_name` in its `option`. The returned `value` is the same. The order of the entries in `option` may change from run to run.
 
 ## Try it yourself
 
