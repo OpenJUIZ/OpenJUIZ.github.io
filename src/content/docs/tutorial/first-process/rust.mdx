@@ -26,11 +26,8 @@ What you build is the same as `process/increment_process` in the [juiz_examples_
 
 ## Before you start
 
-Install Rust and the `juiz` command by following "Install with cargo" in [Installation](/getting-started/install/).
-
-<Aside type="note" title="On Windows">
-The Rust steps are for Linux and macOS (`cargo install juiz_app` is documented for Linux and macOS). On Ubuntu under WSL, you can follow the Linux steps.
-</Aside>
+Install Rust and the `juiz` command by following "Install with cargo" in [Installation](/getting-started/install/) (Linux, macOS, or Windows).
+On Windows, follow the steps in PowerShell. Where commands differ by OS, the tabs show each version.
 
 ```sh
 juiz --version
@@ -53,7 +50,7 @@ In this chapter you create a project laid out like this.
         - lib.rs the Process code
 </FileTree>
 
-In juiz, each Process is built as its own shared library (`.so` or `.dylib`), and the `juiz` command loads it as a plugin.
+In juiz, each Process is built as its own shared library (`.so`, `.dylib`, or `.dll`), and the `juiz` command loads it as a plugin.
 Every Process you write adds one crate, so start with a Cargo **workspace** right away and put the Process crates in it.
 Chapter 2 adds Container crates to this workspace.
 
@@ -64,6 +61,8 @@ mkdir my_juiz_rust
 cd my_juiz_rust
 mkdir -p process/increment_process/src
 ```
+
+The same commands work in PowerShell on Windows.
 
 Run all the following commands in `my_juiz_rust`.
 
@@ -112,7 +111,7 @@ juiz_sdk = { workspace = true }
 
 | Item | Meaning |
 | --- | --- |
-| `name` | The crate name. It becomes the file name of the built shared library (`libincrement_process.so`) |
+| `name` | The crate name. It becomes the file name of the built shared library: `libincrement_process.so` on Linux, `libincrement_process.dylib` on macOS, and `increment_process.dll` on Windows, without the `lib` prefix |
 | `edition` | The Rust edition |
 | `crate-type = ["cdylib"]` under `[lib]` | Builds this crate as a shared library that other languages can load (a C-style dynamic library). This is the format `juiz` can load |
 | `juiz_sdk = { workspace = true }` | Uses the `juiz_sdk` version written in the workspace's `[workspace.dependencies]` |
@@ -121,7 +120,7 @@ If you forget `crate-type`, you get only a regular Rust library (`.rlib`), which
 
 <Aside type="tip">
 Give the crate the same name as the function you are about to write (the Process type name).
-The configuration file you use in chapter 3 builds the file name `libincrement_process.so` from the type name `increment_process` and looks for it.
+The configuration file you use in chapter 3 builds the file name `libincrement_process.so` (`increment_process.dll` on Windows) from the type name `increment_process` and looks for it.
 </Aside>
 
 ## Write the Process code
@@ -174,6 +173,17 @@ ls target/debug/libincrement_process.*
 ```
 
 </TabItem>
+<TabItem label="Windows">
+
+```powershell
+ls target\debug\increment_process.dll
+# => increment_process.dll
+```
+
+On Windows, the file name does not start with `lib`.
+The same directory also gets `increment_process.dll.lib` and `increment_process.pdb`, but `juiz` loads only the `.dll`.
+
+</TabItem>
 </Tabs>
 
 Because this is a workspace, a single `cargo build` at the root builds every crate as you add more, and all the outputs end up in the same `target/debug`.
@@ -194,6 +204,13 @@ juiz --process ./target/debug/libincrement_process.so -e -1 -d
 
 ```sh
 juiz --process ./target/debug/libincrement_process.dylib -e -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --process ./target/debug/increment_process.dll -e -1 -d
 ```
 
 </TabItem>
@@ -237,6 +254,11 @@ juiz process call "http://127.0.0.1:8000/process/increment_process0::increment_p
 ```
 
 You passed `3` and got `4` back. `-p` prints the result.
+
+<Aside type="caution" title="Passing JSON in Windows PowerShell 5.1">
+Windows PowerShell 5.1, which comes with Windows, drops the `"` in `'{"arg1": 3}'` before passing it to `juiz`.
+Write a `\` before each `"`, as in `'{\"arg1\": 3}'`. In PowerShell 7.3 or later, the command above works as written.
+</Aside>
 Check that calling it again with the same argument always gives the same result.
 
 ### Call it from a browser

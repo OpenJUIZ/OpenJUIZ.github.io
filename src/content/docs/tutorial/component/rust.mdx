@@ -118,7 +118,7 @@ The functions are written almost the same way as before. Only two things differ.
 - The attribute macros change to their `component` versions: `#[juiz_process]` → `#[juiz_component_process]`, `#[juiz_container]` → `#[juiz_component_container]`, and `#[juiz_container_process]` → `#[juiz_component_container_process]`.
 - The final `juiz_component_manifest!` declares the Component's name and the Processes, Containers and ContainerProcesses it contains. ContainerProcesses are listed under the Container they are bound to.
 
-The whole Component is one crate (`crate-type = ["cdylib"]` in [`Cargo.toml`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/component/example_component/Cargo.toml)), built into a single shared library: `target/debug/libexample_component.so` on Linux and `target/debug/libexample_component.dylib` on macOS.
+The whole Component is one crate (`crate-type = ["cdylib"]` in [`Cargo.toml`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/component/example_component/Cargo.toml)), built into a single shared library: `target/debug/libexample_component.so` on Linux, `target/debug/libexample_component.dylib` on macOS, and `target/debug/example_component.dll` on Windows.
 
 What used to be split per type now lives in one library.
 The bodies of the Processes and ContainerProcesses are unchanged. Processes are still idempotent functions, and only ContainerProcesses touch state.
@@ -168,7 +168,7 @@ plugins:
 In chapter 3 you listed types one by one in `process_factories` and `container_factories`, and each ContainerProcess under its Container.
 With a Component, you write **just one Component name** in `components`. As in chapter 3, the key determines which file is loaded.
 
-For the Component name `example_component`, juiz loads `libexample_component.so` (`libexample_component.dylib` on macOS) from `./target/debug`. The configuration file has no file extension in it, so the same file works on every OS.
+For the Component name `example_component`, juiz loads `libexample_component.so` (`libexample_component.dylib` on macOS, `example_component.dll` on Windows) from `./target/debug`. The configuration file has no file extension in it, so the same file works on every OS.
 
 That one entry loads every Process, Container and ContainerProcess type in the Component.
 
@@ -248,6 +248,13 @@ juiz --component ./target/debug/libexample_component.so -1 -d
 
 ```sh
 juiz --component ./target/debug/libexample_component.dylib -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --component ./target/debug/example_component.dll -1 -d
 ```
 
 </TabItem>

@@ -31,12 +31,44 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 cd juiz_examples_rust
 git pull
 cargo build
 pip install pyjuiz==0.0.27   # この章では Python の Process も一緒に動かす
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+cd juiz_examples_rust
+git pull
+cargo build
+pip install pyjuiz==0.0.27   # この章では Python の Process も一緒に動かす
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+cd juiz_examples_rust
+git pull
+cargo build
+python -m venv .venv         # この章では Python の Process も一緒に動かす
+.venv\Scripts\activate
+pip install pyjuiz==0.0.27
+$env:PYTHONPATH = "$PWD\.venv\Lib\site-packages"
+```
+
+venv は、`juiz` をビルドしたときと同じ Python で作ります([インストール](/ja/getting-started/install/) の「cargo で入れる」)。
+最後の行は、cargo で入れた `juiz` が Windows で venv のパッケージを読み込めない問題([juiz#296](https://github.com/OpenJUIZ/juiz/issues/296))を避けるためのものです。`juiz` を起動するターミナルで実行しておいてください。juiz 0.0.28 以降では不要になる予定です。
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">
@@ -483,10 +515,32 @@ juiz -f typed_pose.conf -d
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/move0::pose_move" -H "Content-Type: application/json" -d '{}'
 # => {"frame_id":"map","position":{"x":0.5,"y":0.0},"theta":0.0}
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/move0::pose_move" -H "Content-Type: application/json" -d '{}'
+# => {"frame_id":"map","position":{"x":0.5,"y":0.0},"theta":0.0}
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+curl.exe -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/move0::pose_move" -H "Content-Type: application/json" -d '{}'
+# => {"frame_id":"map","position":{"x":0.5,"y":0.0},"theta":0.0}
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">

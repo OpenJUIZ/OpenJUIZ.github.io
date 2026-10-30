@@ -66,6 +66,8 @@ mkdir -p container/example_container_increment/src
 mkdir -p container/example_container_get/src
 ```
 
+The same commands work in PowerShell on Windows.
+
 Add the three crates to `members` in the workspace `Cargo.toml`.
 
 ```toml title="Cargo.toml" ins={5-7}
@@ -103,7 +105,7 @@ The difference from the Process in chapter 1 is the extra `"rlib"` in `crate-typ
 
 | `crate-type` | Used for |
 | --- | --- |
-| `"cdylib"` | The shared library `juiz` loads as a plugin (`libexample_container.so`) |
+| `"cdylib"` | The shared library `juiz` loads as a plugin (`libexample_container.so`; `example_container.dll` on Windows) |
 | `"rlib"` | A regular library that other Rust crates can `use` |
 
 The ContainerProcesses read and write the fields of the Container struct `ExampleContainer`. So the ContainerProcess crates must be able to use this crate as a Rust library.
@@ -243,6 +245,16 @@ ls target/debug/*.dylib
 ```
 
 </TabItem>
+<TabItem label="Windows">
+
+```powershell
+cargo build
+ls target\debug\*.dll
+# => example_container.dll  example_container_get.dll
+#    example_container_increment.dll  increment_process.dll
+```
+
+</TabItem>
 </Tabs>
 
 Everything, including the Process from chapter 1, ends up in `target/debug`.
@@ -266,6 +278,14 @@ juiz --container ./target/debug/libexample_container.so \
 ```sh
 juiz --container ./target/debug/libexample_container.dylib \
      --container_process ./target/debug/libexample_container_increment.dylib -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --container ./target/debug/example_container.dll `
+     --container_process ./target/debug/example_container_increment.dll -1 -d
 ```
 
 </TabItem>
@@ -335,7 +355,7 @@ containers:
 
 The configuration file says:
 
-- Where to load the Container type and the ContainerProcess types from (`plugins`). juiz builds a file name such as `libexample_container.so` from the type name and looks for it in the `path` directory
+- Where to load the Container type and the ContainerProcess types from (`plugins`). juiz builds a file name such as `libexample_container.so` (`example_container.dll` on Windows) from the type name and looks for it in the `path` directory
 - Create one Container instance, `container0` (`containers`)
 - Bind an `increment` instance `increment0` and a `get` instance `get0` to `container0`
 

@@ -118,7 +118,7 @@ juiz_component_manifest!(
 - 属性マクロが `#[juiz_process]` → `#[juiz_component_process]`、`#[juiz_container]` → `#[juiz_component_container]`、`#[juiz_container_process]` → `#[juiz_component_container_process]` のように、`component` の付いたものに変わります。
 - 最後の `juiz_component_manifest!` で、この Component の名前と、中に入れる Process・Container・ContainerProcess を宣言します。ContainerProcess は、結びつく Container の下に並べます。
 
-Component 全体が 1 つのクレート([`Cargo.toml`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/component/example_component/Cargo.toml) の `crate-type = ["cdylib"]`)になり、1 つの共有ライブラリにビルドされます。ファイル名は Linux では `target/debug/libexample_component.so`、macOS では `target/debug/libexample_component.dylib` です。
+Component 全体が 1 つのクレート([`Cargo.toml`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/component/example_component/Cargo.toml) の `crate-type = ["cdylib"]`)になり、1 つの共有ライブラリにビルドされます。ファイル名は Linux では `target/debug/libexample_component.so`、macOS では `target/debug/libexample_component.dylib`、Windows では `target/debug/example_component.dll` です。
 
 これまで型ごとに分かれていたものが、Component では1 つのライブラリに入っています。
 それぞれの Process や ContainerProcess の中身は、これまでと変わりません。Process は冪等な関数のまま、状態に触れるのは ContainerProcess だけ、という考え方もそのままです。
@@ -168,7 +168,7 @@ plugins:
 第 3 章では、`process_factories` と `container_factories` に型を 1 つずつ書き、ContainerProcess も Container の下に 1 つずつ書いていました。
 Component では、`components` に **Component の名前を 1 つ**書くだけです。キーの名前から読み込むファイルが決まるのは、第 3 章と同じです。
 
-Component 名 `example_component` なら、`./target/debug` の中の `libexample_component.so`(macOS では `libexample_component.dylib`)が読み込まれます。設定ファイルには拡張子を書かないので、同じ設定ファイルがどの OS でも使えます。
+Component 名 `example_component` なら、`./target/debug` の中の `libexample_component.so`(macOS では `libexample_component.dylib`、Windows では `example_component.dll`)が読み込まれます。設定ファイルには拡張子を書かないので、同じ設定ファイルがどの OS でも使えます。
 
 この 1 行で、Component の中にある Process・Container・ContainerProcess の型が、すべて読み込まれます。
 
@@ -248,6 +248,13 @@ juiz --component ./target/debug/libexample_component.so -1 -d
 
 ```sh
 juiz --component ./target/debug/libexample_component.dylib -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --component ./target/debug/example_component.dll -1 -d
 ```
 
 </TabItem>

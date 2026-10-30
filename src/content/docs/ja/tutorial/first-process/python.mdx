@@ -105,6 +105,8 @@ py-modules = []
 
 `juiz-cli` も入れると `juiz` コマンドが 2 つになり、どちらが動くかが PATH の順番で決まってしまいます。
 
+Windows では、cargo で入れた `juiz` が venv のパッケージを読み込めません([juiz#296](https://github.com/OpenJUIZ/juiz/issues/296))。`juiz` を起動するターミナルでは、venv を有効にしたあと、`my_juiz_python` で `$env:PYTHONPATH = "$PWD\.venv\Lib\site-packages"` を実行してください。juiz 0.0.28 以降では不要になる予定です。
+
 </TabItem>
 </Tabs>
 

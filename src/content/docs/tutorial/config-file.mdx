@@ -174,7 +174,7 @@ The keys are **type names**. juiz looks in the directory given by `path` for the
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
-For the type name `increment_process`, juiz loads `libincrement_process.so` (`.dylib` on macOS) from `./target/debug`.
+For the type name `increment_process`, juiz loads `libincrement_process.so` (`libincrement_process.dylib` on macOS, `increment_process.dll` on Windows) from `./target/debug`.
 If `language` is omitted, it is treated as `rust`.
 
 </TabItem>
@@ -476,6 +476,9 @@ Restart `juiz` and execute them without arguments through `execute` in the HTTP 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process" \
   -H "Content-Type: application/json" -d '{}'
@@ -484,6 +487,33 @@ curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=co
   -H "Content-Type: application/json" -d '{}'
 # => 8
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+curl.exe -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process" `
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl.exe -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_increment:counter0" `
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">

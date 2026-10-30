@@ -76,29 +76,68 @@ If you also write in Rust, follow "Install with cargo" instead. C++ and Haskell 
 
 Requirements:
 
-- Linux or macOS
+- Linux, macOS, or Windows (x86_64)
 - Rust 1.81 or later (install with [rustup](https://rustup.rs/))
+- On Windows: "Desktop development with C++" from Visual Studio 2022 or Build Tools for Visual Studio 2022 (the linker used by Rust's MSVC toolchain; 2019 has also been confirmed to work)
 - For C++ components: CMake and a C++17 compiler
-- For Python components as well: Python 3 with development headers (`sudo apt install python3-dev python3-venv` on Ubuntu)
+- For Python components as well: Python 3 with development headers (`sudo apt install python3-dev python3-venv` on Ubuntu; on Windows, a Python installed with the python.org installer needs nothing extra)
 
-Install `juiz_app` from crates.io.
+Install `juiz_app` from crates.io. The same command works in PowerShell on Windows.
 
 ```sh
 cargo install juiz_app --version 0.0.27 --locked
 ```
 
-The `juiz` command is installed into `~/.cargo/bin`.
+The `juiz` command is installed into `~/.cargo/bin` (`%USERPROFILE%\.cargo\bin` on Windows).
 
 **Using Python Processes too**
 
 To run Python Processes with this `juiz`, add **only** [pyjuiz](https://pypi.org/project/pyjuiz/) from PyPI, at the same version as `juiz`.
 The `juiz` command embeds the Python it found at build time, so create the venv with that same Python.
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
 pip install pyjuiz==0.0.27
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+pip install pyjuiz==0.0.27
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+pip install pyjuiz==0.0.27
+$env:PYTHONPATH = "$PWD\.venv\Lib\site-packages"
+```
+
+The last line works around the issue described in the caution below.
+
+</TabItem>
+</Tabs>
+
+<Aside type="caution" title="Using cargo's juiz with Python on Windows">
+On Windows, a `juiz` installed with cargo cannot load packages (such as pyjuiz) from the activated venv ([juiz#296](https://github.com/OpenJUIZ/juiz/issues/296)). Loading a Python Process fails with `ModuleNotFoundError: No module named 'juiz'`.
+In the terminal where you start `juiz`, put the venv's `Lib\site-packages` into the `PYTHONPATH` environment variable. `$PWD` is the current directory, so run this in the directory where you created `.venv`.
+
+```powershell
+$env:PYTHONPATH = "$PWD\.venv\Lib\site-packages"
+```
+
+The setting is lost when you close the terminal. It is planned to become unnecessary in juiz 0.0.28 and later.
+</Aside>
 
 <Aside type="caution">
 When you install with cargo, do not install `juiz-cli`. You would end up with two `juiz` commands, and which one runs would depend on the order of your PATH.

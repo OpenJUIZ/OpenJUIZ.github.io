@@ -105,6 +105,8 @@ py-modules = []
 
 If you also install `juiz-cli`, you end up with two `juiz` commands, and which one runs depends on the order of your PATH.
 
+On Windows, a cargo-installed `juiz` cannot load packages from the venv ([juiz#296](https://github.com/OpenJUIZ/juiz/issues/296)). In the terminal where you start `juiz`, activate the venv and then run `$env:PYTHONPATH = "$PWD\.venv\Lib\site-packages"` in `my_juiz_python`. It is planned to become unnecessary in juiz 0.0.28 and later.
+
 </TabItem>
 </Tabs>
 

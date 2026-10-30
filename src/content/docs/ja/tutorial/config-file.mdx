@@ -174,7 +174,7 @@ option:
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
-型名 `increment_process` なら、`./target/debug` の中の `libincrement_process.so`(macOS では `.dylib`)が読み込まれます。
+型名 `increment_process` なら、`./target/debug` の中の `libincrement_process.so`(macOS では `libincrement_process.dylib`、Windows では `increment_process.dll`)が読み込まれます。
 `language` を省略すると `rust` として扱われます。
 
 </TabItem>
@@ -476,6 +476,9 @@ containers:
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process" \
   -H "Content-Type: application/json" -d '{}'
@@ -484,6 +487,33 @@ curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=co
   -H "Content-Type: application/json" -d '{}'
 # => 8
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+curl.exe -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process" `
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl.exe -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_increment:counter0" `
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="Python">
