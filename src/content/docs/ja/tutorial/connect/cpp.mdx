@@ -259,10 +259,32 @@ juiz ec list
 EC を止めた状態で、talker を外から call してみましょう。
 `talker_listener.conf` をコピーして `auto_start: false` に書き換えた設定ファイルを作り、それで起動し直します。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 sed 's/auto_start: true/auto_start: false/' talker_listener.conf > talker_listener_stop.conf
 juiz -f talker_listener_stop.conf -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+sed 's/auto_start: true/auto_start: false/' talker_listener.conf > talker_listener_stop.conf
+juiz -f talker_listener_stop.conf -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+(Get-Content talker_listener.conf) -replace 'auto_start: true', 'auto_start: false' | Set-Content talker_listener_stop.conf
+juiz -f talker_listener_stop.conf -d
+```
+
+</TabItem>
+</Tabs>
 
 今度は、起動しても何も表示されません。EC が動いていないので、誰も Process を実行しないからです。
 別のターミナルから talker と listener を call します。

@@ -488,6 +488,9 @@ curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=co
 </TabItem>
 <TabItem label="Python">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_python" \
   -H "Content-Type: application/json" -d '{}'
@@ -498,7 +501,37 @@ curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=co
 ```
 
 </TabItem>
+<TabItem label="macOS">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_python" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_python_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+curl.exe -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_python" `
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl.exe -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_python_increment:counter0" `
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+</Tabs>
+
+</TabItem>
 <TabItem label="C++">
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
 
 ```sh
 curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_cpp" \
@@ -510,9 +543,42 @@ curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=co
 ```
 
 </TabItem>
+<TabItem label="macOS">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_cpp" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_cpp_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+curl.exe -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_cpp" `
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl.exe -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_cpp_increment:counter0" `
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
 </Tabs>
 
-`inc0` は `arg1` の 10 に 1 を足して `11` を返します。`p_apply` を書いていない `inc1` を同じように実行すると、引数の既定値 0 が使われて `1` が返ります。
+</TabItem>
+</Tabs>
+
+<Aside type="caution" title="Windows で curl を使うとき">
+Windows に最初から入っている Windows PowerShell 5.1 では、`curl` は `Invoke-WebRequest` の別名になっていて、上のオプションを受け付けません。
+`curl.exe` と書くと、Windows に入っている curl が呼び出されます(PowerShell 7 でも同じように書けます)。
+ここで渡している `'{}'` には `"` が入っていないので、Windows PowerShell 5.1 でもこのまま動きます。`"` を含む JSON を `-d` で渡すときは、`juiz process call` のときと同じく `'{\"arg1\": 3}'` のように `"` の前に `\` を書いてください。
+</Aside>
+
+`inc0` は `arg1` の 10 に 1 を足して `11` を返します。`p_apply` を書いていない `inc1` を同じように実行すると、引数の既定値が使われます。既定値は Rust と Python では 0 なので `1` が、C++ では第 1 章の `manifest()` で 1 にしたので `2` が返ります。
 `increment0` は、初期値 3 のカウンタに 5 を足して `8` を返します。
 
 `p_apply` に Process が持っていない引数の名前を書くと、`juiz` は起動時にエラーで止まります。

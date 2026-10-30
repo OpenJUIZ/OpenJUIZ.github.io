@@ -151,10 +151,32 @@ def example_container_python_get(container) -> int:
 まずは第 1 章と同じように、ファイルを指定して `juiz` を起動します。
 Container は `--container`、ContainerProcess は `--container_process` で読み込みます。Python なのでビルドは要りません。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --container ./container/example_container_python.py \
      --container_process ./container/example_container_python_increment.py -l python -1 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --container ./container/example_container_python.py \
+     --container_process ./container/example_container_python_increment.py -l python -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --container ./container/example_container_python.py `
+     --container_process ./container/example_container_python_increment.py -l python -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 `-1` を付けると、読み込んだ Container の型からインスタンスを 1 つ作り、そこに ContainerProcess のインスタンスを 1 つ結びつけます。
 インスタンス名は第 1 章と同じく型名の後ろに `0` を付けた名前で、Container は `example_container_python0`、ContainerProcess は `example_container_python_increment0` になります。

@@ -259,10 +259,32 @@ juiz ec list
 With the EC stopped, call the talker from outside.
 Copy `talker_listener.conf` into a configuration file with `auto_start: false` and restart with it.
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 sed 's/auto_start: true/auto_start: false/' talker_listener.conf > talker_listener_stop.conf
 juiz -f talker_listener_stop.conf -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+sed 's/auto_start: true/auto_start: false/' talker_listener.conf > talker_listener_stop.conf
+juiz -f talker_listener_stop.conf -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+(Get-Content talker_listener.conf) -replace 'auto_start: true', 'auto_start: false' | Set-Content talker_listener_stop.conf
+juiz -f talker_listener_stop.conf -d
+```
+
+</TabItem>
+</Tabs>
 
 This time nothing is printed after startup. The EC is not running, so nothing runs the Processes.
 From another terminal, call the talker and the listener.

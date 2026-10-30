@@ -41,12 +41,38 @@ pip install pyjuiz==0.0.27   # this chapter also runs Python Processes
 </TabItem>
 <TabItem label="Python">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 cd juiz_examples_python
 git pull
 source .venv/bin/activate
 pip install -r requirements.txt  # installs juiz-cli 0.0.27
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+cd juiz_examples_python
+git pull
+source .venv/bin/activate
+pip install -r requirements.txt  # installs juiz-cli 0.0.27
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+cd juiz_examples_python
+git pull
+.venv\Scripts\activate
+pip install -r requirements.txt  # installs juiz-cli 0.0.27
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="C++">
@@ -630,7 +656,7 @@ You can write dictionaries while prototyping and add types once the shape settle
 
 ## Try it yourself
 
-- Call `move0` with `juiz process call` and leave out `"dt"`. With `call`, a missing argument does not take its default; you get an `ArgumentMissing` error. (When an EC or `execute` runs the Process, the default is used.)
+- Call `move0` with `juiz process call` and leave out `"dt"`. With `call` too, a missing argument takes the default from the manifest (here `dt = 1.0`), so you get the pose with `"position":{"x":2.0,"y":2.0}`. (This is from juiz 0.0.27; earlier versions gave an `ArgumentMissing` error.)
 - Add a field with a default, `double lateral = 0.0;`, to `Twist2D` in `types/geometry.jidl` and regenerate the types. The fingerprint changes, but because the new field has a default, the old and new types can still read each other's values (the [Compatibility rules](/guides/datatype/#compatibility-rules) in the guide list which changes stay compatible).
 - Run `juiz idl -g json-schema -o schema types/geometry.jidl` to get JSON Schemas of the dictionary shapes. They are handy for telling programs that do not use juiz about your types.
 

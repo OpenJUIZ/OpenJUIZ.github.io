@@ -151,10 +151,32 @@ When you want to know "where does this value change?", you only need to look at 
 First, start `juiz` with the files, as in chapter 1.
 Load the Container with `--container` and the ContainerProcess with `--container_process`. This is Python, so there is no build.
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 juiz --container ./container/example_container_python.py \
      --container_process ./container/example_container_python_increment.py -l python -1 -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --container ./container/example_container_python.py \
+     --container_process ./container/example_container_python_increment.py -l python -1 -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+juiz --container ./container/example_container_python.py `
+     --container_process ./container/example_container_python_increment.py -l python -1 -d
+```
+
+</TabItem>
+</Tabs>
 
 With `-1`, juiz creates one instance from the loaded Container type and binds one ContainerProcess instance to it.
 As in chapter 1, the instance names are the type names followed by `0`: the Container is `example_container_python0` and the ContainerProcess is `example_container_python_increment0`.

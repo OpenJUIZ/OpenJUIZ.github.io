@@ -41,12 +41,38 @@ pip install pyjuiz==0.0.27   # この章では Python の Process も一緒に�
 </TabItem>
 <TabItem label="Python">
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 cd juiz_examples_python
 git pull
 source .venv/bin/activate
 pip install -r requirements.txt  # juiz-cli 0.0.27 が入る
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+cd juiz_examples_python
+git pull
+source .venv/bin/activate
+pip install -r requirements.txt  # juiz-cli 0.0.27 が入る
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+cd juiz_examples_python
+git pull
+.venv\Scripts\activate
+pip install -r requirements.txt  # juiz-cli 0.0.27 が入る
+```
+
+</TabItem>
+</Tabs>
 
 </TabItem>
 <TabItem label="C++">
@@ -628,7 +654,7 @@ juiz -f typed_mismatch.conf -d
 
 ## やってみよう
 
-- `juiz process call` で `move0` を呼ぶときに `"dt"` を省いてみましょう。`call` では省いた引数は既定値にならず、`ArgumentMissing` のエラーになります(EC や `execute` で動かしたときは既定値が使われます)。
+- `juiz process call` で `move0` を呼ぶときに `"dt"` を省いてみましょう。`call` でも、省いた引数には manifest の既定値(ここでは `dt = 1.0`)が使われるので、`"position":{"x":2.0,"y":2.0}` の姿勢が返ります(juiz 0.0.27 から。それより前は `ArgumentMissing` のエラーになっていました)。
 - `types/geometry.jidl` の `Twist2D` に、既定値つきのフィールド `double lateral = 0.0;` を足して型を作り直してみましょう。指紋は変わりますが、足したフィールドに既定値があるので、古い型の値とも読み合えます(どんな変更なら互換のままかは、[ガイドの「互換性の決まり」](/ja/guides/datatype/#互換性の決まり) にあります)。
 - `juiz idl -g json-schema -o schema types/geometry.jidl` で、辞書の形を表す JSON Schema を作ってみましょう。juiz を使わないプログラムに型を伝えるときに使えます。
 
