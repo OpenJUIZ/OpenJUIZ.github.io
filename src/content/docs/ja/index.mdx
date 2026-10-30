@@ -14,7 +14,7 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 JUIZ (ジュイス) は、カメラやロボット、モータやセンサなどのロボット要素を動かすソフトウェアを複数の言語で開発し、
 それらを結合して一つのソフトウェアサービスのように動作させるためのミドルウェアです。
@@ -38,12 +38,38 @@ JUIZ (ジュイス) は、カメラやロボット、モータやセンサなど
 
 Python 3.10 以降があれば、`pip install` だけで試せます(Rust のツールチェーンは要りません)。
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 git clone https://github.com/OpenJUIZ/juiz_examples_python.git && cd juiz_examples_python
 python3 -m venv .venv && source .venv/bin/activate
 pip install juiz-cli
 juiz -f increment_process.conf -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git && cd juiz_examples_python
+python3 -m venv .venv && source .venv/bin/activate
+pip install juiz-cli
+juiz -f increment_process.conf -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git; cd juiz_examples_python
+python -m venv .venv; .venv\Scripts\activate
+pip install juiz-cli
+juiz -f increment_process.conf -d
+```
+
+</TabItem>
+</Tabs>
 
 別のターミナルで同じ venv を有効にして、Process を呼び出します。
 

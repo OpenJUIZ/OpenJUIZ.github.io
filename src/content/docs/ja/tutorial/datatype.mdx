@@ -507,6 +507,11 @@ curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/
 </TabItem>
 </Tabs>
 
+<Aside type="caution" title="Windows で curl を使うとき">
+Windows に最初から入っている Windows PowerShell 5.1 では、`curl` は `Invoke-WebRequest` の別名になっていて、上のオプションを受け付けません。
+`curl` を `curl.exe` に書き換えて実行してください(PowerShell 7 ではどちらでも動きます)。
+</Aside>
+
 `juiz` を起動したターミナルには、受け取った姿勢が表示されます。`print0` には `Pose2D` の値として届いています。
 
 ```text

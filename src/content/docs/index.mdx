@@ -14,7 +14,7 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
 
 JUIZ lets you write software that drives cameras, robots, motors and sensors in several languages,
 then combine those pieces so they run together as a single software service.
@@ -38,12 +38,38 @@ then combine those pieces so they run together as a single software service.
 
 With Python 3.10 or later, `pip install` is all you need (no Rust toolchain).
 
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
 ```sh
 git clone https://github.com/OpenJUIZ/juiz_examples_python.git && cd juiz_examples_python
 python3 -m venv .venv && source .venv/bin/activate
 pip install juiz-cli
 juiz -f increment_process.conf -d
 ```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git && cd juiz_examples_python
+python3 -m venv .venv && source .venv/bin/activate
+pip install juiz-cli
+juiz -f increment_process.conf -d
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git; cd juiz_examples_python
+python -m venv .venv; .venv\Scripts\activate
+pip install juiz-cli
+juiz -f increment_process.conf -d
+```
+
+</TabItem>
+</Tabs>
 
 In another terminal, activate the same venv and call the Process.
 
