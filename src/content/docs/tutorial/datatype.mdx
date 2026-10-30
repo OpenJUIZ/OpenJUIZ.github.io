@@ -509,6 +509,11 @@ curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/
 </TabItem>
 </Tabs>
 
+<Aside type="caution" title="Using curl on Windows">
+In Windows PowerShell 5.1, which comes with Windows, `curl` is an alias for `Invoke-WebRequest` and does not accept the options above.
+Replace `curl` with `curl.exe` to run it (in PowerShell 7 either works).
+</Aside>
+
 The terminal running `juiz` prints the received pose. It reached `print0` as a `Pose2D` value.
 
 ```text
