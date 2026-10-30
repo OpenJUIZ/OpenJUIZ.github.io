@@ -19,7 +19,7 @@ Use the same juiz_sdk version as the `juiz` you installed with `cargo install ju
 crate-type = ["cdylib"]
 
 [dependencies]
-juiz_sdk = "0.0.27"
+juiz_sdk = "0.0.28"
 ```
 
 [Tutorial chapter 1 (Rust)](/tutorial/first-process/rust/) explains `Cargo.toml` line by line.
@@ -39,7 +39,7 @@ pyjuiz comes with `juiz-cli`. There is nothing else to install.
 As described in "Using Python Processes too" in [Installation](/getting-started/install/), install only pyjuiz, at the same version as `juiz`.
 
 ```sh
-pip install pyjuiz==0.0.27
+pip install pyjuiz==0.0.28
 ```
 
 </TabItem>
@@ -57,16 +57,16 @@ The easiest way is `install-juiz-sdk.sh` (`install-juiz-sdk.ps1` on Windows), wh
 <TabItem label="Linux">
 
 ```sh
-juiz --version      # e.g. juiz 0.0.27
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.27
+juiz --version      # e.g. juiz 0.0.28
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.28
 ```
 
 </TabItem>
 <TabItem label="macOS">
 
 ```sh
-juiz --version      # e.g. juiz 0.0.27
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.27
+juiz --version      # e.g. juiz 0.0.28
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.28
 ```
 
 </TabItem>
@@ -75,8 +75,8 @@ curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-
 Run this in PowerShell. Windows archives are available from 0.0.27.
 
 ```powershell
-juiz --version      # e.g. juiz 0.0.27
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.0.27
+juiz --version      # e.g. juiz 0.0.28
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.0.28
 ```
 
 </TabItem>
@@ -87,49 +87,49 @@ To download it by hand, pick your OS, get the archive below and extract it to th
 <Tabs syncKey="os">
 <TabItem label="Linux (x86_64)">
 
-Download: [juiz_sdk-0.0.27-x86_64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.27/juiz_sdk-0.0.27-x86_64-unknown-linux-gnu.tar.gz)
+Download: [juiz_sdk-0.0.28-x86_64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.28/juiz_sdk-0.0.28-x86_64-unknown-linux-gnu.tar.gz)
 
 ```sh
 mkdir -p ~/.juiz/sdk
-tar xzf juiz_sdk-0.0.27-x86_64-unknown-linux-gnu.tar.gz
-mv juiz_sdk-0.0.27-x86_64-unknown-linux-gnu ~/.juiz/sdk/0.0.27
-# => ~/.juiz/sdk/0.0.27/lib/libjuiz_sdk.so
+tar xzf juiz_sdk-0.0.28-x86_64-unknown-linux-gnu.tar.gz
+mv juiz_sdk-0.0.28-x86_64-unknown-linux-gnu ~/.juiz/sdk/0.0.28
+# => ~/.juiz/sdk/0.0.28/lib/libjuiz_sdk.so
 ```
 
 </TabItem>
 <TabItem label="Linux (aarch64)">
 
-Download: [juiz_sdk-0.0.27-aarch64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.27/juiz_sdk-0.0.27-aarch64-unknown-linux-gnu.tar.gz)
+Download: [juiz_sdk-0.0.28-aarch64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.28/juiz_sdk-0.0.28-aarch64-unknown-linux-gnu.tar.gz)
 
 ```sh
 mkdir -p ~/.juiz/sdk
-tar xzf juiz_sdk-0.0.27-aarch64-unknown-linux-gnu.tar.gz
-mv juiz_sdk-0.0.27-aarch64-unknown-linux-gnu ~/.juiz/sdk/0.0.27
-# => ~/.juiz/sdk/0.0.27/lib/libjuiz_sdk.so
+tar xzf juiz_sdk-0.0.28-aarch64-unknown-linux-gnu.tar.gz
+mv juiz_sdk-0.0.28-aarch64-unknown-linux-gnu ~/.juiz/sdk/0.0.28
+# => ~/.juiz/sdk/0.0.28/lib/libjuiz_sdk.so
 ```
 
 </TabItem>
 <TabItem label="macOS (Apple silicon)">
 
-Download: [juiz_sdk-0.0.27-aarch64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.27/juiz_sdk-0.0.27-aarch64-apple-darwin.tar.gz)
+Download: [juiz_sdk-0.0.28-aarch64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.28/juiz_sdk-0.0.28-aarch64-apple-darwin.tar.gz)
 
 ```sh
 mkdir -p ~/.juiz/sdk
-tar xzf juiz_sdk-0.0.27-aarch64-apple-darwin.tar.gz
-mv juiz_sdk-0.0.27-aarch64-apple-darwin ~/.juiz/sdk/0.0.27
-# => ~/.juiz/sdk/0.0.27/lib/libjuiz_sdk.dylib
+tar xzf juiz_sdk-0.0.28-aarch64-apple-darwin.tar.gz
+mv juiz_sdk-0.0.28-aarch64-apple-darwin ~/.juiz/sdk/0.0.28
+# => ~/.juiz/sdk/0.0.28/lib/libjuiz_sdk.dylib
 ```
 
 </TabItem>
 <TabItem label="macOS (Intel)">
 
-Download: [juiz_sdk-0.0.27-x86_64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.27/juiz_sdk-0.0.27-x86_64-apple-darwin.tar.gz)
+Download: [juiz_sdk-0.0.28-x86_64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.28/juiz_sdk-0.0.28-x86_64-apple-darwin.tar.gz)
 
 ```sh
 mkdir -p ~/.juiz/sdk
-tar xzf juiz_sdk-0.0.27-x86_64-apple-darwin.tar.gz
-mv juiz_sdk-0.0.27-x86_64-apple-darwin ~/.juiz/sdk/0.0.27
-# => ~/.juiz/sdk/0.0.27/lib/libjuiz_sdk.dylib
+tar xzf juiz_sdk-0.0.28-x86_64-apple-darwin.tar.gz
+mv juiz_sdk-0.0.28-x86_64-apple-darwin ~/.juiz/sdk/0.0.28
+# => ~/.juiz/sdk/0.0.28/lib/libjuiz_sdk.dylib
 ```
 
 </TabItem>
@@ -137,13 +137,13 @@ mv juiz_sdk-0.0.27-x86_64-apple-darwin ~/.juiz/sdk/0.0.27
 
 Archives for Windows (x86_64) are available from 0.0.27. The DLL is built with MSVC, but it exposes only C functions, so plugins built with MinGW and other compilers can use it too.
 
-Download: [juiz_sdk-0.0.27-x86_64-pc-windows-msvc.zip](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.27/juiz_sdk-0.0.27-x86_64-pc-windows-msvc.zip)
+Download: [juiz_sdk-0.0.28-x86_64-pc-windows-msvc.zip](https://github.com/OpenJUIZ/juiz/releases/download/v0.0.28/juiz_sdk-0.0.28-x86_64-pc-windows-msvc.zip)
 
 ```powershell
 mkdir $env:USERPROFILE\.juiz\sdk -Force
-Expand-Archive juiz_sdk-0.0.27-x86_64-pc-windows-msvc.zip -DestinationPath .
-Move-Item juiz_sdk-0.0.27-x86_64-pc-windows-msvc $env:USERPROFILE\.juiz\sdk\0.0.27
-# => %USERPROFILE%\.juiz\sdk\0.0.27\bin\juiz_sdk.dll
+Expand-Archive juiz_sdk-0.0.28-x86_64-pc-windows-msvc.zip -DestinationPath .
+Move-Item juiz_sdk-0.0.28-x86_64-pc-windows-msvc $env:USERPROFILE\.juiz\sdk\0.0.28
+# => %USERPROFILE%\.juiz\sdk\0.0.28\bin\juiz_sdk.dll
 ```
 
 </TabItem>
@@ -166,7 +166,7 @@ For 0.0.25 and earlier, get the juiz source at the tag of the same version as `j
 From 0.0.27, CMake can use libjuiz_sdk through `find_package`. Point `CMAKE_PREFIX_PATH` (or the `PATHS` of `find_package`) at the extracted directory.
 
 ```cmake
-find_package(juiz_sdk 0.0.27 EXACT CONFIG REQUIRED)
+find_package(juiz_sdk 0.0.28 EXACT CONFIG REQUIRED)
 add_library(my_process SHARED my_process.cpp)
 target_link_libraries(my_process PRIVATE juiz_sdk::juiz_sdk)
 juiz_sdk_copy_runtime(my_process)   # on Windows, copies juiz_sdk.dll next to the plugin
@@ -184,7 +184,7 @@ Write components with [hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindin
 hsjuiz is waiting to be published on Hackage, so for now get the juiz source at the tag of the same version as `juiz` and use its `bindings/hsjuiz`. In the `cabal.project` of your package, write where the hsjuiz source and libjuiz_sdk are.
 
 ```sh
-git clone --depth 1 --branch v0.0.27 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.27
+git clone --depth 1 --branch v0.0.28 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.28
 ```
 
 The commands for Windows are in the "Windows" tab below.
@@ -193,44 +193,44 @@ The commands for Windows are in the "Windows" tab below.
 <TabItem label="Linux (x86_64)">
 
 ```txt title="cabal.project"
-packages: . /home/me/juiz-0.0.27/bindings/hsjuiz
+packages: . /home/me/juiz-0.0.28/bindings/hsjuiz
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.0.27/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.27/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.0.28/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.28/lib
 ```
 
 </TabItem>
 <TabItem label="Linux (aarch64)">
 
 ```txt title="cabal.project"
-packages: . /home/me/juiz-0.0.27/bindings/hsjuiz
+packages: . /home/me/juiz-0.0.28/bindings/hsjuiz
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.0.27/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.27/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.0.28/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.28/lib
 ```
 
 </TabItem>
 <TabItem label="macOS (Apple silicon)">
 
 ```txt title="cabal.project"
-packages: . /Users/me/juiz-0.0.27/bindings/hsjuiz
+packages: . /Users/me/juiz-0.0.28/bindings/hsjuiz
 
 package hsjuiz
-  extra-lib-dirs: /Users/me/.juiz/sdk/0.0.27/lib
-  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.0.27/lib
+  extra-lib-dirs: /Users/me/.juiz/sdk/0.0.28/lib
+  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.0.28/lib
 ```
 
 </TabItem>
 <TabItem label="macOS (Intel)">
 
 ```txt title="cabal.project"
-packages: . /Users/me/juiz-0.0.27/bindings/hsjuiz
+packages: . /Users/me/juiz-0.0.28/bindings/hsjuiz
 
 package hsjuiz
-  extra-lib-dirs: /Users/me/.juiz/sdk/0.0.27/lib
-  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.0.27/lib
+  extra-lib-dirs: /Users/me/.juiz/sdk/0.0.28/lib
+  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.0.28/lib
 ```
 
 </TabItem>
@@ -242,16 +242,16 @@ The import library of libjuiz_sdk that Rust builds is named `juiz_sdk.dll.lib`, 
 Copy it into a separate directory under the name `juiz_sdk.lib`.
 
 ```powershell
-git clone --depth 1 --branch v0.0.27 https://github.com/OpenJUIZ/juiz.git $env:USERPROFILE\juiz-0.0.27
-mkdir $env:USERPROFILE\.juiz\sdk\0.0.27\import -Force
-Copy-Item $env:USERPROFILE\.juiz\sdk\0.0.27\lib\juiz_sdk.dll.lib $env:USERPROFILE\.juiz\sdk\0.0.27\import\juiz_sdk.lib
+git clone --depth 1 --branch v0.0.28 https://github.com/OpenJUIZ/juiz.git $env:USERPROFILE\juiz-0.0.28
+mkdir $env:USERPROFILE\.juiz\sdk\0.0.28\import -Force
+Copy-Item $env:USERPROFILE\.juiz\sdk\0.0.28\lib\juiz_sdk.dll.lib $env:USERPROFILE\.juiz\sdk\0.0.28\import\juiz_sdk.lib
 ```
 
 ```txt title="cabal.project"
-packages: . C:/Users/me/juiz-0.0.27/bindings/hsjuiz
+packages: . C:/Users/me/juiz-0.0.28/bindings/hsjuiz
 
 package hsjuiz
-  extra-lib-dirs: C:/Users/me/.juiz/sdk/0.0.27/import, C:/Users/me/.juiz/sdk/0.0.27/bin
+  extra-lib-dirs: C:/Users/me/.juiz/sdk/0.0.28/import, C:/Users/me/.juiz/sdk/0.0.28/bin
 ```
 
 `import` is where `juiz_sdk.lib` for linking is, and `bin` is where GHC loads `juiz_sdk.dll` from when it runs Template Haskell.
