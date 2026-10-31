@@ -20,7 +20,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 ## サンプルを用意する
 
 第 4 章と同じ talker と listener を使います。サンプル集は、第 4 章でクローンしてビルドしたものをそのまま使えます。
-まだの場合は、第 4 章の「サンプルを用意する」([Rust](/ja/tutorial/connect/rust/#サンプルを用意する)・[Python](/ja/tutorial/connect/python/#サンプルを用意する)・[C++](/ja/tutorial/connect/cpp/#サンプルを用意する))の手順を済ませてください。
+まだの場合は、第 4 章の「サンプルを用意する」([Rust](/ja/tutorial/connect/rust/#サンプルを用意する)・[Python](/ja/tutorial/connect/python/#サンプルを用意する)・[C++](/ja/tutorial/connect/cpp/#サンプルを用意する)・[Haskell](/ja/tutorial/connect/haskell/#サンプルを用意する))の手順を済ませてください。
 
 この章ではターミナルを 3 つ使います。どれも、サンプル集のルートで開いておいてください(Python の場合は、どのターミナルでも venv を有効にしておきます)。
 
@@ -96,6 +96,26 @@ juiz --process ./build/plugins/listener_cpp.dll -l cpp -1 -d
 </Tabs>
 
 </TabItem>
+<TabItem label="Haskell">
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --process ./build/plugins/liblistener_hs.so -l haskell -1 -d
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./build/plugins/liblistener_hs.dylib -l haskell -1 -d
+```
+
+</TabItem>
+</Tabs>
+
+</TabItem>
 </Tabs>
 
 起動しても何も表示されません。listener を実行する人がまだいないからです。
@@ -123,6 +143,14 @@ juiz process list
 ```sh
 juiz process list
 # => ["http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"]
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_hs0::listener_hs"]
 ```
 
 </TabItem>
@@ -196,6 +224,26 @@ juiz --process ./build/plugins/talker_cpp.dll -l cpp -1 -r 1.0 -d
 </Tabs>
 
 </TabItem>
+<TabItem label="Haskell">
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --process ./build/plugins/libtalker_hs.so -l haskell -1 -r 1.0 -d
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./build/plugins/libtalker_hs.dylib -l haskell -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
+
+</TabItem>
 </Tabs>
 
 `-r` は、起動時に作ったインスタンスを、指定した周期 [Hz] で実行し続けるオプションです。ターミナル 2 には talker の表示だけが 1 秒ごとに出ます。
@@ -228,6 +276,15 @@ talker_cpp: Hello, Juiz!
 ```
 
 </TabItem>
+<TabItem label="Haskell">
+
+```
+talker_hs: Hello, Juiz!
+talker_hs: Hello, Juiz!
+...
+```
+
+</TabItem>
 </Tabs>
 
 8000 番はターミナル 1 の juiz が使っているので、2 つ目の juiz は自動的に次の 8001 番で待ち受けます。
@@ -256,6 +313,14 @@ juiz process list
 ```sh
 juiz process list
 # => ["http://127.0.0.1:8000/process/listener_cpp0::listener_cpp", "http://127.0.0.1:8001/process/talker_cpp0::talker_cpp"]
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_hs0::listener_hs", "http://127.0.0.1:8001/process/talker_hs0::talker_hs"]
 ```
 
 </TabItem>
@@ -377,6 +442,32 @@ juiz connection create -t push `
 </Tabs>
 
 </TabItem>
+<TabItem label="Haskell">
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker_hs0::talker_hs" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener_hs0::listener_hs"
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker_hs0::talker_hs" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener_hs0::listener_hs"
+```
+
+</TabItem>
+</Tabs>
+
+</TabItem>
 </Tabs>
 
 引数は、つなぐ元(`source`)の ID、つなぐ先の引数名(`arg_name`)、つなぐ先(`destination`)の ID の順です。`-t push` は、第 4 章の `connection_type: Push` と同じ意味です。
@@ -412,6 +503,15 @@ listener_cpp: Hello, Juiz!
 ```
 
 </TabItem>
+<TabItem label="Haskell">
+
+```
+listener_hs: Hello, Juiz!
+listener_hs: Hello, Juiz!
+...
+```
+
+</TabItem>
 </Tabs>
 
 別々に起動した juiz の Process が、動いたままつながりました。つながりは、値を送り出す talker の側が持っています。8001 番に問い合わせると確かめられます。
@@ -438,6 +538,14 @@ juiz -s http://127.0.0.1:8001 connection list
 ```sh
 juiz -s http://127.0.0.1:8001 connection list
 # => ["connection://core://core/process/talker_cpp0::talker_cpp|arg1|http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"]
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz -s http://127.0.0.1:8001 connection list
+# => ["connection://core://core/process/talker_hs0::talker_hs|arg1|http://127.0.0.1:8000/process/listener_hs0::listener_hs"]
 ```
 
 </TabItem>
@@ -471,6 +579,14 @@ juiz process call "http://127.0.0.1:8001/process/talker_python0::talker_python" 
 
 ```sh
 juiz process call "http://127.0.0.1:8001/process/talker_cpp0::talker_cpp" '{}' -p
+# => CapsulePtr((value:Value("Hello, Juiz!"), option: []))
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz process call "http://127.0.0.1:8001/process/talker_hs0::talker_hs" '{}' -p
 # => CapsulePtr((value:Value("Hello, Juiz!"), option: []))
 ```
 
@@ -564,6 +680,33 @@ ecs:
     bind:
       - name: talker0
         type_name: talker_cpp
+    auto_start: false
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```yaml
+name: talker_ec
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_hs:
+      language: "haskell"
+      path: "./build/plugins"
+processes:
+  - type_name: talker_hs
+    name: talker0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker0
+        type_name: talker_hs
     auto_start: false
 ```
 
@@ -682,6 +825,32 @@ juiz connection create -t push `
   "http://127.0.0.1:8001/process/talker0::talker_cpp" `
   arg1 `
   "http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"
+```
+
+</TabItem>
+</Tabs>
+
+</TabItem>
+<TabItem label="Haskell">
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker0::talker_hs" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener_hs0::listener_hs"
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz connection create -t push \
+  "http://127.0.0.1:8001/process/talker0::talker_hs" \
+  arg1 \
+  "http://127.0.0.1:8000/process/listener_hs0::listener_hs"
 ```
 
 </TabItem>

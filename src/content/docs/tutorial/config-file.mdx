@@ -23,8 +23,8 @@ In this chapter you write the Process and Container so far into one configuratio
 
 ## Prepare the project
 
-Keep using the project you created in chapters 1 and 2 (`my_juiz_rust` for Rust, `my_juiz_python` for Python, `my_juiz_cpp` for C++).
-The file names and locations match the examples, so you can also follow along with a clone of the examples ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp)) built the same way.
+Keep using the project you created in chapters 1 and 2 (`my_juiz_rust` for Rust, `my_juiz_python` for Python, `my_juiz_cpp` for C++, `my_juiz_hs` for Haskell).
+The file names and locations match the examples, so you can also follow along with a clone of the examples ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp), [Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell)) built the same way.
 
 In this chapter you create a new configuration file named `tutorial.conf` at the root of the project.
 
@@ -145,6 +145,44 @@ containers:
 ```
 
 </TabItem>
+<TabItem label="Haskell">
+
+```yaml title="tutorial.conf"
+name: tutorial
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    increment_process_hs:
+      language: "haskell"
+      path: "./build/plugins"
+  container_factories:
+    example_container_hs:
+      language: "haskell"
+      path: "./build/plugins"
+      processes:
+        example_container_hs_increment:
+          path: "./build/plugins"
+        example_container_hs_get:
+          path: "./build/plugins"
+processes:
+  - type_name: increment_process_hs
+    name: inc0
+  - type_name: increment_process_hs
+    name: inc1
+containers:
+  - type_name: example_container_hs
+    name: counter0
+    processes:
+      - type_name: example_container_hs_increment
+        name: increment0
+      - type_name: example_container_hs_get
+        name: get0
+```
+
+</TabItem>
 </Tabs>
 
 Configuration files are written in YAML. Let's go through it from the top.
@@ -188,6 +226,12 @@ Always write `language: python`. ContainerProcesses use the same language as the
 
 For the type name `increment_process_cpp`, juiz loads `libincrement_process_cpp.so` (`libincrement_process_cpp.dylib` on macOS, `increment_process_cpp.dll` on Windows) from `./build/plugins`.
 Always write `language: "c++"` (note that this differs from `-l cpp` on the command line). ContainerProcesses use the same language as their parent Container.
+
+</TabItem>
+<TabItem label="Haskell">
+
+For the type name `increment_process_hs`, juiz loads `libincrement_process_hs.so` (`libincrement_process_hs.dylib` on macOS) from `./build/plugins`.
+Always write `language: "haskell"`. ContainerProcesses use the same language as their parent Container.
 
 </TabItem>
 </Tabs>
@@ -249,6 +293,16 @@ juiz container-process list
 ```
 
 </TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/inc0::increment_process_hs", "http://127.0.0.1:8000/process/inc1::increment_process_hs"]
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_hs_increment:counter0", "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:counter0"]
+```
+
+</TabItem>
 </Tabs>
 
 The order may change from run to run.
@@ -294,6 +348,20 @@ juiz process call "http://127.0.0.1:8000/process/inc1::increment_process_cpp" '{
 juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:counter0" '{"arg1": 5}' -p
 # => CapsulePtr((value:Value(5), option: []))
 juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(5), option: []))
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/inc0::increment_process_hs" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz process call "http://127.0.0.1:8000/process/inc1::increment_process_hs" '{"arg1": 10}' -p
+# => CapsulePtr((value:Value(11), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_hs_increment:counter0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:counter0" '{}' -p
 # => CapsulePtr((value:Value(5), option: []))
 ```
 
@@ -348,6 +416,19 @@ containers:
 `create_container` takes `3` out of the `CapsuleMap` it receives with `args.get_int("value")`.
 
 </TabItem>
+<TabItem label="Haskell">
+
+```yaml ins={4}
+containers:
+  - type_name: example_container_hs
+    name: counter0
+    value: 3
+    processes:
+```
+
+`3` is passed to the `value` parameter of the `create` function (the one declared with `addIntArg "value" ...` in `manifest`).
+
+</TabItem>
 </Tabs>
 
 Stop `juiz` with Ctrl+C, start it again, and call `get`. It returns `3`.
@@ -373,6 +454,14 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 
 ```sh
 juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(3), option: []))
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:counter0" '{}' -p
 # => CapsulePtr((value:Value(3), option: []))
 ```
 
@@ -461,6 +550,30 @@ containers:
         p_apply:
           arg1: 5
       - type_name: example_container_cpp_get
+        name: get0
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```yaml ins={4-5,14-15}
+processes:
+  - type_name: increment_process_hs
+    name: inc0
+    p_apply:
+      arg1: 10
+  - type_name: increment_process_hs
+    name: inc1
+containers:
+  - type_name: example_container_hs
+    name: counter0
+    value: 3
+    processes:
+      - type_name: example_container_hs_increment
+        name: increment0
+        p_apply:
+          arg1: 5
+      - type_name: example_container_hs_get
         name: get0
 ```
 
@@ -600,6 +713,36 @@ curl.exe -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifie
 </Tabs>
 
 </TabItem>
+<TabItem label="Haskell">
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_hs" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_hs_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_hs" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_hs_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+</Tabs>
+
+</TabItem>
 </Tabs>
 
 <Aside type="caution" title="Using curl on Windows">
@@ -608,7 +751,7 @@ Write `curl.exe` to run the curl that ships with Windows (this works the same wa
 The `'{}'` passed here contains no `"`, so it works as is in Windows PowerShell 5.1. When you pass JSON containing `"` with `-d`, write a `\` before each `"`, as in `'{\"arg1\": 3}'`, just as with `juiz process call`.
 </Aside>
 
-`inc0` adds 1 to the 10 in `arg1` and returns `11`. If you execute `inc1`, which has no `p_apply`, the same way, the argument's default value is used. The default is 0 in Rust and Python, so it returns `1`; in C++ you set it to 1 in `manifest()` in chapter 1, so it returns `2`.
+`inc0` adds 1 to the 10 in `arg1` and returns `11`. If you execute `inc1`, which has no `p_apply`, the same way, the argument's default value is used. The default is 0 in Rust and Python, so it returns `1`; in C++ and Haskell you set it to 1 in `manifest()` / `manifest` in chapter 1, so it returns `2`.
 `increment0` adds 5 to the counter that started at 3 and returns `8`.
 
 If `p_apply` names an argument the Process does not have, `juiz` stops with an error at startup.

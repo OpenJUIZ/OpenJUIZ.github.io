@@ -89,6 +89,40 @@ def example_container_python(initial_value: int = 0) -> PyContainer:
 ```
 
 </TabItem>
+<TabItem label="Haskell">
+
+```haskell
+-- ExampleContainerState.hs: the state type (put it in both the Container and the ContainerProcess libraries)
+module ExampleContainerState (ExampleContainer (..)) where
+
+import Data.IORef (IORef)
+import Data.Int (Int64)
+
+newtype ExampleContainer = ExampleContainer (IORef Int64)
+```
+
+```haskell
+-- ExampleContainer.hs
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+module ExampleContainer () where
+
+import Juiz
+import ExampleContainerState
+
+manifest :: ContainerManifest
+manifest = containerManifest "example_container_hs"
+  & addIntArg "value" "initial value" 0
+
+create :: Int64 -> IO ExampleContainer
+create value = ExampleContainer <$> newIORef value
+
+juizContainer 'create 'manifest
+```
+
+The arguments of `containerManifest` become the arguments of the function that creates the Container (it receives the values written under `containers` in the configuration file). Keep values you rewrite in an `IORef`.
+
+</TabItem>
 </Tabs>
 
 ## ContainerProcess
@@ -142,6 +176,30 @@ from juiz import juiz_container_process
 def example_container_python_get(container) -> int:
     return container.value
 ```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+module ExampleContainerIncrement () where
+
+import Juiz
+import ExampleContainerState
+
+manifest :: ProcessManifest
+manifest = containerProcessManifest "example_container_hs_increment" "example_container_hs"
+  & addIntArg "arg1" "value to be added" 1
+
+increment :: ExampleContainer -> Int64 -> IO Int64
+increment (ExampleContainer ref) arg1 = atomicModifyIORef' ref (\v -> (v + arg1, v + arg1))
+
+juizContainerProcess 'increment 'manifest
+```
+
+The second argument of `containerProcessManifest` is the type name of the Container to bind to.
+Use the same type from the same module for the state in both the Container library and the ContainerProcess library (a different type causes an error). To put them in one library, use `juizComponent` ([tutorial chapter 5 (Haskell)](/tutorial/component/haskell/)).
 
 </TabItem>
 </Tabs>

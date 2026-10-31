@@ -1,0 +1,368 @@
+---
+title: "1. Your first Process (Haskell)"
+description: Create a cabal project from scratch, write a Process in Haskell that adds 1 to its argument, and run it.
+sidebar:
+  order: 4
+  label: Haskell
+prev:
+  link: /tutorial/first-process/
+  label: "1. Your first Process"
+next:
+  link: /tutorial/container/haskell/
+  label: "2. Keeping state (Haskell)"
+---
+
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
+
+In this chapter you create a cabal project from an empty directory, write a Process in Haskell that adds 1 to its argument and returns it, and run it.
+What you build is the same as `process/IncrementProcess.hs` in the [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) examples.
+
+<Aside type="tip" title="What you will learn">
+- How to set up a cabal project for writing Processes (how to write `cabal.project` and the `.cabal` file)
+- A Process is an idempotent function that takes arguments and returns a result
+- A Process has a "type name" and an "instance name"
+- How to call a Process from outside and get the result back (call)
+</Aside>
+
+<Aside type="note" title="On Windows">
+The Haskell tutorial is written for Linux and macOS.
+Haskell also works on Windows from 0.0.27, but the way the DLL is built differs (`options: standalone` and a `.def` file), and a Container and its ContainerProcesses must be put into one Component. See the "Windows" tab of [Haskell in Language packages](/getting-started/packages/#haskell).
+</Aside>
+
+## Before you start
+
+Prepare the following (Linux or macOS).
+
+- The `juiz` command, installed either with pip or with cargo as described in [Installation](/getting-started/install/)
+- GHC 9.6 or later and cabal. You can install them with [GHCup](https://www.haskell.org/ghcup/)
+- libjuiz_sdk at the same version as `juiz`
+- The juiz source at the same version as `juiz` (for hsjuiz, the Haskell library)
+
+Haskell Processes are written with hsjuiz, juiz's Haskell library, and built against libjuiz_sdk, the shared library of functions that pass values to and from juiz.
+hsjuiz is waiting to be published on Hackage, so for now you get the juiz source at the tag of your `juiz` version and use its `bindings/hsjuiz`.
+
+Check the version of `juiz`, then extract libjuiz_sdk of the same version into `~/.juiz/sdk/<version>` and get the juiz source into `~/juiz-<version>` (to download libjuiz_sdk by hand, see [Language packages](/getting-started/packages/#c-and-haskell-libjuiz_sdk)).
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --version
+# => juiz 0.0.28
+ghc --version
+# => The Glorious Glasgow Haskell Compilation System, version 9.6.7
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.28
+ls ~/.juiz/sdk/0.0.28/lib
+# => libjuiz_sdk.so  ...
+git clone --depth 1 --branch v0.0.28 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.28
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --version
+# => juiz 0.0.28
+ghc --version
+# => The Glorious Glasgow Haskell Compilation System, version 9.6.7
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.28
+ls ~/.juiz/sdk/0.0.28/lib
+# => libjuiz_sdk.dylib  ...
+git clone --depth 1 --branch v0.0.28 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.28
+```
+
+</TabItem>
+</Tabs>
+
+Any GHC 9.6 or later is fine, even if it prints a different version.
+
+## Project layout
+
+In this chapter you create a project laid out like this.
+
+<FileTree>
+- my_juiz_hs/
+  - cabal.project where hsjuiz and libjuiz_sdk are
+  - my-juiz-hs.cabal build settings
+  - build.sh script that builds and collects the plugins into build/plugins
+  - process/
+    - IncrementProcess.hs the Process code
+</FileTree>
+
+In juiz, each Process is built as a shared library (`.so`, `.dylib`), and the `juiz` command loads it as a plugin.
+In Haskell, a shared library is made with a cabal `foreign-library`.
+In chapter 2 you add a Container to this project.
+
+First, create the directories.
+
+```sh
+mkdir my_juiz_hs
+cd my_juiz_hs
+mkdir process
+```
+
+Run all the following commands in `my_juiz_hs`.
+
+## Write cabal.project
+
+Create `my_juiz_hs/cabal.project` with the following content. Replace `/home/me` with your home directory (on macOS it looks like `/Users/me`; `~` cannot be used in `cabal.project`).
+
+```txt title="cabal.project"
+-- build this project together with hsjuiz from the juiz source
+packages: . /home/me/juiz-0.0.28/bindings/hsjuiz
+
+-- hsjuiz uses only packages that come with GHC, so the Hackage index is not used (no cabal update needed)
+active-repositories: :none
+
+-- hsjuiz links to libjuiz_sdk
+package hsjuiz
+  extra-lib-dirs: /home/me/.juiz/sdk/0.0.28/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.28/lib
+```
+
+| Part | Meaning |
+| --- | --- |
+| `packages` | The packages built together. `.` is this project; the other is hsjuiz in the juiz source you got in "Before you start". **Use the source of the same version as `juiz --version`** |
+| `active-repositories: :none` | Keeps cabal from fetching packages from Hackage. hsjuiz uses only packages that come with GHC (`base`, `text`, `containers`, `template-haskell` and so on), so it builds without `cabal update` |
+| `extra-lib-dirs` under `package hsjuiz` | Where libjuiz_sdk, which hsjuiz links to, is |
+| `ghc-options` under `package hsjuiz` | The rpath. GHC needs it to load libjuiz_sdk together with hsjuiz when it runs Template Haskell. The built plugins also look for libjuiz_sdk there |
+
+## Write the .cabal file
+
+Create `my_juiz_hs/my-juiz-hs.cabal` with the following content.
+
+```txt title="my-juiz-hs.cabal"
+cabal-version:      3.0
+name:               my-juiz-hs
+version:            0.1.0.0
+build-type:         Simple
+
+-- settings shared by all juiz plugins
+common plugin
+    default-language: Haskell2010
+    build-depends:    base >=4.18 && <5
+                    , hsjuiz
+    ghc-options:      -Wall -threaded
+
+-- Chapter 1: a Process that adds 1 to its argument
+foreign-library increment_process_hs
+    import:           plugin
+    type:             native-shared
+    hs-source-dirs:   process
+    other-modules:    IncrementProcess
+```
+
+Let's go through it from the top.
+
+| Part | Meaning |
+| --- | --- |
+| `cabal-version`, `name`, `version`, `build-type` | Required fields of a cabal package. `name` is the package name and is not visible to juiz |
+| `common plugin` | Settings shared by the plugins. They are pulled in with `import: plugin`, so you don't repeat them for every Process or Container you add |
+| `build-depends: base >=4.18 && <5, hsjuiz` | Depends on hsjuiz. `base >=4.18` means GHC 9.6 or later |
+| `ghc-options: -threaded` | juiz calls Processes from worker threads, so the `-threaded` RTS is required. Without it, loading fails with an error |
+| `foreign-library increment_process_hs` | Builds one shared library. The file is `libincrement_process_hs.so` on Linux and `libincrement_process_hs.dylib` on macOS |
+| `type: native-shared` | This is the format `juiz` can load |
+| `hs-source-dirs`, `other-modules` | Where the sources are and which modules go in. This puts in `process/IncrementProcess.hs` |
+
+<Aside type="tip">
+Give the `foreign-library` (`increment_process_hs`) the same name as the Process type name you write in `manifest` below.
+The configuration file used in chapter 3 builds the file name `libincrement_process_hs.so` from the type name `increment_process_hs` to find it.
+</Aside>
+
+## Write the Process code
+
+Create `process/IncrementProcess.hs` with the following content. It is a Process that adds 1 to the argument `arg1` and returns it.
+
+```haskell title="process/IncrementProcess.hs"
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+-- | A Process that returns arg1 plus 1 (increment_process_hs).
+module IncrementProcess () where
+
+import Juiz
+
+manifest :: ProcessManifest
+manifest = processManifest "increment_process_hs"
+  & description "Adds 1 to arg1."
+  & addIntArg "arg1" "value to be incremented" 1
+
+increment :: Int64 -> IO Int64
+increment arg1 = pure (arg1 + 1)
+
+juizProcess 'increment 'manifest
+```
+
+| Part | Meaning |
+| --- | --- |
+| `OverloadedStrings`, `TemplateHaskell` | Extensions for writing strings as `Text` and for using `juizProcess` at the end |
+| `module IncrementProcess () where` | Nothing is exported. `juizProcess` generates the functions juiz calls |
+| `import Juiz` | Imports hsjuiz. `Int64` and `Text` are also available from it |
+| `manifest` | The Process's description. The string in `processManifest "increment_process_hs"` becomes the Process **type name** |
+| `addIntArg "arg1" "value to be incremented" 1` | Declares the integer argument `arg1`, with a description and a default value (1) |
+| `increment :: Int64 -> IO Int64` | The body of the Process. Arguments are passed in the order they are declared in `manifest` |
+| `juizProcess 'increment 'manifest` | Pairs the body with the manifest and exposes it so `juiz` can load it (Template Haskell generates the C functions juiz looks for) |
+
+As in C++, in Haskell you write the type name and the arguments (name, description, default value) in `manifest` yourself.
+If the number of arguments in the manifest differs from the number of arguments of the function, `juiz` reports an error when loading it.
+The result does not have to be in `IO`. Writing `increment :: Int64 -> Int64` with `increment arg1 = arg1 + 1` works the same way.
+
+## Build it
+
+cabal puts the shared libraries made by `foreign-library` deep inside `dist-newstyle`.
+To make it easy to tell `juiz` where they are, create a script `build.sh` that collects them into `build/plugins` after building.
+
+```bash title="build.sh"
+#!/usr/bin/env bash
+# build the Haskell plugins and collect them into build/plugins
+set -euo pipefail
+case "$(uname -s)" in
+    Darwin) ext=dylib ;;
+    *) ext=so ;;
+esac
+cabal build all
+mkdir -p build/plugins
+# for each foreign-library NAME in my-juiz-hs.cabal, copy lib<NAME>.so (.dylib on macOS)
+for name in $(sed -n -E 's/^foreign-library[[:space:]]+//p' my-juiz-hs.cabal); do
+    find dist-newstyle -name "lib$name.$ext" -type f -exec cp {} build/plugins/ \;
+done
+ls build/plugins
+```
+
+Make it executable, then build.
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+chmod +x build.sh
+./build.sh
+# => libincrement_process_hs.so
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+chmod +x build.sh
+./build.sh
+# => libincrement_process_hs.dylib
+```
+
+</TabItem>
+</Tabs>
+
+The first build also builds hsjuiz, so it takes a while.
+If a path in `cabal.project` is wrong, `cabal build` stops because it cannot find hsjuiz or libjuiz_sdk. In that case, check the locations and versions you prepared in "Before you start".
+
+<Aside type="caution">
+The built plugins refer to the hsjuiz shared library inside `dist-newstyle`.
+If you delete `dist-newstyle` or switch GHC, run `./build.sh` again.
+</Aside>
+
+<Aside type="note" title="If linking fails on macOS">
+If the Command Line Tools installed are newer than the selected Xcode, GHC's link step can fail with `tapi error: ... unknown architecture`.
+Build with the Command Line Tools' linker, like `DEVELOPER_DIR=/Library/Developer/CommandLineTools ./build.sh` ([issue #143](https://github.com/OpenJUIZ/juiz/issues/143)).
+</Aside>
+
+## Run it
+
+Start `juiz` with the file given to `--process`.
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --process ./build/plugins/libincrement_process_hs.so -l haskell -e -1 -d
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./build/plugins/libincrement_process_hs.dylib -l haskell -e -1 -d
+```
+
+</TabItem>
+</Tabs>
+
+The options mean the following.
+
+| Option | Meaning |
+| --- | --- |
+| `--process <path>` | Load the Process file |
+| `-l <language>` | The language of the file (`rust` / `python` / `cpp` / `haskell`, `rust` by default). For Haskell, add `-l haskell` |
+| `-1` | Create one instance from the loaded Process |
+| `-e` | Run the created instance once with the default arguments |
+| `-d` | Start the HTTP broker on port 8000 and keep running (stop with Ctrl+C) |
+
+Notice that "loading" and "creating an instance" are separate steps.
+Loading a file makes juiz learn the Process **type** (how to make it). With `-1`, juiz creates one **instance** from that type.
+The instance name is the type name followed by `0` (`increment_process_hs0`).
+You can also create many instances with different names from the same type (covered in chapter 3).
+
+## Call it from outside
+
+Leave `juiz` running, open another terminal, and call the Process.
+First, list the running Processes.
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment_process_hs0::increment_process_hs"]
+```
+
+The URL shown is the **ID** of this Process.
+`http://127.0.0.1:8000` is where the Process lives (the broker), and the part after `process/` is "instance name`::`type name".
+With [namespaces](/guides/namespace/), a namespace such as `robot1/` comes before the instance name. Without them, it looks like the above.
+
+Call the Process with this ID and arguments (call). Arguments are passed as JSON.
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/increment_process_hs0::increment_process_hs" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+You passed `3` and got `4` back. `-p` prints the result.
+Also check that calling it again with the same argument always returns the same result.
+
+### Call it from a browser
+
+The HTTP broker started with `-d` also serves Swagger UI. Open this URL in a browser.
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+Open `PATCH /api/process/call` in the list, press "Try it out", enter the following, and press "Execute" to get the result.
+
+- identifier: `core://core/process/increment_process_hs0::increment_process_hs`
+- Request body: `{"arg1": 3}`
+
+<Aside>
+When calling from Swagger UI, use an ID of the form `core://core/...`, which points to a Process inside the broker itself.
+</Aside>
+
+Both the `juiz` command and Swagger UI just call the same API over HTTP.
+So any program that speaks HTTP, in any language, can call a Process and get the result.
+This way of using juiz like a server and client is called **call**.
+
+## A Process is an idempotent function
+
+`increment_process_hs` only takes an argument and returns a result.
+It does not read or write any external state, so the same argument always gives the same result (it is idempotent).
+Thanks to this, Processes are easy to test, and their behavior does not change when you connect them later or move them to another machine.
+In Haskell, making the result a type without `IO` shows in the type that there are no side effects.
+
+## Try it yourself
+
+- Change the body so that it doubles the value instead of adding 1. Rebuild with `./build.sh` and restart `juiz`; `{"arg1": 3}` should return `6`.
+- Add a Process `decrement_process_hs` that subtracts 1. Create `process/DecrementProcess.hs` and add `foreign-library decrement_process_hs` to `my-juiz-hs.cabal`. The answer is [`process/DecrementProcess.hs`](https://github.com/OpenJUIZ/juiz_examples_haskell/blob/main/process/DecrementProcess.hs) in the examples.
+
+## Summary
+
+- A Haskell Process is written with hsjuiz and built as a shared library with a cabal `foreign-library`. Use hsjuiz and libjuiz_sdk of the same version as `juiz`.
+- Write where hsjuiz and libjuiz_sdk are in `cabal.project`, and gather the shared plugin settings in a `common` stanza in the `.cabal` file, so that a Process takes only a few lines to add.
+- A Process is just an idempotent function that takes arguments and returns a result. In Haskell, you write the type name and arguments in `manifest` and expose it with `juizProcess`.
+- juiz loads a file to learn the Process **type**, and creates named **instances** from it.
+- A running Process has a URL-shaped ID, and you can call it from outside with the ID and arguments (call).
+
+In the next chapter, you add a counter Container to this project and learn how to write components that keep state. Go on to [Keeping state: Container and ContainerProcess (Haskell)](/tutorial/container/haskell/).

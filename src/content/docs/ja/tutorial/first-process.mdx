@@ -16,7 +16,7 @@ import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 書くコードは短い関数ひとつですが、juiz はそれを読み込んで、ネットワーク越しに呼び出せる部品にしてくれます。
 
 <Aside type="tip" title="この章で学ぶこと">
-- Process を書くプロジェクトの作り方(`Cargo.toml`・`pyproject.toml`・`CMakeLists.txt` の書き方)
+- Process を書くプロジェクトの作り方(`Cargo.toml`・`pyproject.toml`・`CMakeLists.txt`・`.cabal` の書き方)
 - Process は、引数を受け取って結果を返す冪等な関数であること
 - Process には「型名」と「インスタンス名」があること
 - 外から Process を呼び出して結果を受け取る使い方(call)
@@ -28,11 +28,9 @@ import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 	<LinkCard title="Rust" href="/ja/tutorial/first-process/rust/" description="Cargo のワークスペースを作り、共有ライブラリとしてビルドします。" />
 	<LinkCard title="Python" href="/ja/tutorial/first-process/python/" description="pyproject.toml と venv を用意し、.py ファイルをそのまま読み込ませます。" />
 	<LinkCard title="C++" href="/ja/tutorial/first-process/cpp/" description="CMakeLists.txt を書き、libjuiz_sdk にリンクしてビルドします。" />
+	<LinkCard title="Haskell" href="/ja/tutorial/first-process/haskell/" description="cabal のプロジェクトを作り、foreign-library として共有ライブラリにビルドします。" />
 </CardGrid>
 
 ここで作るプロジェクトは、第 2 章で Container を足し、第 3 章で設定ファイルを足して育てていきます。
-ファイルの名前と置き場所は、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp))とそろえてあるので、途中で迷ったらサンプル集の同じ場所のファイルと見比べてください。
+ファイルの名前と置き場所は、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp)・[Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell))とそろえてあるので、途中で迷ったらサンプル集の同じ場所のファイルと見比べてください。
 
-<Aside type="note">
-Haskell の書き方は [hsjuiz の README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) と [Haskell のクイックスタート](/ja/getting-started/quickstart/haskell/) を見てください。
-</Aside>

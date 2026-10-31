@@ -1,0 +1,383 @@
+---
+title: "2. Keeping state (Haskell)"
+description: Add a counter Container and ContainerProcesses to the cabal project from chapter 1, and learn how to handle state.
+sidebar:
+  order: 4
+  label: Haskell
+prev:
+  link: /tutorial/first-process/haskell/
+  label: "1. Your first Process (Haskell)"
+next:
+  link: /tutorial/config-file/
+  label: "3. Starting everything from a configuration file"
+---
+
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
+
+The Process in chapter 1 was an idempotent function that always returns the same result for the same arguments.
+But when you build parts for robots and IoT devices, you always end up with things you want to remember: a counter value, the current position of a motor, a connection to a camera.
+In this chapter you add a counter that remembers one integer to `my_juiz_hs`, the project you created in chapter 1.
+What you build is the same as `container/` in the [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) examples.
+
+<Aside type="tip" title="What you will learn">
+- State lives in a **Container**, never in a Process
+- Only the **ContainerProcesses** bound to a Container touch its state
+- One Container can have several ContainerProcesses with different roles
+- How to write the `.cabal` file so that ContainerProcesses share the state type
+</Aside>
+
+## Project layout
+
+In this chapter you add `container/` to the project from chapter 1, so that it looks like this.
+
+<FileTree>
+- my_juiz_hs/
+  - cabal.project unchanged from chapter 1
+  - my-juiz-hs.cabal add three foreign-library stanzas
+  - build.sh unchanged from chapter 1
+  - example_container.conf configuration file for starting (new)
+  - process/
+    - IncrementProcess.hs the Process from chapter 1
+  - container/
+    - ExampleContainerState.hs the state type (shared by the three libraries)
+    - ExampleContainer.hs Container (the counter value)
+    - ExampleContainerIncrement.hs ContainerProcess (adds to the value)
+    - ExampleContainerGet.hs ContainerProcess (reads the value)
+</FileTree>
+
+Create the directory. Run all the following commands in `my_juiz_hs`.
+
+```sh
+cd my_juiz_hs
+mkdir container
+```
+
+## Write the Container
+
+A Container is the state itself. You write only the box that holds the value and the function that creates it.
+
+First, write the state type in its own module.
+The Container and the ContainerProcesses become separate shared libraries, so they all use the same type from the same module to agree on it.
+
+```haskell title="container/ExampleContainerState.hs"
+-- | The state type of example_container_hs.
+-- Put this module in both the Container library and the ContainerProcess libraries so the type matches.
+module ExampleContainerState
+  ( ExampleContainer (..)
+  ) where
+
+import Data.IORef (IORef)
+import Data.Int (Int64)
+
+-- | The value held. ContainerProcesses rewrite it, so it is kept in an IORef
+newtype ExampleContainer = ExampleContainer (IORef Int64)
+```
+
+Haskell values cannot be rewritten, so a value you want to change is kept in an `IORef`.
+
+```haskell title="container/ExampleContainer.hs"
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+-- | A Container that holds one integer (example_container_hs).
+-- The initial value is the value written in containers in the configuration file (0 if absent).
+module ExampleContainer () where
+
+import Juiz
+
+import ExampleContainerState
+
+manifest :: ContainerManifest
+manifest = containerManifest "example_container_hs"
+  & description "Holds an integer value."
+  & addIntArg "value" "initial value" 0
+
+create :: Int64 -> IO ExampleContainer
+create value = ExampleContainer <$> newIORef value
+
+juizContainer 'create 'manifest
+```
+
+| Part | Meaning |
+| --- | --- |
+| `containerManifest "example_container_hs"` | The Container's description. The string becomes the Container **type name** |
+| `addIntArg "value" "initial value" 0` | An argument of the function that creates the Container. If you write `value` under `containers` in the configuration file, it receives that value (chapter 3). Otherwise it is the default, 0 |
+| `create :: Int64 -> IO ExampleContainer` | The function that creates the Container. Its result becomes the Container's state |
+| `juizContainer 'create 'manifest` | Exposes it so `juiz` can load it |
+
+The Container has no code that changes or reads the value. A Container only says "what to remember".
+
+## Write the ContainerProcesses
+
+The code that changes or reads the state goes into ContainerProcesses.
+A ContainerProcess is a Process that **receives the Container's state as its first argument**. Which Container it pairs with is given by the Container type name.
+
+### increment: add to the value
+
+```haskell title="container/ExampleContainerIncrement.hs"
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+-- | A ContainerProcess that adds arg1 to the value of example_container_hs and returns the new value
+-- (example_container_hs_increment).
+module ExampleContainerIncrement () where
+
+import Juiz
+
+import ExampleContainerState
+
+manifest :: ProcessManifest
+manifest = containerProcessManifest "example_container_hs_increment" "example_container_hs"
+  & description "Adds arg1 to the value of the container."
+  & addIntArg "arg1" "value to be added" 1
+
+-- | Receives the Container's state as the first argument
+increment :: ExampleContainer -> Int64 -> IO Int64
+increment (ExampleContainer ref) arg1 = atomicModifyIORef' ref (\v -> (v + arg1, v + arg1))
+
+juizContainerProcess 'increment 'manifest
+```
+
+| Part | Meaning |
+| --- | --- |
+| `import ExampleContainerState` | Uses the same state type as the Container |
+| `containerProcessManifest "example_container_hs_increment" "example_container_hs"` | The ContainerProcess's description. The first string is the ContainerProcess type name, the second is the type name of the Container to bind to |
+| `ExampleContainer -> Int64 -> IO Int64` | Receives the Container's state as the first argument, followed by the arguments declared in `manifest` |
+| `atomicModifyIORef'` | Rewrites the value in the `IORef` and returns the new value |
+| `juizContainerProcess 'increment 'manifest` | Use `juizContainerProcess` instead of `juizProcess` to expose it |
+
+### get: read the value
+
+```haskell title="container/ExampleContainerGet.hs"
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+-- | A ContainerProcess that returns the value of example_container_hs (example_container_hs_get). It has no arguments.
+module ExampleContainerGet () where
+
+import Juiz
+
+import ExampleContainerState
+
+manifest :: ProcessManifest
+manifest = containerProcessManifest "example_container_hs_get" "example_container_hs"
+  & description "Returns the value of the container."
+
+get :: ExampleContainer -> IO Int64
+get (ExampleContainer ref) = readIORef ref
+
+juizContainerProcess 'get 'manifest
+```
+
+`get` has no arguments other than the Container; it just returns the value.
+
+This is how state (the Container) and behavior (the ContainerProcesses) are written separately.
+Only the ContainerProcesses bound to a Container can change or read its state.
+When you want to know "where does this value change?", you only need to look at the ContainerProcesses.
+
+<Aside type="note">
+juiz never calls ContainerProcesses of the same Container at the same time. This example uses `atomicModifyIORef'`, but `modifyIORef'` followed by `readIORef` works too.
+</Aside>
+
+## Add them to my-juiz-hs.cabal
+
+Add the following to the end of `my-juiz-hs.cabal`. It uses the `common plugin` stanza from chapter 1, so each `foreign-library` takes only a few lines.
+
+```txt title="my-juiz-hs.cabal (append at the end)"
+-- Chapter 2: a counter Container and its ContainerProcesses
+-- The state type (ExampleContainerState) goes into all three libraries
+foreign-library example_container_hs
+    import:           plugin
+    type:             native-shared
+    hs-source-dirs:   container
+    other-modules:    ExampleContainer
+                      ExampleContainerState
+
+foreign-library example_container_hs_increment
+    import:           plugin
+    type:             native-shared
+    hs-source-dirs:   container
+    other-modules:    ExampleContainerIncrement
+                      ExampleContainerState
+
+foreign-library example_container_hs_get
+    import:           plugin
+    type:             native-shared
+    hs-source-dirs:   container
+    other-modules:    ExampleContainerGet
+                      ExampleContainerState
+```
+
+All three libraries list `ExampleContainerState` in `other-modules`.
+juiz compares the Container's state type and the type a ContainerProcess receives by the type name with its module (`ExampleContainerState.ExampleContainer`). Binding to a Container of a different type makes the call fail with an error.
+
+## Build it
+
+The `build.sh` from chapter 1 collects every `foreign-library` in `my-juiz-hs.cabal`, so you can use it as is.
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+./build.sh
+# => libexample_container_hs.so
+#    libexample_container_hs_get.so
+#    libexample_container_hs_increment.so
+#    libincrement_process_hs.so
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+./build.sh
+# => libexample_container_hs.dylib
+#    libexample_container_hs_get.dylib
+#    libexample_container_hs_increment.dylib
+#    libincrement_process_hs.dylib
+```
+
+</TabItem>
+</Tabs>
+
+Everything, including the Process from chapter 1, ends up in `build/plugins`.
+
+## Run it
+
+First, start `juiz` with the files, as in chapter 1.
+Load the Container with `--container` and the ContainerProcess with `--container_process`.
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --container ./build/plugins/libexample_container_hs.so \
+     --container_process ./build/plugins/libexample_container_hs_increment.so -l haskell -1 -d
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --container ./build/plugins/libexample_container_hs.dylib \
+     --container_process ./build/plugins/libexample_container_hs_increment.dylib -l haskell -1 -d
+```
+
+</TabItem>
+</Tabs>
+
+With `-1`, juiz creates one instance from the loaded Container type and binds one ContainerProcess instance to it.
+As in chapter 1, the instance names are the type names followed by `0`: the Container is `example_container_hs0` and the ContainerProcess is `example_container_hs_increment0`.
+The Container starts at 0 (the default of `value`).
+
+## Call it from outside
+
+Leave `juiz` running and open another terminal. First, list the running ContainerProcesses.
+
+```sh
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/example_container_hs_increment0::example_container_hs_increment:example_container_hs0"]
+```
+
+A ContainerProcess ID has the form "instance name`::`type name`:`Container instance name", so you can tell from the ID which Container it is bound to.
+
+Call `increment` twice with the same argument.
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_hs_increment0::example_container_hs_increment:example_container_hs0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/example_container_hs_increment0::example_container_hs_increment:example_container_hs0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+You passed the same `{"arg1": 5}` both times, but the results differ.
+Unlike the Process in chapter 1, the result of a ContainerProcess depends not only on its arguments but also on the state of the Container.
+
+## Share a Container between two ContainerProcesses
+
+Next, read the value changed by `increment` with `get`.
+The command line can load only one ContainerProcess, so write "which ContainerProcesses to bind to which Container" in a configuration file.
+Create `my_juiz_hs/example_container.conf` with the following content.
+
+```yaml title="example_container.conf"
+name: example_container
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  container_factories:
+    example_container_hs:
+      language: "haskell"
+      path: "./build/plugins"
+      processes:
+        example_container_hs_increment:
+          path: "./build/plugins"
+        example_container_hs_get:
+          path: "./build/plugins"
+containers:
+  - type_name: example_container_hs
+    name: container0
+    processes:
+      - type_name: example_container_hs_increment
+        name: increment0
+      - type_name: example_container_hs_get
+        name: get0
+```
+
+The configuration file says:
+
+- Where to load the Container type and the ContainerProcess types from (`plugins`). juiz builds a file name such as `libexample_container_hs.so` (`libexample_container_hs.dylib` on macOS) from the type name and looks for it in the `path` directory. The language is written `language: "haskell"`
+- Create one Container instance, `container0` (`containers`)
+- Bind an `increment` instance `increment0` and a `get` instance `get0` to `container0`
+
+Chapter 3 covers how to write configuration files in detail. For now, just note the shape: "one Container with two ContainerProcesses hanging from it".
+
+Stop the running `juiz` with Ctrl+C, then start it again with the configuration file.
+
+```sh
+juiz -f example_container.conf -d
+```
+
+The list now has two ContainerProcesses (the order may change from run to run).
+
+```sh
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_hs_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:container0"]
+```
+
+Check the current value with `get`, call `increment` twice, then check the value with `get` again.
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:container0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_hs_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_hs_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:container0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+`get`, a different ContainerProcess, reads the value that `increment` changed. The two ContainerProcesses share the same Container.
+
+### Call it from a browser
+
+As in chapter 1, you can also call them from Swagger UI (`http://127.0.0.1:8000/docs/`).
+Open `PATCH /api/container_process/call` and, as identifier, enter the ID shown by `juiz container-process list` with the leading `http://127.0.0.1:8000` replaced by `core://core`.
+
+- identifier: `core://core/container_process/get0::example_container_hs_get:container0`
+- Request body: `{}`
+
+## Try it yourself
+
+- Pass a negative number to `increment` (such as `{"arg1": -3}`) and check that the value goes down.
+- Stop `juiz` with Ctrl+C, start it again and call `get`. The value is back at the start. The state exists only inside the running Container.
+- Add a ContainerProcess that resets the value to 0 (`example_container_hs_reset`). Create a file shaped like `get`, rewrite the value with `writeIORef ref 0` and return it. Do not forget to add it to both `my-juiz-hs.cabal` and `example_container.conf`.
+
+## Summary
+
+- State lives in a Container. A Container only says "what to remember"; it has no logic.
+- Only the ContainerProcesses bound to a Container read and write its state. A ContainerProcess receives the Container as its first argument.
+- In Haskell, write the state type in its own module and put it in the `other-modules` of both the Container library and the ContainerProcess libraries. Keep values you rewrite in an `IORef`.
+- One Container can have several ContainerProcesses with different roles, and they share the same state.
+- The result of a ContainerProcess depends on the Container's state as well as its arguments. Keeping idempotent Processes separate from state-handling ContainerProcesses makes it clear where state changes.
+
+In the next chapter you learn how to write the configuration file used in this chapter, and start the Process from chapter 1 and the Container from this chapter together from one configuration file. Move on to [Starting everything from a configuration file](/tutorial/config-file/).

@@ -15,11 +15,11 @@ Each chapter is built around running things yourself, so you can follow along wi
 
 <Steps>
 
-1. **[Your first Process](/tutorial/first-process/)** ([Rust](/tutorial/first-process/rust/), [Python](/tutorial/first-process/python/), [C++](/tutorial/first-process/cpp/))
+1. **[Your first Process](/tutorial/first-process/)** ([Rust](/tutorial/first-process/rust/), [Python](/tutorial/first-process/python/), [C++](/tutorial/first-process/cpp/), [Haskell](/tutorial/first-process/haskell/))
 
    Create a Process that adds 1 to its argument from an empty directory, run it, call it from outside and get the result back. You learn that a Process is an idempotent function, and how to use it with call.
 
-2. **[Keeping state: Container and ContainerProcess](/tutorial/container/)** ([Rust](/tutorial/container/rust/), [Python](/tutorial/container/python/), [C++](/tutorial/container/cpp/))
+2. **[Keeping state: Container and ContainerProcess](/tutorial/container/)** ([Rust](/tutorial/container/rust/), [Python](/tutorial/container/python/), [C++](/tutorial/container/cpp/), [Haskell](/tutorial/container/haskell/))
 
    Using a counter as the example, you learn a design where state lives in a Container and only ContainerProcesses touch it.
 
@@ -52,10 +52,10 @@ Each chapter is built around running things yourself, so you can follow along wi
 ## How to read each chapter
 
 - Each chapter starts with "What you will learn" and ends with a "Summary".
-- **Chapters 1 and 2 have a separate page for each language.** You create your own project from an empty directory, starting with how to write `Cargo.toml` (Rust), `pyproject.toml` (Python) or `CMakeLists.txt` (C++).
+- **Chapters 1 and 2 have a separate page for each language.** You create your own project from an empty directory, starting with how to write `Cargo.toml` (Rust), `pyproject.toml` (Python), `CMakeLists.txt` (C++), or `cabal.project` and the `.cabal` file (Haskell).
 - Chapter 3 keeps using the project from chapters 1 and 2.
-- From chapter 4 on, you clone and use the example repositories ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp)). Each chapter links to the corresponding files.
-- From chapter 3 on, code examples can be switched between Rust, Python and C++ with tabs. The language you pick is kept on every other page.
+- From chapter 4 on, you clone and use the example repositories ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp), [Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell)). Each chapter links to the corresponding files.
+- From chapter 3 on, code examples can be switched between Rust, Python, C++ and Haskell with tabs. The language you pick is kept on every other page.
 - If you already know what you want to do, you can also look it up in the [Guides](/guides/process/).
 
 ## Before you start
@@ -65,5 +65,6 @@ Install the `juiz` command by following [Installation](/getting-started/install/
 - For Rust, install the `juiz` command with `cargo install juiz_app`.
 - If you use only Python, chapter 1 installs `juiz-cli` into the project's venv, so you do not need to install it beforehand. No Rust toolchain is needed.
 - For C++, besides the `juiz` command (installed with either pip or cargo), you need CMake and a C++17 compiler. Chapter 1 sets up libjuiz_sdk.
+- For Haskell, besides the `juiz` command, you need GHC 9.6 or later and cabal (Linux or macOS). Chapter 1 sets up libjuiz_sdk and hsjuiz. Building the examples from chapter 4 on also uses Rust.
 
 When you are ready, move on to [Your first Process](/tutorial/first-process/).

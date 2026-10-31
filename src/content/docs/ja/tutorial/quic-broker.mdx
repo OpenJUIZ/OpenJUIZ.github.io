@@ -131,6 +131,29 @@ brokers:
 ```
 
 </TabItem>
+<TabItem label="Haskell">
+
+```yaml title="listener_qmp_full.conf"
+name: listener_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    listener_hs:
+      language: "haskell"
+      path: "./build/plugins"
+processes:
+  - type_name: listener_hs
+    name: listener_hs0
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5000
+```
+
+</TabItem>
 </Tabs>
 
 </details>
@@ -243,6 +266,37 @@ brokers:
 ```
 
 </TabItem>
+<TabItem label="Haskell">
+
+```yaml title="talker_qmp_full.conf"
+name: talker_qmp
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    talker_hs:
+      language: "haskell"
+      path: "./build/plugins"
+processes:
+  - type_name: talker_hs
+    name: talker_hs0
+ecs:
+  - name: ec0
+    type_name: main_loop_ec
+    rate: 1.0
+    bind:
+      - name: talker_hs0
+        type_name: talker_hs
+    auto_start: true
+brokers:
+  - type_name: qmp
+    name: qmp0
+    port: 5001
+```
+
+</TabItem>
 </Tabs>
 
 </details>
@@ -319,6 +373,26 @@ juiz -f listener_qmp.conf --process ./build/plugins/listener_cpp.dll -l cpp -1 -
 </Tabs>
 
 </TabItem>
+<TabItem label="Haskell">
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz -f listener_qmp.conf --process ./build/plugins/liblistener_hs.so -l haskell -1 -d
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz -f listener_qmp.conf --process ./build/plugins/liblistener_hs.dylib -l haskell -1 -d
+```
+
+</TabItem>
+</Tabs>
+
+</TabItem>
 </Tabs>
 
 ターミナル 3 から、`-s` に `qmp://` で始まるアドレスを指定して問い合わせます。
@@ -345,6 +419,14 @@ juiz -s qmp://127.0.0.1:5000 process list
 ```sh
 juiz -s qmp://127.0.0.1:5000 process list
 # => ["qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp"]
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz -s qmp://127.0.0.1:5000 process list
+# => ["qmp://127.0.0.1:5000/process/listener_hs0::listener_hs"]
 ```
 
 </TabItem>
@@ -376,6 +458,14 @@ juiz process list
 ```sh
 juiz process list
 # => ["http://127.0.0.1:8000/process/listener_cpp0::listener_cpp"]
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_hs0::listener_hs"]
 ```
 
 </TabItem>
@@ -449,6 +539,26 @@ juiz -f talker_qmp.conf --process ./build/plugins/talker_cpp.dll -l cpp -1 -r 1.
 </Tabs>
 
 </TabItem>
+<TabItem label="Haskell">
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz -f talker_qmp.conf --process ./build/plugins/libtalker_hs.so -l haskell -1 -r 1.0 -d
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz -f talker_qmp.conf --process ./build/plugins/libtalker_hs.dylib -l haskell -1 -r 1.0 -d
+```
+
+</TabItem>
+</Tabs>
+
+</TabItem>
 </Tabs>
 
 ターミナル 2 に、talker の表示が 1 秒ごとに出ます。ターミナル 3 から、5001 番に問い合わせて ID を確かめます。
@@ -475,6 +585,14 @@ juiz -s qmp://127.0.0.1:5001 process list
 ```sh
 juiz -s qmp://127.0.0.1:5001 process list
 # => ["qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp"]
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 process list
+# => ["qmp://127.0.0.1:5001/process/talker_hs0::talker_hs"]
 ```
 
 </TabItem>
@@ -597,6 +715,32 @@ juiz connection create -t push `
 </Tabs>
 
 </TabItem>
+<TabItem label="Haskell">
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz connection create -t push \
+  "qmp://127.0.0.1:5001/process/talker_hs0::talker_hs" \
+  arg1 \
+  "qmp://127.0.0.1:5000/process/listener_hs0::listener_hs"
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz connection create -t push \
+  "qmp://127.0.0.1:5001/process/talker_hs0::talker_hs" \
+  arg1 \
+  "qmp://127.0.0.1:5000/process/listener_hs0::listener_hs"
+```
+
+</TabItem>
+</Tabs>
+
+</TabItem>
 </Tabs>
 
 ターミナル 1 の listener が表示を始めます。つながりを持っている talker の側に問い合わせると、つなぐ先が `qmp://` になっていることがわかります。
@@ -623,6 +767,14 @@ juiz -s qmp://127.0.0.1:5001 connection list
 ```sh
 juiz -s qmp://127.0.0.1:5001 connection list
 # => ["connection://core://core/process/talker_cpp0::talker_cpp|arg1|qmp://127.0.0.1:5000/process/listener_cpp0::listener_cpp"]
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz -s qmp://127.0.0.1:5001 connection list
+# => ["connection://core://core/process/talker_hs0::talker_hs|arg1|qmp://127.0.0.1:5000/process/listener_hs0::listener_hs"]
 ```
 
 </TabItem>
@@ -655,6 +807,14 @@ juiz process call "qmp://127.0.0.1:5001/process/talker_python0::talker_python" '
 
 ```sh
 juiz process call "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" '{}' -p
+# => CapsulePtr((value:Value("Hello, Juiz!"), option: [function_name:call,class_name:process,]))
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz process call "qmp://127.0.0.1:5001/process/talker_hs0::talker_hs" '{}' -p
 # => CapsulePtr((value:Value("Hello, Juiz!"), option: [function_name:call,class_name:process,]))
 ```
 
