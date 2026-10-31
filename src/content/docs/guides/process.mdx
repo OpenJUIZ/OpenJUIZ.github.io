@@ -1,6 +1,6 @@
 ---
 title: Writing a Process
-description: Write a Process that adds 1 to its argument in Rust, C++ and Python.
+description: Write a Process that adds 1 to its argument in Rust, C++, Python and Haskell.
 sidebar:
   order: 1
 ---
@@ -61,6 +61,31 @@ def increment_process(arg1: int = 1) -> int:
 Just add the `@juiz_process` decorator to make it a Process. Define your own data types as dataclasses, and convert outputs to dicts with `asdict` before returning them.
 
 </TabItem>
+<TabItem label="Haskell">
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+module IncrementProcess () where
+
+import Juiz
+
+manifest :: ProcessManifest
+manifest = processManifest "increment_process_hs"
+  & description "Adds 1 to arg1."
+  & addIntArg "arg1" "value to be incremented" 1
+
+increment :: Int64 -> IO Int64
+increment arg1 = pure (arg1 + 1)
+
+juizProcess 'increment 'manifest
+```
+
+In Haskell, you use hsjuiz, write the manifest (type name and argument definitions) yourself, and expose it with `juizProcess`. Arguments are passed to the function in the order they are added to the manifest.
+The result can be `IO r` or a plain `r`. Build it as a shared library with a cabal `foreign-library` (`type: native-shared`, `ghc-options: -threaded`).
+For the types you can use and how to return errors, see the [hsjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz); for setting up a project, see [tutorial chapter 1 (Haskell)](/tutorial/first-process/haskell/).
+
+</TabItem>
 </Tabs>
 
 ## Running it on its own
@@ -91,7 +116,7 @@ juiz --process target/debug/increment_process.dll -l rust -e -1 -d
 </TabItem>
 </Tabs>
 
-- `-l` is the language (`rust` / `cpp` / `python`, default `rust`)
+- `-l` is the language (`rust` / `cpp` / `python` / `haskell`, default `rust`)
 - `-e` instantiates one loaded Process and runs it with its default arguments
 - `-1` creates one instance per loaded module
 - `-d` starts the HTTP broker after running and keeps waiting

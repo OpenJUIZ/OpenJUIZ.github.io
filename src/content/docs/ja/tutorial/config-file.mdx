@@ -23,8 +23,8 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 ## プロジェクトを用意する
 
-第 1 章・第 2 章で作ったプロジェクト(Rust は `my_juiz_rust`、Python は `my_juiz_python`、C++ は `my_juiz_cpp`)をそのまま使います。
-ファイルの名前と置き場所はサンプル集とそろえてあるので、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp))をクローンしてビルドしたものでも、同じ手順で進められます。
+第 1 章・第 2 章で作ったプロジェクト(Rust は `my_juiz_rust`、Python は `my_juiz_python`、C++ は `my_juiz_cpp`、Haskell は `my_juiz_hs`)をそのまま使います。
+ファイルの名前と置き場所はサンプル集とそろえてあるので、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp)・[Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell))をクローンしてビルドしたものでも、同じ手順で進められます。
 
 この章では、プロジェクトのルートに `tutorial.conf` という設定ファイルを新しく作ります。
 
@@ -145,6 +145,44 @@ containers:
 ```
 
 </TabItem>
+<TabItem label="Haskell">
+
+```yaml title="tutorial.conf"
+name: tutorial
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  process_factories:
+    increment_process_hs:
+      language: "haskell"
+      path: "./build/plugins"
+  container_factories:
+    example_container_hs:
+      language: "haskell"
+      path: "./build/plugins"
+      processes:
+        example_container_hs_increment:
+          path: "./build/plugins"
+        example_container_hs_get:
+          path: "./build/plugins"
+processes:
+  - type_name: increment_process_hs
+    name: inc0
+  - type_name: increment_process_hs
+    name: inc1
+containers:
+  - type_name: example_container_hs
+    name: counter0
+    processes:
+      - type_name: example_container_hs_increment
+        name: increment0
+      - type_name: example_container_hs_get
+        name: get0
+```
+
+</TabItem>
 </Tabs>
 
 設定ファイルは YAML で書きます。上から順に見ていきましょう。
@@ -188,6 +226,12 @@ option:
 
 型名 `increment_process_cpp` なら、`./build/plugins` の中の `libincrement_process_cpp.so`(macOS では `libincrement_process_cpp.dylib`、Windows では `increment_process_cpp.dll`)が読み込まれます。
 `language: "c++"` を必ず書いてください(コマンドラインの `-l cpp` とは書き方が違います)。ContainerProcess の言語は、親の Container と同じになります。
+
+</TabItem>
+<TabItem label="Haskell">
+
+型名 `increment_process_hs` なら、`./build/plugins` の中の `libincrement_process_hs.so`(macOS では `libincrement_process_hs.dylib`)が読み込まれます。
+`language: "haskell"` を必ず書いてください。ContainerProcess の言語は、親の Container と同じになります。
 
 </TabItem>
 </Tabs>
@@ -249,6 +293,16 @@ juiz container-process list
 ```
 
 </TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/inc0::increment_process_hs", "http://127.0.0.1:8000/process/inc1::increment_process_hs"]
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/increment0::example_container_hs_increment:counter0", "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:counter0"]
+```
+
+</TabItem>
 </Tabs>
 
 表示される順番は実行ごとに変わることがあります。
@@ -294,6 +348,20 @@ juiz process call "http://127.0.0.1:8000/process/inc1::increment_process_cpp" '{
 juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:counter0" '{"arg1": 5}' -p
 # => CapsulePtr((value:Value(5), option: []))
 juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(5), option: []))
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/inc0::increment_process_hs" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz process call "http://127.0.0.1:8000/process/inc1::increment_process_hs" '{"arg1": 10}' -p
+# => CapsulePtr((value:Value(11), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_hs_increment:counter0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:counter0" '{}' -p
 # => CapsulePtr((value:Value(5), option: []))
 ```
 
@@ -348,6 +416,19 @@ containers:
 `create_container` が受け取る `CapsuleMap` から、`args.get_int("value")` で `3` を取り出します。
 
 </TabItem>
+<TabItem label="Haskell">
+
+```yaml ins={4}
+containers:
+  - type_name: example_container_hs
+    name: counter0
+    value: 3
+    processes:
+```
+
+`create` 関数の引数 `value`(`manifest` で `addIntArg "value" ...` と宣言したもの)に `3` が渡されます。
+
+</TabItem>
 </Tabs>
 
 `juiz` を Ctrl+C で止めて起動し直し、`get` を呼び出すと `3` が返ってきます。
@@ -373,6 +454,14 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 
 ```sh
 juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(3), option: []))
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:counter0" '{}' -p
 # => CapsulePtr((value:Value(3), option: []))
 ```
 
@@ -461,6 +550,30 @@ containers:
         p_apply:
           arg1: 5
       - type_name: example_container_cpp_get
+        name: get0
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```yaml ins={4-5,14-15}
+processes:
+  - type_name: increment_process_hs
+    name: inc0
+    p_apply:
+      arg1: 10
+  - type_name: increment_process_hs
+    name: inc1
+containers:
+  - type_name: example_container_hs
+    name: counter0
+    value: 3
+    processes:
+      - type_name: example_container_hs_increment
+        name: increment0
+        p_apply:
+          arg1: 5
+      - type_name: example_container_hs_get
         name: get0
 ```
 
@@ -600,6 +713,36 @@ curl.exe -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifie
 </Tabs>
 
 </TabItem>
+<TabItem label="Haskell">
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_hs" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_hs_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_hs" \
+  -H "Content-Type: application/json" -d '{}'
+# => 11
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_hs_increment:counter0" \
+  -H "Content-Type: application/json" -d '{}'
+# => 8
+```
+
+</TabItem>
+</Tabs>
+
+</TabItem>
 </Tabs>
 
 <Aside type="caution" title="Windows で curl を使うとき">
@@ -608,7 +751,7 @@ Windows に最初から入っている Windows PowerShell 5.1 では、`curl` �
 ここで渡している `'{}'` には `"` が入っていないので、Windows PowerShell 5.1 でもこのまま動きます。`"` を含む JSON を `-d` で渡すときは、`juiz process call` のときと同じく `'{\"arg1\": 3}'` のように `"` の前に `\` を書いてください。
 </Aside>
 
-`inc0` は `arg1` の 10 に 1 を足して `11` を返します。`p_apply` を書いていない `inc1` を同じように実行すると、引数の既定値が使われます。既定値は Rust と Python では 0 なので `1` が、C++ では第 1 章の `manifest()` で 1 にしたので `2` が返ります。
+`inc0` は `arg1` の 10 に 1 を足して `11` を返します。`p_apply` を書いていない `inc1` を同じように実行すると、引数の既定値が使われます。既定値は Rust と Python では 0 なので `1` が、C++ と Haskell では第 1 章の `manifest()`・`manifest` で 1 にしたので `2` が返ります。
 `increment0` は、初期値 3 のカウンタに 5 を足して `8` を返します。
 
 `p_apply` に Process が持っていない引数の名前を書くと、`juiz` は起動時にエラーで止まります。

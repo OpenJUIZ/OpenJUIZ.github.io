@@ -1,6 +1,6 @@
 ---
 title: Process を書く
-description: 引数に 1 を足して返す Process を Rust、C++、Python で書きます。
+description: 引数に 1 を足して返す Process を Rust、C++、Python、Haskell で書きます。
 sidebar:
   order: 1
 ---
@@ -61,6 +61,31 @@ def increment_process(arg1: int = 1) -> int:
 `@juiz_process` デコレータを付けるだけで Process になります。独自のデータ型は dataclass で定義し、出力では `asdict` で dict に変換して返します。
 
 </TabItem>
+<TabItem label="Haskell">
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+module IncrementProcess () where
+
+import Juiz
+
+manifest :: ProcessManifest
+manifest = processManifest "increment_process_hs"
+  & description "Adds 1 to arg1."
+  & addIntArg "arg1" "value to be incremented" 1
+
+increment :: Int64 -> IO Int64
+increment arg1 = pure (arg1 + 1)
+
+juizProcess 'increment 'manifest
+```
+
+Haskell では hsjuiz を使い、manifest(型名と引数の定義)を自分で書いて、`juizProcess` で公開します。引数は manifest に足した順に関数へ渡されます。
+結果は `IO r` でも、IO の付かない `r` でもかまいません。cabal の `foreign-library`(`type: native-shared`、`ghc-options: -threaded`)で共有ライブラリとしてビルドします。
+使える型やエラーの返し方は [hsjuiz の README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz)、プロジェクトの作り方は [チュートリアル第 1 章(Haskell)](/ja/tutorial/first-process/haskell/) にあります。
+
+</TabItem>
 </Tabs>
 
 ## 単体で動かす
@@ -91,7 +116,7 @@ juiz --process target/debug/increment_process.dll -l rust -e -1 -d
 </TabItem>
 </Tabs>
 
-- `-l` は言語（`rust` / `cpp` / `python`、既定は `rust`）
+- `-l` は言語（`rust` / `cpp` / `python` / `haskell`、既定は `rust`）
 - `-e` はロードした Process を一つ実体化し、既定の引数で実行
 - `-1` はロードしたモジュールごとにインスタンスを一つ作成
 - `-d` は実行後に HTTP ブローカーを立てて待機

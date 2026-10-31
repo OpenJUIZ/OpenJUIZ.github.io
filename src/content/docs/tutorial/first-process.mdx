@@ -16,7 +16,7 @@ In this first chapter you start from an empty directory and run a Process that j
 The code you write is a single short function, but juiz loads it and turns it into a building block you can call over the network.
 
 <Aside type="tip" title="What you will learn">
-- How to set up a project for writing Processes (how to write `Cargo.toml`, `pyproject.toml` or `CMakeLists.txt`)
+- How to set up a project for writing Processes (how to write `Cargo.toml`, `pyproject.toml`, `CMakeLists.txt` or the `.cabal` file)
 - A Process is an idempotent function that takes arguments and returns a result
 - A Process has a "type name" and an "instance name"
 - How to call a Process from outside and get the result back (call)
@@ -28,11 +28,9 @@ How you set up a project differs a lot between languages, so this chapter and ch
 	<LinkCard title="Rust" href="/tutorial/first-process/rust/" description="Create a Cargo workspace and build the Process as a shared library." />
 	<LinkCard title="Python" href="/tutorial/first-process/python/" description="Set up pyproject.toml and a venv, and let juiz load the .py file directly." />
 	<LinkCard title="C++" href="/tutorial/first-process/cpp/" description="Write CMakeLists.txt and build against libjuiz_sdk." />
+	<LinkCard title="Haskell" href="/tutorial/first-process/haskell/" description="Create a cabal project and build it as a shared library with foreign-library." />
 </CardGrid>
 
 You grow the project you create here: chapter 2 adds a Container, and chapter 3 adds a configuration file.
-The file names and locations match the examples ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp)), so if you get stuck, compare your files with the ones in the same place in the examples.
+The file names and locations match the examples ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp), [Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell)), so if you get stuck, compare your files with the ones in the same place in the examples.
 
-<Aside type="note">
-For Haskell, see the [hsjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) and the [Haskell quick start](/getting-started/quickstart/haskell/).
-</Aside>

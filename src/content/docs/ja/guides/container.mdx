@@ -89,6 +89,40 @@ def example_container_python(initial_value: int = 0) -> PyContainer:
 ```
 
 </TabItem>
+<TabItem label="Haskell">
+
+```haskell
+-- ExampleContainerState.hs: 状態の型 (Container と ContainerProcess の両方のライブラリに入れる)
+module ExampleContainerState (ExampleContainer (..)) where
+
+import Data.IORef (IORef)
+import Data.Int (Int64)
+
+newtype ExampleContainer = ExampleContainer (IORef Int64)
+```
+
+```haskell
+-- ExampleContainer.hs
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+module ExampleContainer () where
+
+import Juiz
+import ExampleContainerState
+
+manifest :: ContainerManifest
+manifest = containerManifest "example_container_hs"
+  & addIntArg "value" "initial value" 0
+
+create :: Int64 -> IO ExampleContainer
+create value = ExampleContainer <$> newIORef value
+
+juizContainer 'create 'manifest
+```
+
+`containerManifest` の引数は、Container を作る関数の引数になります(設定ファイルの `containers` に書いた値を受け取ります)。書き換える値は `IORef` に入れます。
+
+</TabItem>
 </Tabs>
 
 ## ContainerProcess
@@ -142,6 +176,30 @@ from juiz import juiz_container_process
 def example_container_python_get(container) -> int:
     return container.value
 ```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```haskell
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+module ExampleContainerIncrement () where
+
+import Juiz
+import ExampleContainerState
+
+manifest :: ProcessManifest
+manifest = containerProcessManifest "example_container_hs_increment" "example_container_hs"
+  & addIntArg "arg1" "value to be added" 1
+
+increment :: ExampleContainer -> Int64 -> IO Int64
+increment (ExampleContainer ref) arg1 = atomicModifyIORef' ref (\v -> (v + arg1, v + arg1))
+
+juizContainerProcess 'increment 'manifest
+```
+
+`containerProcessManifest` の 2 つ目の引数が、結びつける Container の型名です。
+状態の型は、Container と ContainerProcess のライブラリで同じモジュールの同じ型を使ってください(型が違うとエラーになります)。1 つのライブラリにまとめる場合は `juizComponent` を使います([チュートリアル第 5 章(Haskell)](/ja/tutorial/component/haskell/))。
 
 </TabItem>
 </Tabs>

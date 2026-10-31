@@ -1,0 +1,368 @@
+---
+title: "1. はじめての Process(Haskell)"
+description: cabal のプロジェクトを 1 から作り、引数に 1 を足す Process を Haskell で書いて動かします。
+sidebar:
+  order: 4
+  label: Haskell
+prev:
+  link: /ja/tutorial/first-process/
+  label: "1. はじめての Process"
+next:
+  link: /ja/tutorial/container/haskell/
+  label: "2. 状態を持つ(Haskell)"
+---
+
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
+
+この章では、空のディレクトリから cabal のプロジェクトを作り、引数に 1 を足して返す Process を Haskell で書いて動かします。
+できあがるものは、サンプル集 [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) の `process/IncrementProcess.hs` と同じです。
+
+<Aside type="tip" title="この章で学ぶこと">
+- Process を書く cabal のプロジェクトの作り方(`cabal.project` と `.cabal` の書き方)
+- Process は、引数を受け取って結果を返す冪等な関数であること
+- Process には「型名」と「インスタンス名」があること
+- 外から Process を呼び出して結果を受け取る使い方(call)
+</Aside>
+
+<Aside type="note" title="Windows では">
+Haskell のチュートリアルは Linux と macOS の手順で書いています。
+Windows でも 0.0.27 から Haskell で書けますが、DLL の作り方(`options: standalone` と `.def` ファイル)と、Container と ContainerProcess を 1 つの Component にまとめる必要があることが違います。[言語ごとのパッケージの「Haskell」](/ja/getting-started/packages/#haskell) の「Windows」タブを見てください。
+</Aside>
+
+## 準備
+
+次のものを用意してください(Linux・macOS)。
+
+- `juiz` コマンド。[インストール](/ja/getting-started/install/) の、pip と cargo のどちらの入れ方でもかまいません
+- GHC 9.6 以降と cabal。[GHCup](https://www.haskell.org/ghcup/) で入れられます
+- `juiz` と同じ版の libjuiz_sdk
+- `juiz` と同じ版の juiz のソース(Haskell 用のライブラリ hsjuiz を使うため)
+
+Haskell の Process は、hsjuiz(juiz の Haskell 用のライブラリ)を使って書き、libjuiz_sdk(juiz と値を受け渡す関数の共有ライブラリ)にリンクしてビルドします。
+hsjuiz は Hackage への公開を待っているので、いまは juiz のソースを `juiz` と同じ版のタグで取得し、その中の `bindings/hsjuiz` を使います。
+
+`juiz` の版を確かめてから、同じ版の libjuiz_sdk を `~/.juiz/sdk/<版>` に展開し、juiz のソースを `~/juiz-<版>` に取得します(手でダウンロードする方法は [言語ごとのパッケージ](/ja/getting-started/packages/#c-と-haskell-の共通-libjuiz_sdk) にあります)。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --version
+# => juiz 0.0.28
+ghc --version
+# => The Glorious Glasgow Haskell Compilation System, version 9.6.7
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.28
+ls ~/.juiz/sdk/0.0.28/lib
+# => libjuiz_sdk.so  ...
+git clone --depth 1 --branch v0.0.28 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.28
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --version
+# => juiz 0.0.28
+ghc --version
+# => The Glorious Glasgow Haskell Compilation System, version 9.6.7
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.0.28
+ls ~/.juiz/sdk/0.0.28/lib
+# => libjuiz_sdk.dylib  ...
+git clone --depth 1 --branch v0.0.28 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.0.28
+```
+
+</TabItem>
+</Tabs>
+
+GHC は 9.6 以降なら、表示される版が違ってもかまいません。
+
+## プロジェクトの形
+
+この章では、次の形のプロジェクトを作ります。
+
+<FileTree>
+- my_juiz_hs/
+  - cabal.project hsjuiz と libjuiz_sdk の場所
+  - my-juiz-hs.cabal ビルドの設定
+  - build.sh ビルドして build/plugins に集めるスクリプト
+  - process/
+    - IncrementProcess.hs Process のコード
+</FileTree>
+
+juiz では、Process をひとつずつ共有ライブラリ(`.so`・`.dylib`)としてビルドし、`juiz` コマンドがそれをプラグインとして読み込みます。
+Haskell では、cabal の `foreign-library` で共有ライブラリを作ります。
+第 2 章では、このプロジェクトに Container を足します。
+
+まず、ディレクトリを作ります。
+
+```sh
+mkdir my_juiz_hs
+cd my_juiz_hs
+mkdir process
+```
+
+以降のコマンドは、すべて `my_juiz_hs` で実行します。
+
+## cabal.project を書く
+
+`my_juiz_hs/cabal.project` を、次の内容で作ります。`/home/me` は自分のホームディレクトリに読み替えてください(macOS では `/Users/me` のようになります。`cabal.project` では `~` を使えません)。
+
+```txt title="cabal.project"
+-- このプロジェクトと、juiz のソースにある hsjuiz をビルドする
+packages: . /home/me/juiz-0.0.28/bindings/hsjuiz
+
+-- hsjuiz は GHC に付いてくるパッケージだけを使うので、Hackage の索引は使わない(cabal update 不要)
+active-repositories: :none
+
+-- hsjuiz は libjuiz_sdk にリンクする
+package hsjuiz
+  extra-lib-dirs: /home/me/.juiz/sdk/0.0.28/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.0.28/lib
+```
+
+| 部分 | 意味 |
+| --- | --- |
+| `packages` | 一緒にビルドするパッケージです。`.` はこのプロジェクト、もう 1 つは準備で取得した juiz のソースの hsjuiz です。**`juiz --version` と同じ版のソースにしてください** |
+| `active-repositories: :none` | Hackage からパッケージを取りに行かないようにします。hsjuiz は GHC に付いてくるパッケージ(`base`・`text`・`containers`・`template-haskell` など)だけを使うので、`cabal update` をしなくてもビルドできます |
+| `package hsjuiz` の `extra-lib-dirs` | hsjuiz がリンクする libjuiz_sdk の場所です |
+| `package hsjuiz` の `ghc-options` | rpath です。Template Haskell を動かすときに、GHC が hsjuiz と一緒に libjuiz_sdk を読み込むために要ります。できあがったプラグインも、ここから libjuiz_sdk を探します |
+
+## .cabal を書く
+
+`my_juiz_hs/my-juiz-hs.cabal` を、次の内容で作ります。
+
+```txt title="my-juiz-hs.cabal"
+cabal-version:      3.0
+name:               my-juiz-hs
+version:            0.1.0.0
+build-type:         Simple
+
+-- juiz のプラグインに共通の設定
+common plugin
+    default-language: Haskell2010
+    build-depends:    base >=4.18 && <5
+                    , hsjuiz
+    ghc-options:      -Wall -threaded
+
+-- 第 1 章: 引数に 1 を足す Process
+foreign-library increment_process_hs
+    import:           plugin
+    type:             native-shared
+    hs-source-dirs:   process
+    other-modules:    IncrementProcess
+```
+
+上から順に見ていきます。
+
+| 部分 | 意味 |
+| --- | --- |
+| `cabal-version`・`name`・`version`・`build-type` | cabal のパッケージの決まりごとです。`name` はパッケージの名前で、juiz からは見えません |
+| `common plugin` | プラグインに共通の設定をまとめたものです。Process や Container を足すたびに同じ設定を書かずに済むよう、`import: plugin` で読み込みます |
+| `build-depends: base >=4.18 && <5, hsjuiz` | hsjuiz に依存します。`base >=4.18` は GHC 9.6 以降のことです |
+| `ghc-options: -threaded` | juiz は Process をワーカースレッドから呼ぶので、`-threaded` の RTS が必要です。付けないと、読み込むときにエラーになります |
+| `foreign-library increment_process_hs` | 共有ライブラリを 1 つ作ります。ファイル名は Linux では `libincrement_process_hs.so`、macOS では `libincrement_process_hs.dylib` になります |
+| `type: native-shared` | `juiz` が読み込めるのは、この形式です |
+| `hs-source-dirs`・`other-modules` | ソースの場所と、入れるモジュールです。`process/IncrementProcess.hs` を入れます |
+
+<Aside type="tip">
+`foreign-library` の名前(`increment_process_hs`)は、このあと `manifest` に書く Process の型名と同じにしておきます。
+第 3 章で使う設定ファイルは、型名 `increment_process_hs` から `libincrement_process_hs.so` というファイル名を作って探すからです。
+</Aside>
+
+## Process のコードを書く
+
+`process/IncrementProcess.hs` を、次の内容で作ります。引数 `arg1` に 1 を足して返す Process です。
+
+```haskell title="process/IncrementProcess.hs"
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+-- | arg1 に 1 を足して返す Process (increment_process_hs)。
+module IncrementProcess () where
+
+import Juiz
+
+manifest :: ProcessManifest
+manifest = processManifest "increment_process_hs"
+  & description "Adds 1 to arg1."
+  & addIntArg "arg1" "value to be incremented" 1
+
+increment :: Int64 -> IO Int64
+increment arg1 = pure (arg1 + 1)
+
+juizProcess 'increment 'manifest
+```
+
+| 部分 | 意味 |
+| --- | --- |
+| `OverloadedStrings`・`TemplateHaskell` | 文字列を `Text` として書くためと、最後の `juizProcess` を使うための拡張です |
+| `module IncrementProcess () where` | 外に出す名前はありません。juiz が呼ぶ関数は `juizProcess` が作ります |
+| `import Juiz` | hsjuiz を読み込みます。`Int64` や `Text` も、ここから使えます |
+| `manifest` | Process の説明書です。`processManifest "increment_process_hs"` の文字列が Process の**型名**になります |
+| `addIntArg "arg1" "value to be incremented" 1` | 整数の引数 `arg1` を宣言します。説明と既定値(1)も書きます |
+| `increment :: Int64 -> IO Int64` | Process の本体です。引数は、`manifest` で宣言した順に渡されます |
+| `juizProcess 'increment 'manifest` | 本体とマニフェストを組にして、`juiz` から読み込めるように公開します(Template Haskell で、juiz が探す C の関数を作ります) |
+
+C++ と同じく、Haskell でも型名と引数(名前・説明・既定値)を `manifest` に自分で書きます。
+マニフェストの引数の数と関数の引数の数が違うと、`juiz` が読み込むときにエラーになります。
+結果は `IO` でなくてもかまいません。`increment :: Int64 -> Int64` と書いて `increment arg1 = arg1 + 1` にしても同じように動きます。
+
+## ビルドする
+
+cabal は、`foreign-library` でできた共有ライブラリを `dist-newstyle` の奥のほうに置きます。
+`juiz` に場所を伝えやすいように、ビルドしたあと `build/plugins` に集めるスクリプト `build.sh` を作っておきます。
+
+```bash title="build.sh"
+#!/usr/bin/env bash
+# Haskell のプラグインをビルドし、build/plugins に集める
+set -euo pipefail
+case "$(uname -s)" in
+    Darwin) ext=dylib ;;
+    *) ext=so ;;
+esac
+cabal build all
+mkdir -p build/plugins
+# my-juiz-hs.cabal の foreign-library の名前 NAME ごとに、lib<NAME>.so(macOS は .dylib)を写す
+for name in $(sed -n -E 's/^foreign-library[[:space:]]+//p' my-juiz-hs.cabal); do
+    find dist-newstyle -name "lib$name.$ext" -type f -exec cp {} build/plugins/ \;
+done
+ls build/plugins
+```
+
+実行できるようにしてから、ビルドします。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+chmod +x build.sh
+./build.sh
+# => libincrement_process_hs.so
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+chmod +x build.sh
+./build.sh
+# => libincrement_process_hs.dylib
+```
+
+</TabItem>
+</Tabs>
+
+初回は hsjuiz のビルドも行うので、少し時間がかかります。
+`cabal.project` の場所を書き間違えると、`cabal build` が hsjuiz や libjuiz_sdk を見つけられずに止まります。そのときは、準備で取得した場所と版を確かめてください。
+
+<Aside type="caution">
+できあがったプラグインは、`dist-newstyle` の中にある hsjuiz の共有ライブラリを参照しています。
+`dist-newstyle` を消したり GHC を入れ替えたりしたら、もう一度 `./build.sh` を実行してください。
+</Aside>
+
+<Aside type="note" title="macOS でリンクに失敗するとき">
+選んでいる Xcode より新しい Command Line Tools が入っていると、GHC のリンクが `tapi error: ... unknown architecture` で失敗することがあります。
+`DEVELOPER_DIR=/Library/Developer/CommandLineTools ./build.sh` のように、Command Line Tools のリンカでビルドしてください([issue #143](https://github.com/OpenJUIZ/juiz/issues/143))。
+</Aside>
+
+## 動かす
+
+`--process` でファイルを指定して `juiz` を起動します。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --process ./build/plugins/libincrement_process_hs.so -l haskell -e -1 -d
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --process ./build/plugins/libincrement_process_hs.dylib -l haskell -e -1 -d
+```
+
+</TabItem>
+</Tabs>
+
+オプションの意味は次のとおりです。
+
+| オプション | 意味 |
+| --- | --- |
+| `--process <パス>` | Process のファイルを読み込む |
+| `-l <言語>` | ファイルの言語(`rust` / `python` / `cpp` / `haskell`、既定は `rust`)。Haskell では `-l haskell` を付ける |
+| `-1` | 読み込んだ Process から、インスタンスを 1 つ作る |
+| `-e` | 作ったインスタンスを、既定の引数で 1 回実行する |
+| `-d` | HTTP ブローカーを 8000 番ポートで立ち上げて待機する(Ctrl+C で終了) |
+
+ここで「読み込む」と「インスタンスを作る」が分かれていることに注目してください。
+ファイルを読み込むと、juiz は Process の**型**(作り方)を覚えます。`-1` を付けると、その型から**インスタンス**を 1 つ作ります。
+インスタンス名は、型名の後ろに `0` を付けた名前(`increment_process_hs0`)になります。
+同じ型から、名前の違うインスタンスをいくつも作ることもできます(第 3 章で扱います)。
+
+## 外から呼び出す
+
+`juiz` を起動したまま、別のターミナルを開いて Process を呼び出してみます。
+まず、動いている Process の一覧を見ます。
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment_process_hs0::increment_process_hs"]
+```
+
+表示された URL が、この Process の **ID** です。
+`http://127.0.0.1:8000` は Process がいる場所(ブローカー)、`process/` の後ろは「インスタンス名`::`型名」を表しています。
+[ネームスペース](/ja/guides/namespace/)を使うと、インスタンス名の前に `robot1/` のようにネームスペースが入ります。使わなければ上のとおりです。
+
+この ID と引数を指定して、Process を呼び出します(call)。引数は JSON で渡します。
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/increment_process_hs0::increment_process_hs" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+`3` を渡して `4` が返ってきました。`-p` は結果を表示するオプションです。
+何度呼び出しても、同じ引数なら同じ結果が返ることも確かめてみてください。
+
+### ブラウザから呼び出す
+
+`-d` で立ち上げた HTTP ブローカーは、Swagger UI も提供しています。ブラウザで次の URL を開きます。
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+一覧から `PATCH /api/process/call` を開き、「Try it out」を押して次のように入力し、「Execute」を押すと結果が返ってきます。
+
+- identifier: `core://core/process/increment_process_hs0::increment_process_hs`
+- Request body: `{"arg1": 3}`
+
+<Aside>
+Swagger UI で呼び出すときは、ブローカー自身の中にある Process を指す `core://core/...` という形の ID を使います。
+</Aside>
+
+`juiz` コマンドも Swagger UI も、HTTP で同じ API を呼んでいるだけです。
+つまり、HTTP を話せるプログラムなら、どの言語からでも Process を呼び出して結果を受け取れます。
+これが、juiz をサーバー・クライアントのように使う **call** という使い方です。
+
+## Process は冪等な関数
+
+`increment_process_hs` は、引数を受け取って結果を返すだけです。
+外部の状態を読み書きしないので、同じ引数を渡せばいつも同じ結果が返ります(冪等)。
+この性質のおかげで、Process はテストしやすく、あとでつないだり別のマシンに置いたりしても振る舞いが変わりません。
+Haskell では、結果を `IO` の付かない型にすれば、副作用がないことを型で示せます。
+
+## やってみよう
+
+- 本体を書き換えて、1 を足す代わりに 2 倍にして返すようにしてみましょう。`./build.sh` でビルドし直して `juiz` を起動し直すと、`{"arg1": 3}` に対して `6` が返ってくるはずです。
+- 1 を引く Process `decrement_process_hs` を足してみましょう。`process/DecrementProcess.hs` を作り、`my-juiz-hs.cabal` に `foreign-library decrement_process_hs` を足します。答えはサンプル集の [`process/DecrementProcess.hs`](https://github.com/OpenJUIZ/juiz_examples_haskell/blob/main/process/DecrementProcess.hs) にあります。
+
+## まとめ
+
+- Haskell の Process は、hsjuiz を使って書き、cabal の `foreign-library` で共有ライブラリとしてビルドします。hsjuiz と libjuiz_sdk は `juiz` と同じ版を使います。
+- `cabal.project` に hsjuiz のソースと libjuiz_sdk の場所を書き、`.cabal` の `common` にプラグインの共通の設定をまとめておくと、Process を数行で足せます。
+- Process は、引数を受け取って結果を返すだけの冪等な関数です。Haskell では `manifest` に型名と引数を書き、`juizProcess` で公開します。
+- juiz はファイルを読み込んで Process の**型**を覚え、そこから名前の付いた**インスタンス**を作ります。
+- 動いている Process には URL の形をした ID があり、ID と引数を指定して外から呼び出せます(call)。
+
+次の章では、このプロジェクトにカウンタの Container を足して、状態を持つ部品の書き方を学びます。[状態を持つ: Container と ContainerProcess(Haskell)](/ja/tutorial/container/haskell/) に進みましょう。
