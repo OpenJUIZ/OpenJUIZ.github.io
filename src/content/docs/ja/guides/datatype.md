@@ -1,6 +1,6 @@
 ---
 title: データ型
-description: Process の引数と戻り値に名前のついた型を付けます。IDL(JIDL)の文法、生成器、互換性の決まり、標準の型 juiz_std、型パッケージの配り方をまとめます。
+description: Process の引数と戻り値に名前のついた型を付けます。IDL(JIDL)の文法、生成器、互換性の決まり、標準の型 juiz_std、型パッケージの配り方、ROS 2 の型の取り込みをまとめます。
 sidebar:
   order: 8
 ---
@@ -10,7 +10,7 @@ Process の引数と戻り値には、`robot.geometry.Pose2D` のような**名�
 手を動かして試すには、[チュートリアル第 8 章](/ja/tutorial/datatype/) から始めてください。
 
 :::caution[juiz 0.0.23 以降]
-データ型は juiz 0.0.23 から使えます。このページの [標準の型 juiz_std](#標準の型-juiz_std)、import の探し先(`-I`)、`--extern` は 0.0.24 から使えます。
+データ型は juiz 0.0.23 から使えます。このページの [標準の型 juiz_std](#標準の型-juiz_std)、import の探し先(`-I`)、`--extern` は 0.0.24 から、[属性と定数](#属性と定数)と [ROS 2 の型の取り込み](#ros-2-の型を取り込む) は 0.0.26 から使えます。
 :::
 
 ## 考え方
@@ -103,6 +103,44 @@ record Robot {
 ```
 
 **すべてのフィールドに既定値を付けておく**と、引数を省いても値を作れ、後でフィールドを足しても古い型と読み合えるので扱いやすくなります(→ [互換性の決まり](#互換性の決まり))。
+
+### 属性と定数
+
+:::note[juiz 0.0.26 以降]
+属性と定数は、0.0.26 以降の `juiz idl` で使えます。
+:::
+
+名前に `.` を含む注釈(`@juiz.maxLength(10)` など)は、レコード・列挙・フィールドの**属性**になります(Avro のスキーマの属性として残ります)。juiz が意味を決めているのは次の `juiz.*` です。[ROS 2 の型を取り込む](#ros-2-の型を取り込む) と自動で付きますが、人が書く JIDL にも書けます。
+
+| 属性 | 付ける所 | 内容 |
+|---|---|---|
+| `@juiz.minimum(N)` / `@juiz.maximum(N)` | フィールド | 数の範囲。配列なら各要素に使う |
+| `@juiz.maxLength(N)` | フィールド | 文字列の長さ(文字数)の上限。配列なら各要素に使う |
+| `@juiz.minItems(N)` / `@juiz.maxItems(N)` | フィールド | 配列の要素の数(`bytes` ならバイト数) |
+| `@juiz.ros_type("uint8")` | フィールド | 取り込んだ ROS 2 の型の名前(記録のためだけ) |
+| `@juiz.constants([…])` | レコード | 定数の並び `{"name", "type", "value"}`。`type` は `boolean`・`int`・`long`・`float`・`double`・`string` |
+
+```text
+@juiz.constants([{"name": "MODE_A", "type": "int", "value": 1}])
+record Sample {
+  @juiz.minimum(0) @juiz.maximum(255) int mode = 1;
+  @juiz.maxLength(10) string label = "abc";
+  @juiz.minItems(3) @juiz.maxItems(3) array<double> xyz = [0.0, 0.0, 0.0];
+}
+```
+
+- 制約(`juiz.minimum` など)は、型で辞書を読むとき(呼び出し時の検査、既定値の検査、Rust の生成コードの `from_value`)に確かめます。Python・C++・Haskell・TypeScript の生成コードは確かめません。
+- 属性は指紋にも互換性の判定にも入りません(変えても同じ型です)。
+- 引数(`process` の引数)には属性を書けません。
+- 定数は各言語の生成コードの定数になります。
+
+| 言語 | `Sample` の定数 `MODE_A` |
+|---|---|
+| Rust | 関連定数 `Sample::MODE_A` |
+| Python | クラス変数 `Sample.MODE_A` |
+| C++ | `static constexpr` のメンバ `Sample::MODE_A` |
+| Haskell | 値 `sampleMODE_A` |
+| TypeScript | `SampleConstants.MODE_A`(`export const SampleConstants = { … } as const`) |
 
 ## 辞書での表し方
 
@@ -280,7 +318,7 @@ option:
 |---|---|---|
 | `juiz_std/common.jidl` | `juiz_std.common` | `Time {sec, nanosec}`、`Duration {sec, nanosec}`、`Header {stamp, frame_id}` |
 | `juiz_std/geometry.jidl` | `juiz_std.geometry` | `Point2D`、`Point3D`、`Vector2`、`Vector3`、`Quaternion`(既定は回転なし `w = 1`)、`Pose2D {position, theta}`、`Pose {position, orientation}`、`Twist2D {linear, angular}`、`Twist {linear, angular}`、`Pose2DStamped`、`PoseStamped` |
-| `juiz_std/sensor.jidl` | `juiz_std.sensor` | `ImageInfo {header, width, height, encoding}`(画素は `image` 型で別に渡す)、`Imu`、`LaserScan`、`Range` |
+| `juiz_std/sensor.jidl` | `juiz_std.sensor` | `ImageInfo {header, width, height, encoding}`(画素は `image` 型で別に渡す)、`Imu {header, orientation, angular_velocity, linear_acceleration, orientation_covariance, angular_velocity_covariance, linear_acceleration_covariance}`、`LaserScan {header, angle_min, angle_max, angle_increment, range_min, range_max, ranges, time_increment, scan_time, intensities}`、`Range {header, range, min_range, max_range, radiation_type, field_of_view}`(定数 `ULTRASOUND = 0`・`INFRARED = 1`) |
 
 ```text
 namespace my_robot;
@@ -302,6 +340,8 @@ record Goal {
 | TypeScript | `juiz-idl -g typescript juiz_std/geometry.jidl` |
 
 標準の型は一度出したら変えません(足すときは既定値つきのフィールドにします)。
+
+0.0.26 で、`Imu` に共分散 3 つ(`orientation_covariance`・`angular_velocity_covariance`・`linear_acceleration_covariance`、どれも 3×3 の行優先で 9 個の `double`)、`LaserScan` に `time_increment`・`scan_time`・`intensities`、`Range` に `radiation_type`・`field_of_view` と定数 `ULTRASOUND`・`INFRARED` を足し、ROS 2 の `sensor_msgs` と同じフィールドにしました。どれも既定値つきなので、指紋は変わりましたが 0.0.25 までの型とは両方向に互換で、そのままつながります。
 
 ## 型パッケージを配る
 
@@ -331,6 +371,83 @@ record Goal {
 
 型を変えるときは [型を変えるときの目安](#型を変えるときの目安) を見てください。既存のフィールドの型・名前・順番を変えると指紋が変わり、古い版とは別の型になります。パッケージの版を上げても、指紋が同じなら同じ型として扱われます。
 
+## ROS 2 の型を取り込む
+
+:::note[juiz 0.0.26 以降]
+`juiz idl import-ros2` は 0.0.26 から使えます。
+:::
+
+ROS 2 の `.msg`・`.srv`・`.idl` は、`juiz idl import-ros2`(`juiz-idl import-ros2` も同じ)で JIDL にできます。書き出した .jidl は、ふつうの JIDL として `juiz idl` で各言語の型にします。
+
+```sh
+# ROS 2 の環境 (AMENT_PREFIX_PATH) から参照先を探す
+source /opt/ros/humble/setup.bash
+juiz idl import-ros2 -o idl my_msgs/msg/Status.msg my_msgs/srv/SetMode.srv
+# 書き出した .jidl から各言語の型を作る
+juiz idl -I idl -g rust,python idl/ros2/my_msgs/msg/Status.jidl
+```
+
+| オプション | 内容 |
+|---|---|
+| `-o <dir>`(`--out-dir`) | 出力先(既定はカレントディレクトリ)。この下の `ros2/<パッケージ>/msg/<Name>.jidl`・`ros2/<パッケージ>/srv/<Name>.jidl` に書く |
+| `-I <dir>`(`--include-dir`、繰り返し可) | 参照しているメッセージの探し先。`<dir>/<パッケージ>/msg/<Name>.msg`(なければ `.idl`)を探す |
+| `--no-std-map` | 標準メッセージを juiz_std に置き換えない |
+
+- 入力の `.msg`・`.srv` は `<パッケージ>/msg/<Name>.msg`・`<パッケージ>/srv/<Name>.srv` の置き場所からパッケージ名と型名を決めます。`.idl` は rosidl が `.msg` / `.srv` から作る範囲だけ読めます。`.action` は読めません。
+- 型ごとに 1 つの .jidl を書き、名前空間は `ros2.<パッケージ>.msg` / `ros2.<パッケージ>.srv` です(例 `ros2.my_msgs.msg.Status`)。
+- 参照しているメッセージは、入力と同じパッケージの並び(`<パッケージ>/msg/` の親ディレクトリ)、`-I`、環境変数 `AMENT_PREFIX_PATH` の `<prefix>/share` の順に探し、見つけたものも書き出します。ROS 2 の標準メッセージは juiz に入っていないので、ROS 2 の環境を読み込むか `-I` で場所を教えます。
+- コメントは説明(`doc`)になります。既定値は書かれていればそれ、なければ ROS 2 と同じゼロ値なので、全フィールドに既定値があります。
+
+### 型の対応
+
+| ROS 2 | JIDL | 付く属性 |
+|---|---|---|
+| `bool` | `boolean` | |
+| `byte`・`char`・`int8`・`uint8`・`int16`・`uint16`・`int32` | `int` | `juiz.ros_type` と範囲(`int32` は付かない) |
+| `uint32`・`int64`・`uint64` | `long` | `juiz.ros_type`、`uint32`・`uint64` は範囲も(`uint64` は 2^63 以上を表せないので取り込み時に警告) |
+| `float32` / `float64` | `float` / `double` | |
+| `string`・`wstring` | `string` | `string<=N` は `juiz.maxLength` |
+| `T[]` / `T[N]` / `T[<=N]` | `array<T>` | 固定長は `juiz.minItems`・`juiz.maxItems`、長さ制限は `juiz.maxItems` |
+| `uint8[]`・`byte[]` | `bytes` | |
+| ほかのメッセージ `pkg/Name` | レコード `ros2.pkg.msg.Name` | |
+| 定数 `uint8 MODE_A=1` | 型には入らない | レコードの `juiz.constants`(→ [属性と定数](#属性と定数)) |
+
+`.srv` は、Request のフィールドを引数、Response を戻り値にした `process` 宣言と、レコード `<Name>_Request`・`<Name>_Response` になります。Process の名前は型名を snake_case にしたものです。
+
+```text
+// my_msgs/srv/AddTwoInts.srv (int64 a / int64 b / --- / int64 sum) から
+namespace ros2.my_msgs.srv;
+
+record AddTwoInts_Request {
+  @juiz.ros_type("int64") long a = 0;
+  @juiz.ros_type("int64") long b = 0;
+}
+
+record AddTwoInts_Response {
+  @juiz.ros_type("int64") long sum = 0;
+}
+
+process AddTwoInts_Response add_two_ints(long a = 0, long b = 0);
+```
+
+引数には属性を書けないので、制約は `<Name>_Request` の側にだけ残ります。
+
+### 標準メッセージは juiz_std に置き換わる
+
+辞書の形(フィールドの名前と入れ子)が [juiz_std](#標準の型-juiz_std) と同じ標準メッセージは、**既定で** juiz_std の型に置き換え、`ros2.*` の型としては書き出しません。こうすると、取り込んだ型を使う Process と juiz_std を使う Process をそのままつなげます(名前の違う型は互換でないため)。
+
+| ROS 2 | juiz_std |
+|---|---|
+| `builtin_interfaces/Time`・`Duration` | `juiz_std.common.Time`・`Duration` |
+| `std_msgs/Header` | `juiz_std.common.Header` |
+| `geometry_msgs/Point` | `juiz_std.geometry.Point3D` |
+| `geometry_msgs/Vector3`・`Quaternion`・`Pose`・`Twist`・`PoseStamped` | `juiz_std.geometry` の同じ名前の型 |
+| `sensor_msgs/Imu`・`LaserScan`・`Range` | `juiz_std.sensor` の同じ名前の型 |
+
+- 置き換わる型そのものを入力に書くと、警告を出して書き出しません。
+- `geometry_msgs/Pose2D`(ROS 2 は `x, y, theta`、juiz_std は `position, theta`)や `sensor_msgs/Image`(juiz では画素を `image` 型で渡す)のように形が違うものは置き換えず、`ros2.*` の型として取り込みます。
+- 置き換えずに ROS 2 の型のまま取り込むには `--no-std-map` を付けます。
+
 ## 詳しい仕様
 
-細かな決まりは、juiz のリポジトリの [docs/spec/datatype.md](https://github.com/OpenJUIZ/juiz/blob/main/docs/spec/datatype.md) にあります。
+細かな決まりは、juiz のリポジトリの [docs/spec/datatype.md](https://github.com/OpenJUIZ/juiz/blob/main/docs/spec/datatype.md) にあります(ROS 2 の型の取り込みは §10 と §25)。

@@ -1,6 +1,6 @@
 ---
 title: Data types
-description: Give named types to a Process's arguments and return value. Covers the IDL (JIDL) syntax, the generator, the compatibility rules, the standard types juiz_std, and how to distribute type packages.
+description: Give named types to a Process's arguments and return value. Covers the IDL (JIDL) syntax, the generator, the compatibility rules, the standard types juiz_std, how to distribute type packages, and importing ROS 2 types.
 sidebar:
   order: 8
 ---
@@ -10,7 +10,7 @@ Types are written in the IDL (**JIDL**, extension `.jidl`), and the generator `j
 To try it hands-on, start with [chapter 8 of the tutorial](/tutorial/datatype/).
 
 :::caution[juiz 0.0.23 or later]
-Data types are available from juiz 0.0.23. The [standard types juiz_std](#standard-types-juiz_std), import search paths (`-I`), and `--extern` on this page are available from 0.0.24.
+Data types are available from juiz 0.0.23. The [standard types juiz_std](#standard-types-juiz_std), import search paths (`-I`), and `--extern` on this page are available from 0.0.24, and [attributes and constants](#attributes-and-constants) and [importing ROS 2 types](#importing-ros-2-types) from 0.0.26.
 :::
 
 ## Ideas
@@ -103,6 +103,44 @@ record Robot {
 ```
 
 **Giving every field a default** makes types easier to use: values can be built even when arguments are left out, and fields added later still let old and new types read each other (→ [Compatibility rules](#compatibility-rules)).
+
+### Attributes and constants
+
+:::note[juiz 0.0.26 or later]
+Attributes and constants are available in `juiz idl` 0.0.26 or later.
+:::
+
+An annotation whose name contains a `.` (such as `@juiz.maxLength(10)`) becomes an **attribute** of a record, enum, or field (it is kept as an attribute of the Avro schema). juiz gives meaning to the following `juiz.*` attributes. They are added automatically when you [import ROS 2 types](#importing-ros-2-types), and you can also write them in your own JIDL.
+
+| Attribute | Where | Meaning |
+|---|---|---|
+| `@juiz.minimum(N)` / `@juiz.maximum(N)` | field | Range of a number. For an array, applies to each element |
+| `@juiz.maxLength(N)` | field | Maximum length of a string (in characters). For an array, applies to each element |
+| `@juiz.minItems(N)` / `@juiz.maxItems(N)` | field | Number of array elements (number of bytes for `bytes`) |
+| `@juiz.ros_type("uint8")` | field | Name of the imported ROS 2 type (for the record only) |
+| `@juiz.constants([…])` | record | List of constants `{"name", "type", "value"}`. `type` is one of `boolean`, `int`, `long`, `float`, `double`, `string` |
+
+```text
+@juiz.constants([{"name": "MODE_A", "type": "int", "value": 1}])
+record Sample {
+  @juiz.minimum(0) @juiz.maximum(255) int mode = 1;
+  @juiz.maxLength(10) string label = "abc";
+  @juiz.minItems(3) @juiz.maxItems(3) array<double> xyz = [0.0, 0.0, 0.0];
+}
+```
+
+- Constraints (`juiz.minimum` and so on) are checked when a dictionary is read with the type (the call-time check, the check of default values, and `from_value` in generated Rust code). Generated Python, C++, Haskell, and TypeScript code does not check them.
+- Attributes are not part of the fingerprint or the compatibility rules (changing them keeps the same type).
+- Attributes cannot be written on arguments (the parameters of a `process`).
+- Constants become constants in the generated code of each language.
+
+| Language | Constant `MODE_A` of `Sample` |
+|---|---|
+| Rust | associated constant `Sample::MODE_A` |
+| Python | class variable `Sample.MODE_A` |
+| C++ | `static constexpr` member `Sample::MODE_A` |
+| Haskell | value `sampleMODE_A` |
+| TypeScript | `SampleConstants.MODE_A` (`export const SampleConstants = { … } as const`) |
 
 ## How values look as dictionaries
 
@@ -280,7 +318,7 @@ Lengths are in [m], angles in [rad], and times in [s], and **every field has a d
 |---|---|---|
 | `juiz_std/common.jidl` | `juiz_std.common` | `Time {sec, nanosec}`, `Duration {sec, nanosec}`, `Header {stamp, frame_id}` |
 | `juiz_std/geometry.jidl` | `juiz_std.geometry` | `Point2D`, `Point3D`, `Vector2`, `Vector3`, `Quaternion` (defaults to no rotation, `w = 1`), `Pose2D {position, theta}`, `Pose {position, orientation}`, `Twist2D {linear, angular}`, `Twist {linear, angular}`, `Pose2DStamped`, `PoseStamped` |
-| `juiz_std/sensor.jidl` | `juiz_std.sensor` | `ImageInfo {header, width, height, encoding}` (pixels are passed separately as `image`), `Imu`, `LaserScan`, `Range` |
+| `juiz_std/sensor.jidl` | `juiz_std.sensor` | `ImageInfo {header, width, height, encoding}` (pixels are passed separately as `image`), `Imu {header, orientation, angular_velocity, linear_acceleration, orientation_covariance, angular_velocity_covariance, linear_acceleration_covariance}`, `LaserScan {header, angle_min, angle_max, angle_increment, range_min, range_max, ranges, time_increment, scan_time, intensities}`, `Range {header, range, min_range, max_range, radiation_type, field_of_view}` (constants `ULTRASOUND = 0`, `INFRARED = 1`) |
 
 ```text
 namespace my_robot;
@@ -302,6 +340,8 @@ record Goal {
 | TypeScript | `juiz-idl -g typescript juiz_std/geometry.jidl` |
 
 Once released, the standard types do not change (new fields are added only with defaults).
+
+In 0.0.26, `Imu` gained three covariances (`orientation_covariance`, `angular_velocity_covariance`, `linear_acceleration_covariance`, each nine `double`s of a row-major 3×3 matrix), `LaserScan` gained `time_increment`, `scan_time`, and `intensities`, and `Range` gained `radiation_type`, `field_of_view`, and the constants `ULTRASOUND` and `INFRARED`, so that they have the same fields as ROS 2's `sensor_msgs`. All of them have defaults, so although the fingerprints changed, the types are compatible in both directions with those of 0.0.25 and earlier and connect as they are.
 
 ## Distributing type packages
 
@@ -331,6 +371,83 @@ In every language, **ship the .jidl in the package** so that users can import it
 
 When you change types, see [Guidelines for changing types](#guidelines-for-changing-types). Changing the type, name, or order of an existing field changes the fingerprint, making it a different type from the old version. Bumping the package version does not matter: types with the same fingerprint are treated as the same type.
 
+## Importing ROS 2 types
+
+:::note[juiz 0.0.26 or later]
+`juiz idl import-ros2` is available from 0.0.26.
+:::
+
+ROS 2 `.msg`, `.srv`, and `.idl` files can be turned into JIDL with `juiz idl import-ros2` (also `juiz-idl import-ros2`). The written .jidl files are ordinary JIDL; generate the types for each language from them with `juiz idl`.
+
+```sh
+# Look for referenced messages in the ROS 2 environment (AMENT_PREFIX_PATH)
+source /opt/ros/humble/setup.bash
+juiz idl import-ros2 -o idl my_msgs/msg/Status.msg my_msgs/srv/SetMode.srv
+# Generate the types for each language from the written .jidl
+juiz idl -I idl -g rust,python idl/ros2/my_msgs/msg/Status.jidl
+```
+
+| Option | Meaning |
+|---|---|
+| `-o <dir>` (`--out-dir`) | Output directory (defaults to the current directory). Files are written under it as `ros2/<package>/msg/<Name>.jidl` and `ros2/<package>/srv/<Name>.jidl` |
+| `-I <dir>` (`--include-dir`, repeatable) | Where to look for referenced messages. Looks for `<dir>/<package>/msg/<Name>.msg` (or `.idl`) |
+| `--no-std-map` | Do not replace standard messages with juiz_std |
+
+- For `.msg` and `.srv` inputs, the package and type names come from the location `<package>/msg/<Name>.msg` or `<package>/srv/<Name>.srv`. For `.idl`, only what rosidl generates from `.msg` / `.srv` can be read. `.action` is not supported.
+- One .jidl is written per type, in the namespace `ros2.<package>.msg` / `ros2.<package>.srv` (for example `ros2.my_msgs.msg.Status`).
+- Referenced messages are looked up in the input's sibling packages (the parent directory of `<package>/msg/`), then in `-I`, then in `<prefix>/share` of each entry of the environment variable `AMENT_PREFIX_PATH`; the ones found are written out too. The ROS 2 standard messages do not come with juiz, so source your ROS 2 environment or point to them with `-I`.
+- Comments become descriptions (`doc`). Default values are the ones written in the file, or otherwise the same zero values as ROS 2, so every field has a default.
+
+### Type mapping
+
+| ROS 2 | JIDL | Attributes added |
+|---|---|---|
+| `bool` | `boolean` | |
+| `byte`, `char`, `int8`, `uint8`, `int16`, `uint16`, `int32` | `int` | `juiz.ros_type` and the range (none for `int32`) |
+| `uint32`, `int64`, `uint64` | `long` | `juiz.ros_type`, plus the range for `uint32` and `uint64` (`uint64` cannot hold 2^63 or more, so importing warns) |
+| `float32` / `float64` | `float` / `double` | |
+| `string`, `wstring` | `string` | `juiz.maxLength` for `string<=N` |
+| `T[]` / `T[N]` / `T[<=N]` | `array<T>` | `juiz.minItems` and `juiz.maxItems` for fixed length, `juiz.maxItems` for bounded |
+| `uint8[]`, `byte[]` | `bytes` | |
+| another message `pkg/Name` | record `ros2.pkg.msg.Name` | |
+| constant `uint8 MODE_A=1` | not part of the type | `juiz.constants` on the record (→ [Attributes and constants](#attributes-and-constants)) |
+
+A `.srv` becomes a `process` declaration whose arguments are the Request fields and whose return value is the Response, plus the records `<Name>_Request` and `<Name>_Response`. The Process name is the type name in snake_case.
+
+```text
+// from my_msgs/srv/AddTwoInts.srv (int64 a / int64 b / --- / int64 sum)
+namespace ros2.my_msgs.srv;
+
+record AddTwoInts_Request {
+  @juiz.ros_type("int64") long a = 0;
+  @juiz.ros_type("int64") long b = 0;
+}
+
+record AddTwoInts_Response {
+  @juiz.ros_type("int64") long sum = 0;
+}
+
+process AddTwoInts_Response add_two_ints(long a = 0, long b = 0);
+```
+
+Arguments cannot carry attributes, so constraints remain only on `<Name>_Request`.
+
+### Standard messages are replaced with juiz_std
+
+Standard messages whose dictionary shape (field names and nesting) is the same as [juiz_std](#standard-types-juiz_std) are **by default** replaced with the juiz_std types and are not written out as `ros2.*` types. This way, Processes that use imported types connect directly to Processes that use juiz_std (types with different names are not compatible).
+
+| ROS 2 | juiz_std |
+|---|---|
+| `builtin_interfaces/Time`, `Duration` | `juiz_std.common.Time`, `Duration` |
+| `std_msgs/Header` | `juiz_std.common.Header` |
+| `geometry_msgs/Point` | `juiz_std.geometry.Point3D` |
+| `geometry_msgs/Vector3`, `Quaternion`, `Pose`, `Twist`, `PoseStamped` | the types of the same names in `juiz_std.geometry` |
+| `sensor_msgs/Imu`, `LaserScan`, `Range` | the types of the same names in `juiz_std.sensor` |
+
+- If you give a replaced type itself as an input, a warning is printed and nothing is written for it.
+- Messages with a different shape, such as `geometry_msgs/Pose2D` (ROS 2 has `x, y, theta`; juiz_std has `position, theta`) or `sensor_msgs/Image` (juiz passes pixels as the `image` type), are not replaced and are imported as `ros2.*` types.
+- To import the ROS 2 types as they are, without replacing, add `--no-std-map`.
+
 ## Detailed specification
 
-The details are in [docs/spec/datatype.md](https://github.com/OpenJUIZ/juiz/blob/main/docs/spec/datatype.md) in the juiz repository (in Japanese).
+The details are in [docs/spec/datatype.md](https://github.com/OpenJUIZ/juiz/blob/main/docs/spec/datatype.md) in the juiz repository (in Japanese; importing ROS 2 types is in §10 and §25).
