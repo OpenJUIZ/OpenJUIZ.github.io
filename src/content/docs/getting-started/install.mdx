@@ -66,9 +66,9 @@ juiz --help
 The `juiz` command is installed into the venv. Run `juiz` from a terminal where this venv is activated.
 pyjuiz is installed along with it, so there is nothing else to install for writing Python Processes.
 
-<Aside type="caution">
-The `juiz` installed with pip is built by the juiz CI. It cannot load Rust plugins you build yourself (such as Processes written in Rust), because the compiler versions do not match.
-If you also write in Rust, follow "Install with cargo" instead. C++ and Haskell plugins can be loaded.
+<Aside type="note">
+The `juiz` installed with pip is built by the juiz CI. Since juiz 0.0.30 it can also load Rust Process, Container and Component plugins you build yourself (they use the plugin C ABI, which works even when the compiler versions differ). C++ and Haskell plugins can be loaded too.
+If you write execution contexts (EC) or brokers in Rust, or use juiz 0.0.29 or earlier, the compiler versions must match, so follow "Install with cargo" instead.
 </Aside>
 
 </TabItem>
@@ -85,7 +85,7 @@ Requirements:
 Install `juiz_app` from crates.io. The same command works in PowerShell on Windows.
 
 ```sh
-cargo install juiz_app --version 0.0.28 --locked
+cargo install juiz_app --version 0.0.30 --locked
 ```
 
 The `juiz` command is installed into `~/.cargo/bin` (`%USERPROFILE%\.cargo\bin` on Windows).
@@ -101,7 +101,7 @@ The `juiz` command embeds the Python it found at build time, so create the venv 
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-pip install pyjuiz==0.0.28
+pip install pyjuiz==0.0.30
 ```
 
 </TabItem>
@@ -110,7 +110,7 @@ pip install pyjuiz==0.0.28
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-pip install pyjuiz==0.0.28
+pip install pyjuiz==0.0.30
 ```
 
 </TabItem>
@@ -119,7 +119,7 @@ pip install pyjuiz==0.0.28
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
-pip install pyjuiz==0.0.28
+pip install pyjuiz==0.0.30
 ```
 
 </TabItem>
