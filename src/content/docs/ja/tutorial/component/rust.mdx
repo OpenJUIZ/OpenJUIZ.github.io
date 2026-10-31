@@ -234,7 +234,7 @@ Process は引数に 1 を足して返し、ContainerProcess は Container の�
 - `processes` に `example_component_increment`のインスタンスをもう 1 つ書き足してみましょう。Component から読み込んだ型からも、第 3 章と同じように、いくつでもインスタンスを作れます。
 - `containers` にもう 1 つ Container(たとえば `container1`)と、それに結びつく ContainerProcess を書き足してみましょう。`container0` と `container1` は別々の値を持ちます。
 - 第 4 章の `connections` と `ecs` を書き足して、1 つ目の Process の出力を、書き足した 2 つ目の Process の `arg1` につないでみましょう。Component から読み込んだ型かどうかに関係なく、同じようにつなげます。`plugins` には `components` と `process_factories` を並べて書けるので、第 3 章の `increment_process` のような別ファイルの Process とつなぐこともできます。
-- 設定ファイルを使わずに、コマンドラインから Component を読み込むこともできます。`-1` を付けると、Component の中のすべての型から、インスタンスを 1 つずつ作ります(名前は第 1 章と同じく「型名 + `0`」になります)。起動時に `ERROR` の行がいくつか表示されますが、そのまま動きます。
+- 設定ファイルを使わずに、コマンドラインから Component を読み込むこともできます。`-1` を付けると、Component の中のすべての型から、インスタンスを 1 つずつ作ります(名前は第 1 章と同じく「型名 + `0`」になります)。
 
 <Tabs syncKey="platform">
 <TabItem label="Linux">
