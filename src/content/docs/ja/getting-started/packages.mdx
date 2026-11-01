@@ -266,6 +266,7 @@ foreign-library increment_process_hs
     if os(windows)
         options:      standalone
         mod-def-file: increment_process_hs.def
+        ghc-options:  -fno-PIC
     ...
 ```
 
@@ -277,7 +278,7 @@ EXPORTS
 ```
 
 できるライブラリは lib の付かない `<名前>.dll` です。Linux・macOS と違い、DLL ごとに RTS が別になるので、Container とその ContainerProcess は `juizComponent` で 1 つの Component(1 つの DLL)にまとめてください。
-また、構成子が 8 個以上ある型の値で枝分かれする `case`(`deriving Show` の `show` を含む)を実行すると、プロセスが落ちることがわかっています([issue #262](https://github.com/OpenJUIZ/juiz/issues/262))。
+Windows では `-fno-PIC` も付けてください。付けないと、構成子が 7 個以上ある型の値で枝分かれする `case`(`deriving Show` の `show` を含む)を実行したときにプロセスが落ちます(GHC の不具合 [ghc#24016](https://gitlab.haskell.org/ghc/ghc/-/issues/24016)、[issue #262](https://github.com/OpenJUIZ/juiz/issues/262))。
 詳しくは [hsjuiz の README の「Windows」](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz#windows) を見てください。
 
 </TabItem>

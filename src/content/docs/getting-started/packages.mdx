@@ -266,6 +266,7 @@ foreign-library increment_process_hs
     if os(windows)
         options:      standalone
         mod-def-file: increment_process_hs.def
+        ghc-options:  -fno-PIC
     ...
 ```
 
@@ -277,7 +278,7 @@ EXPORTS
 ```
 
 The library you get is `<name>.dll`, without `lib`. Unlike Linux and macOS, each DLL has its own RTS, so put a Container and its ContainerProcesses into one Component (one DLL) with `juizComponent`.
-Also, running a `case` that branches on a value of a type with 8 or more constructors (including `show` from `deriving Show`) is known to crash the process ([issue #262](https://github.com/OpenJUIZ/juiz/issues/262)).
+On Windows, also add `-fno-PIC`. Without it, running a `case` that branches on a value of a type with 7 or more constructors (including `show` from `deriving Show`) crashes the process (GHC bug [ghc#24016](https://gitlab.haskell.org/ghc/ghc/-/issues/24016), [issue #262](https://github.com/OpenJUIZ/juiz/issues/262)).
 See the ["Windows" section of the hsjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz#windows) for details.
 
 </TabItem>
