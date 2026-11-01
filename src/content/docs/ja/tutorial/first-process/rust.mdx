@@ -31,10 +31,10 @@ Windows では PowerShell で進めます。OS によってコマンドが違う
 
 ```sh
 juiz --version
-# => juiz 0.0.28
+# => juiz 0.0.30
 ```
 
-Rust で書いたプラグインは、`cargo install juiz_app` で入れた `juiz` で動かします。pip で入れた `juiz` は、手元でビルドした Rust のプラグインを読み込めません。
+Rust で書いたプラグインは、`cargo install juiz_app` で入れた `juiz` で動かします(juiz 0.0.30 からは、pip で入れた `juiz` でも動きます)。
 
 ## プロジェクトの形
 
@@ -78,7 +78,7 @@ members = [
 ]
 
 [workspace.dependencies]
-juiz_sdk = "0.0.28"
+juiz_sdk = "0.0.30"
 ```
 
 | 項目 | 意味 |

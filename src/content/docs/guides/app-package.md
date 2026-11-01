@@ -75,7 +75,7 @@ exclude: ["*.log", "scratch/**"]
 
 | Field | Meaning |
 | --- | --- |
-| `juiz` | Range of juiz versions that can run the package (for example `>=0.0.28`). If omitted, pack writes `>=<version of juiz that packed it>`. With Rust plugins it is fixed to `=<juiz_sdk version>` |
+| `juiz` | Range of juiz versions that can run the package (for example `>=0.0.30`). If omitted, pack writes `>=<version of juiz that packed it>`. Only with old-style Rust plugins (see below) it is fixed to `=<juiz_sdk version>` |
 | `base.http_port` | For `kind: base`, the fixed port of the HTTP broker |
 | `exclude` | Globs of files pack leaves out |
 
@@ -91,17 +91,17 @@ Before writing the zip, pack checks the following and stops with an error withou
 
 - The entry configuration file can be read, and every plugin `path` points inside the package.
 - Every native plugin `path` contains `{target}`, and each target under `plugins/` has the plugin file.
-- All Rust plugins were built with the same juiz_sdk and rustc (pack reads the build info from the files and writes it to the manifest).
+- All Rust plugins were built with the same juiz_sdk (pack reads the build info from the files and writes it to the manifest). Old-style Rust plugins must also share the same rustc.
 
 Names starting with `.` (`.git`, `.venv`), `target/`, `build/`, `dist-newstyle/` and `__pycache__/` are not included. The zip is written so that the same input gives the same bytes, so rebuilding in CI does not change the file.
 
 ## Run: juiz run
 
 ```sh
-juiz run <file.juizapp | name[@version]> [--entry <conf>] [--depend <name>=<URL>]... [-b] [--ipc <name>] [--namespace <ns>]
+juiz run <file.juizapp | name[@version]> [--entry <conf>] [--depend <name>=<URL>]... [--http] [--no-http] [--ipc <name>] [--namespace <ns>]
 ```
 
-Given a file, juiz run checks the manifest, the SHA-256 of each file, the juiz version, the target and (for Rust) the rustc, then extracts the package into a cache (`~/.cache/juiz/apps/`) and starts it. If anything does not match, it stops with a clear message before loading any plugin.
+Given a file, juiz run checks the manifest, the SHA-256 of each file, the juiz version, the target and (for Rust) the plugin ABI version, then extracts the package into a cache (`~/.cache/juiz/apps/`) and starts it. If anything does not match, it stops with a clear message before loading any plugin.
 
 ```sh
 juiz run talker_listener-0.1.0-x86_64-unknown-linux-gnu.juizapp
@@ -183,12 +183,14 @@ If Process names in the base and the app collide, put them in different [namespa
 | Language | What goes in the package | What the receiver needs |
 | --- | --- | --- |
 | Python | `.py` files | juiz with embedded Python (juiz-cli from pip) and the packages in `python.requires` |
-| Rust | so / dylib / dll in `plugins/<target>/` | juiz built with the same juiz_sdk version and **the same rustc** |
+| Rust | so / dylib / dll in `plugins/<target>/` | a matching version of juiz (the rustc does not have to match) |
 | C++ | plugins and libjuiz_sdk | a matching version of juiz |
 | Haskell | plugins, libjuiz_sdk, GHC shared libraries, libffi and libgmp | a matching version of juiz |
 
 - **Python**: with no native plugins, one file runs on every OS (`targets: [any]`). This is the easiest way to ship to many people.
-- **Rust**: Rust plugins load only when both the juiz_sdk version and the rustc version match. `juiz run` checks this before starting and, if they differ, stops and shows which rustc built the plugins.
+- **Rust**: since juiz 0.0.30, Rust Process, Container and Component plugins are loaded through a C function boundary (the plugin C ABI), so they work even when the receiver's juiz was built with another rustc. They also work with juiz installed by pip. `juiz pack` writes `rust.abi` (the ABI version) to the manifest and `juiz run` checks it before starting.
+  - Plugins built with juiz_sdk 0.0.29 or earlier, and execution context (EC) and broker plugins, still use the old style (the Rust ABI). Packages containing them run only on juiz built with the same juiz_sdk version and **the same rustc**, and pack writes `rust.rustc` and `juiz: "=<juiz_sdk version>"`.
+  - If you write the `juiz` range yourself, start it at `>=0.0.30`. juiz 0.0.29 and earlier cannot load the new-style plugins, so pack warns when they are in the range.
 - **C++**: in CMake, call `juiz_sdk_bundle(<target>)` after `find_package(juiz_sdk)`. The plugin's RPATH becomes only its own directory (`$ORIGIN` / `@loader_path`) and libjuiz_sdk is copied next to it. Put the contents of that directory in `plugins/<target>/`. On Windows, juiz looks for DLLs next to the plugin.
 - **Haskell**: juiz's `scripts/bundle-plugin-deps.sh <plugin> <out-dir>` gathers the plugin and the libraries it uses into one directory and rewrites them to look next to themselves (patchelf on Linux, install_name_tool and codesign on macOS). The receiver does not need GHC.
 

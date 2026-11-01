@@ -75,7 +75,7 @@ exclude: ["*.log", "scratch/**"]
 
 | 項目 | 意味 |
 | --- | --- |
-| `juiz` | 動かせる juiz の版の範囲(`>=0.0.28` など)。省くと pack が `>=<pack した juiz の版>` を書く。Rust のプラグインを含むときは `=<juiz_sdk の版>` に決まる |
+| `juiz` | 動かせる juiz の版の範囲(`>=0.0.30` など)。省くと pack が `>=<pack した juiz の版>` を書く。古い形の Rust のプラグイン(後述)を含むときだけ `=<juiz_sdk の版>` に決まる |
 | `base.http_port` | `kind: base` のとき、HTTP ブローカーを立てる固定のポート |
 | `exclude` | pack で入れないファイルの glob |
 
@@ -91,17 +91,17 @@ pack は zip を書く前に次を確かめ、合わなければ何も書かず�
 
 - entry の設定ファイルが読める。プラグインの `path` がパッケージの中を指している
 - ネイティブのプラグインの `path` に `{target}` が入っていて、`plugins/` の下の各ターゲットにそのファイルがある
-- Rust のプラグインがどれも同じ juiz_sdk と rustc でビルドされている(ファイルからビルド情報を読み、マニフェストに書く)
+- Rust のプラグインがどれも同じ juiz_sdk でビルドされている(ファイルからビルド情報を読み、マニフェストに書く)。古い形の Rust のプラグインは、rustc の版もそろっている
 
 `.` で始まるもの(`.git`・`.venv`)、`target/`・`build/`・`dist-newstyle/`・`__pycache__/` は入りません。zip は同じ入力から同じバイト列になるように書くので、CI で作り直しても中身が変わりません。
 
 ## 動かす: juiz run
 
 ```sh
-juiz run <ファイル.juizapp | 名前[@版]> [--entry <conf>] [--depend <名前>=<URL>]... [-b] [--ipc <名前>] [--namespace <ns>]
+juiz run <ファイル.juizapp | 名前[@版]> [--entry <conf>] [--depend <名前>=<URL>]... [--http] [--no-http] [--ipc <名前>] [--namespace <ns>]
 ```
 
-ファイルを渡すと、マニフェストと各ファイルの SHA-256、juiz の版、ターゲット、(Rust なら)rustc を確かめてから、キャッシュ(`~/.cache/juiz/apps/`)に展開して起動します。どれかが合わなければ、プラグインを読み込む前に分かる文で止まります。
+ファイルを渡すと、マニフェストと各ファイルの SHA-256、juiz の版、ターゲット、(Rust なら)プラグインの ABI の版を確かめてから、キャッシュ(`~/.cache/juiz/apps/`)に展開して起動します。どれかが合わなければ、プラグインを読み込む前に分かる文で止まります。
 
 ```sh
 juiz run talker_listener-0.1.0-x86_64-unknown-linux-gnu.juizapp
@@ -183,12 +183,14 @@ chatter_listener depends on chatter_base >=0.1, <0.2, but chatter_base is not ru
 | 言語 | パッケージに入れるもの | 受け取る側に要るもの |
 | --- | --- | --- |
 | Python | `.py` | Python を組み込んだ juiz(pip の juiz-cli)と、`python.requires` のパッケージ |
-| Rust | `plugins/<ターゲット>/` の so / dylib / dll | 同じ版の juiz_sdk と**同じ rustc** でビルドされた juiz |
+| Rust | `plugins/<ターゲット>/` の so / dylib / dll | 対応する版の juiz(rustc はそろえなくてよい) |
 | C++ | プラグインと libjuiz_sdk | 対応する版の juiz |
 | Haskell | プラグインと libjuiz_sdk、GHC の共有ライブラリ・libffi・libgmp | 対応する版の juiz |
 
 - **Python**: ネイティブのプラグインが無いので、どの OS でも動く 1 つのファイル(`targets: [any]`)になります。たくさんの人に配るなら一番楽です。
-- **Rust**: Rust のプラグインは、juiz_sdk の版だけでなく rustc の版まで一致しないと読み込めません。`juiz run` が起動前に確かめ、違えばどの rustc でビルドされたものかを表示して止まります。
+- **Rust**: juiz 0.0.30 から、Rust の Process・Container・Component のプラグインは C の関数の境界(プラグインの C ABI)で読み込むので、受け取る側の juiz と rustc の版が違っても動きます。pip で入れた juiz でも動きます。`juiz pack` はマニフェストに `rust.abi`(ABI の版)を書き、`juiz run` は起動前にそれを確かめます。
+  - 0.0.29 以前の juiz_sdk でビルドしたプラグインと、実行コンテキスト(EC)・ブローカーのプラグインは古い形(Rust ABI)のままです。これらを含むパッケージは、今までどおり同じ版の juiz_sdk と**同じ rustc** でビルドした juiz でしか動かず、pack が `rust.rustc` と `juiz: "=<juiz_sdk の版>"` を書きます。
+  - `juiz` の範囲を自分で書くときは `>=0.0.30` からにしてください。0.0.29 以前の juiz は新しい形のプラグインを読めないので、範囲に入っていれば pack が警告します。
 - **C++**: CMake で `find_package(juiz_sdk)` の後に `juiz_sdk_bundle(<ターゲット>)` を呼ぶと、プラグインの RPATH が自身の場所(`$ORIGIN` / `@loader_path`)だけになり、隣に libjuiz_sdk が写されます。できたディレクトリの中身を `plugins/<ターゲット>/` に置きます。Windows の juiz はプラグインの隣の DLL を探します。
 - **Haskell**: juiz の `scripts/bundle-plugin-deps.sh <プラグイン> <出力先>` で、プラグインと依存するライブラリを 1 つのディレクトリに集め、隣を探すように書き換えます(Linux は patchelf、macOS は install_name_tool と codesign)。受け取る側に GHC は要りません。
 

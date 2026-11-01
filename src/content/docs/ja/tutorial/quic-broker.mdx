@@ -791,7 +791,7 @@ call も同じです。`qmp://` の ID を指定すると、QUIC ブローカー
 
 ```sh
 juiz process call "qmp://127.0.0.1:5001/process/talker0::talker" '{}' -p
-# => CapsulePtr((value:Value("Hello World"), option: [function_name:call,class_name:process,]))
+# => CapsulePtr((value:Value("Hello World"), option: []))
 ```
 
 </TabItem>
@@ -799,7 +799,7 @@ juiz process call "qmp://127.0.0.1:5001/process/talker0::talker" '{}' -p
 
 ```sh
 juiz process call "qmp://127.0.0.1:5001/process/talker_python0::talker_python" '{}' -p
-# => CapsulePtr((value:Value("Hello, World!"), option: [function_name:call,class_name:process,]))
+# => CapsulePtr((value:Value("Hello, World!"), option: []))
 ```
 
 </TabItem>
@@ -807,7 +807,7 @@ juiz process call "qmp://127.0.0.1:5001/process/talker_python0::talker_python" '
 
 ```sh
 juiz process call "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" '{}' -p
-# => CapsulePtr((value:Value("Hello, Juiz!"), option: [function_name:call,class_name:process,]))
+# => CapsulePtr((value:Value("Hello, Juiz!"), option: []))
 ```
 
 </TabItem>
@@ -815,13 +815,13 @@ juiz process call "qmp://127.0.0.1:5001/process/talker_cpp0::talker_cpp" '{}' -p
 
 ```sh
 juiz process call "qmp://127.0.0.1:5001/process/talker_hs0::talker_hs" '{}' -p
-# => CapsulePtr((value:Value("Hello, Juiz!"), option: [function_name:call,class_name:process,]))
+# => CapsulePtr((value:Value("Hello, Juiz!"), option: []))
 ```
 
 </TabItem>
 </Tabs>
 
-HTTP ブローカーで呼び出したときは `option: []` でしたが、QUIC ブローカーを通すと `option` に `function_name` と `class_name` が入って返ってきます。返ってくる値(`value`)は同じです。`option` の中の並び順は、実行するたびに入れ替わることがあります。
+HTTP ブローカーで呼び出したときと同じ値(`value`)が返ってきます。`option` も HTTP と同じく空です(0.0.29 以前の juiz では、QUIC ブローカーを通すと `option` に `function_name` と `class_name` が入っていました)。
 
 ## やってみよう
 
