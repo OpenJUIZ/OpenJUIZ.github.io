@@ -21,7 +21,7 @@ In this chapter you write the **data types** `Pose2D` (a pose on a plane) and `T
 
 <Aside type="caution" title="Requires juiz 0.0.23 or later">
 Data types are available from juiz 0.0.23. Use 0.0.23 or later for the `juiz` command (`juiz_app` or `juiz-cli`) and for pyjuiz.
-For example: `cargo install juiz_app --version 0.0.30 --locked` and `pip install pyjuiz==0.0.30`.
+For example: `cargo install juiz_app --version 0.1.0 --locked` and `pip install pyjuiz==0.1.0`.
 </Aside>
 
 ## Prepare the examples
@@ -38,7 +38,7 @@ Update the examples you cloned in chapter 4 and build them again.
 cd juiz_examples_rust
 git pull
 cargo build
-pip install pyjuiz==0.0.30   # this chapter also runs Python Processes
+pip install pyjuiz==0.1.0   # this chapter also runs Python Processes
 ```
 
 </TabItem>
@@ -48,7 +48,7 @@ pip install pyjuiz==0.0.30   # this chapter also runs Python Processes
 cd juiz_examples_rust
 git pull
 cargo build
-pip install pyjuiz==0.0.30   # this chapter also runs Python Processes
+pip install pyjuiz==0.1.0   # this chapter also runs Python Processes
 ```
 
 </TabItem>
@@ -60,7 +60,7 @@ git pull
 cargo build
 python -m venv .venv         # this chapter also runs Python Processes
 .venv\Scripts\activate
-pip install pyjuiz==0.0.30
+pip install pyjuiz==0.1.0
 ```
 
 Create the venv with the same Python that `juiz` was built with, and keep it active in the terminal where you start `juiz` ("Install with cargo" in [Installation](/getting-started/install/)).
@@ -78,7 +78,7 @@ Create the venv with the same Python that `juiz` was built with, and keep it act
 cd juiz_examples_python
 git pull
 source .venv/bin/activate
-pip install -r requirements.txt  # installs juiz-cli 0.0.30
+pip install -r requirements.txt  # installs juiz-cli 0.1.0
 ```
 
 </TabItem>
@@ -88,7 +88,7 @@ pip install -r requirements.txt  # installs juiz-cli 0.0.30
 cd juiz_examples_python
 git pull
 source .venv/bin/activate
-pip install -r requirements.txt  # installs juiz-cli 0.0.30
+pip install -r requirements.txt  # installs juiz-cli 0.1.0
 ```
 
 </TabItem>
@@ -98,7 +98,7 @@ pip install -r requirements.txt  # installs juiz-cli 0.0.30
 cd juiz_examples_python
 git pull
 .venv\Scripts\activate
-pip install -r requirements.txt  # installs juiz-cli 0.0.30
+pip install -r requirements.txt  # installs juiz-cli 0.1.0
 ```
 
 </TabItem>
@@ -112,7 +112,7 @@ cd juiz_examples_cpp
 git pull
 cmake -S . -B build
 cmake --build build
-pip install pyjuiz==0.0.30   # this chapter also runs Python Processes
+pip install pyjuiz==0.1.0   # this chapter also runs Python Processes
 ```
 
 CMake makes the C++ types with the installed `juiz` command (`juiz idl`). Install `juiz` first; CMake stops with an error if it cannot find it.
@@ -125,7 +125,7 @@ On Windows, build with `cmake --build build --config Release`. The `juiz` instal
 cd juiz_examples_haskell
 git pull
 ./build.sh
-pip install pyjuiz==0.0.30   # this chapter also runs Python Processes
+pip install pyjuiz==0.1.0   # this chapter also runs Python Processes
 ```
 
 `build.sh` makes the Haskell types into `build/gen-hs` with `juiz-idl`, which it builds from the juiz source (this is why Rust is needed).
