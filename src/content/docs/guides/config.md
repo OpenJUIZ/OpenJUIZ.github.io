@@ -59,6 +59,8 @@ processes:
 | `processes` | Instances to create from the loaded Processes. An entry can have `p_apply` |
 | `composites` | Definitions of types (Composites) that combine existing Processes (→ [Composition](/guides/composition/), juiz 0.0.22 or later) |
 | `composite_containers` | CompositeContainers that bundle references to existing Containers, and the CompositeContainerProcesses on them (→ [Composition](/guides/composition/)) |
+| `transforms` | Transforms that link Containers (`source`, `destination`, `translation`, `rotation`). The Anchors at the origin of coordinates go in `containers:` with `type_name: periodic_anchor` / `static_anchor` (→ [Transformations](/guides/transformations/), from the release after juiz 0.1.0) |
+| `pose_listeners` | Pose notifications that call a Process when a Container's pose is written (→ [Transformations](/guides/transformations/#pose-notifications)) |
 | `connections` | Connections from a Process's output to another Process's argument. Give `source`, `destination`, `arg_name` and `connection_type` (such as `Push`) |
 | `ecs` | Execution Contexts. Give `type_name` (such as `main_loop_ec`), `rate` [Hz], `bind` (the Processes to run) and `auto_start` |
 
