@@ -37,7 +37,7 @@ cd juiz_examples_haskell
 
 サンプル集の `build.sh` は、`juiz` と同じ版の libjuiz_sdk を [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から、hsjuiz を juiz のソースから取得してビルドします(第 1 章のように `~/.juiz/sdk` や `~/juiz-<版>` に用意しておく必要はありません)。
 サンプルの型を作る juiz-idl もソースからビルドするので、Rust(stable)も入れておいてください。初回は少し時間がかかります。
-取得する juiz の版は `build.sh` の `JUIZ_GIT_REF` で決まります(既定は `v0.1.0`)。`juiz --version` と違う版を使っているときは、`JUIZ_GIT_REF=v<版> ./build.sh` のように合わせてください。
+取得する juiz の版は `build.sh` の `JUIZ_GIT_REF` で決まります(既定は `v0.2.0`)。`juiz --version` と違う版を使っているときは、`JUIZ_GIT_REF=v<版> ./build.sh` のように合わせてください。
 
 各サンプルは共有ライブラリとして `build/plugins` にビルドされます。ファイル名は OS によって違います。
 
