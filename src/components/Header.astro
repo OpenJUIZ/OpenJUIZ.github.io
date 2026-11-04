@@ -1,0 +1,29 @@
+---
+// Starlight の既定の Header に、スマホ幅だけ言語の切り替えを足す。
+// 既定ではスマホ幅の言語切り替えはメニュー(≡)の中にしかなく、
+// メニューのないトップページ(splash)では切り替える手段がなかった(site#72)。
+import DefaultHeader from '@astrojs/starlight/components/Header.astro';
+import LanguageSelect from '@astrojs/starlight/components/LanguageSelect.astro';
+---
+
+<div class="juiz-header sl-flex">
+	<div class="juiz-header-default">
+		<DefaultHeader />
+	</div>
+	<div class="juiz-mobile-lang md:sl-hidden print:hidden">
+		<LanguageSelect />
+	</div>
+</div>
+
+<style>
+	.juiz-header {
+		height: 100%;
+		align-items: center;
+		gap: var(--sl-nav-gap);
+	}
+	.juiz-header-default {
+		flex: 1;
+		min-width: 0;
+		height: 100%;
+	}
+</style>
