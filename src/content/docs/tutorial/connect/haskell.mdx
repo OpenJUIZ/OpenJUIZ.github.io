@@ -37,7 +37,7 @@ cd juiz_examples_haskell
 
 The `build.sh` of the examples gets libjuiz_sdk of the same version as `juiz` from [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) and hsjuiz from the juiz source, then builds everything (you do not need to prepare `~/.juiz/sdk` or `~/juiz-<version>` as in chapter 1).
 It also builds juiz-idl, which generates the example types, from source, so install Rust (stable) too. The first run takes a while.
-The juiz version it gets is set by `JUIZ_GIT_REF` in `build.sh` (`v0.2.0` by default). If your `juiz --version` is different, match it like `JUIZ_GIT_REF=v<version> ./build.sh`.
+The juiz version it gets is set by `JUIZ_GIT_REF` in `build.sh` (`v0.2.1` by default). If your `juiz --version` is different, match it like `JUIZ_GIT_REF=v<version> ./build.sh`.
 
 Each example is built as a shared library in `build/plugins`. The file names depend on the OS.
 
