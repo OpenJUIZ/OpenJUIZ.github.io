@@ -26,6 +26,10 @@ export default defineConfig({
 				root: { label: 'English', lang: 'en' },
 				ja: { label: '日本語', lang: 'ja' },
 			},
+			components: {
+				// スマホ幅でもヘッダー右上に言語の切り替えを出す(site#72)
+				Header: './src/components/Header.astro',
+			},
 			social: [
 				{ icon: 'github', label: 'GitHub', href: 'https://github.com/OpenJUIZ/juiz' },
 			],
