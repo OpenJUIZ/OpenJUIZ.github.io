@@ -326,8 +326,88 @@ In C++, Haskell and C ABI Rust, the accessors work **only during the call**. Rea
 
 - The pan-tilt unit in the sample keeps its mounting position and changes only its orientation (it reads its current position with `pose("base0")`, changes the orientation and calls `set_pose("base0", ...)`). The camera is a child of the pan-tilt unit, so it turns with it without doing anything.
 - Writing to a Container that is in no tree is an error (`NoCommonAnchorError`). Transforms are never created automatically; create one first in the configuration file or through the API.
-- Writing to the root Anchor of the tree, to the reference itself, or to a Container whose descendant is the reference is an error (`PoseNotWritableError`).
+- Writing to the root Anchor of the tree, to the reference itself, or to a Container whose descendant is the reference is an error (`PoseNotWritableError`). So is writing from inside a [readonly ContainerProcess](#readonly-containerprocesses).
 - The return value is `pose(C, R)` after the write.
+
+## Readonly ContainerProcesses
+
+A ContainerProcess normally takes a **write lock** on its Container, so the ContainerProcesses of one Container run one at a time. A ContainerProcess that does not change its Container, such as one that only reads a pose, can be made **readonly**. A readonly ContainerProcess takes a **read lock** on the Container, so readonly ContainerProcesses of the same Container run in parallel.
+
+:::note[Available from juiz 0.2.2]
+Readonly ContainerProcesses were added in juiz 0.2.2. Earlier versions do not have them.
+:::
+
+- A readonly ContainerProcess can still read ContainerPoses with `pose`. Writing with `set_pose` fails with `PoseNotWritableError`.
+- Readonly and non-readonly ContainerProcesses do not run in parallel. A non-readonly one waits for running readonly ones to finish (and the other way round).
+- Only writes **from inside that readonly call to its own Container** are blocked. While a readonly ContainerProcess runs, writes from the API, the CLI, other ContainerProcesses and Pose notifications work as before.
+- Whether a ContainerProcess is readonly is decided by how the function is written (its manifest), and cannot be changed per instance in the configuration file. The Process profile shows `readonly: true` (it is omitted when not readonly).
+- In a Composite ContainerProcess, each child takes its own lock: readonly children are called with a read lock and the others with a write lock.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+Make the first argument `&ContainerImpl<T>` (without `mut`) and the macro makes the ContainerProcess readonly. Because it is `&self`, `set_pose` cannot be called, and changes to your own state are **stopped by the type system**. The Container type `T` must be `Sync`.
+
+```rust
+#[juiz_component_container_process(container_type = "camera" arguments = {
+    default = { reference = "map" }
+})]
+fn camera_pose(c: &ContainerImpl<Camera>, reference: String) -> JuizResult<Capsule> {
+    Ok(c.pose(&reference)?.into())
+}
+```
+
+Writing `readonly = true` in the attribute does the same (a first argument left as `&mut` is then a compile error). The code is the same whether the plugin is loaded with the default C ABI or with `abi: rust`.
+
+</TabItem>
+<TabItem label="Python">
+
+Add `readonly=True` to the decorator.
+
+```python
+@juiz_container_process(container_type="camera_python", readonly=True)
+def camera_python_pose(camera, reference: str = "map") -> PoseStamped:
+    return pose(camera, reference)
+```
+
+Calling `juiz.set_pose` inside raises `PoseNotWritableError`. However, Python **cannot stop** changes to the attributes of the Container object. In a readonly function, it is up to you not to change the Container's state. Since calls run in parallel, changing it causes data races.
+
+</TabItem>
+<TabItem label="C++">
+
+Add `.readonly()` to the manifest, and take the Container as `const T*`.
+
+```cpp
+static auto camera_cpp_pose_manif = ProcessManifest("camera_cpp_pose")
+    .readonly()
+    .add_string_arg("reference", "reference container", "map");
+std::optional<juiz::Value> camera_cpp_pose(const Camera* camera, const std::string& reference) {
+    return juiz::pose_to_value(juiz::pose(camera, reference), reference);
+}
+COMPONENT_CONTAINER_PROCESS_FACTORY(Camera, camera_cpp_pose_manif, camera_cpp_pose);
+```
+
+With `const T*`, changes to the Container are **stopped by the type system**. Passing a const Container to `juiz::set_pose` is a compile error (`static_assert`). `T*` still works, but then it is up to you not to change the Container.
+
+</TabItem>
+<TabItem label="Haskell">
+
+Add `& readonly True` to the manifest.
+
+```haskell
+cameraPoseManifest :: ProcessManifest
+cameraPoseManifest = containerProcessManifest "camera_hs_pose" "camera_hs"
+  & readonly True
+  & addStringArg "reference" "reference container" "map"
+
+cameraPose :: Camera -> Text -> IO Value
+cameraPose Camera reference = poseStampedToValue reference <$> containerPose reference
+```
+
+Calling `setContainerPose` inside throws `JuizError` (`juizPoseNotWritableError`). However, changes to Container state held in an `IORef` or similar **cannot be stopped**. In a readonly function, it is up to you not to change the Container's state.
+
+</TabItem>
+</Tabs>
 
 ## Anchor updates
 
@@ -656,7 +736,7 @@ In the parent System, Containers that are being fetched get a "別系の子" (Re
 | Error | When |
 |---|---|
 | `NoCommonAnchorError` | No Anchor contains both the reference and the target (reads and writes). Also raised when writing to a Container that is in no tree |
-| `PoseNotWritableError` | Writing to the root Anchor of the tree, to the reference itself, or to a Container whose descendant is the reference |
+| `PoseNotWritableError` | Writing to the root Anchor of the tree, to the reference itself, or to a Container whose descendant is the reference. Writing from inside a [readonly ContainerProcess](#readonly-containerprocesses) (from juiz 0.2.2) |
 | `InvalidPoseValueError` | Zero-length quaternion, NaN or infinity |
 | `TransformTreeError` | A Transform that breaks the tree rules |
 | `TransformAlreadyExistsError` | A Transform with the same source and destination |
