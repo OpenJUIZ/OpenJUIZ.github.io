@@ -507,8 +507,8 @@ There is no 3D view yet.
 
 A Transform can start from **a Container in a System of another process (or another machine)**, such as a map System and a robot System. The robot System can then read "the camera's pose seen from the map".
 
-:::note[Available from the release after juiz 0.2.0]
-Transforms across Systems come in the release after juiz 0.2.0.
+:::note[Available from juiz 0.2.1]
+Transforms across Systems were added in juiz 0.2.1.
 :::
 
 ```text
@@ -662,7 +662,7 @@ In the parent System, Containers that are being fetched get a "別系の子" (Re
 | `TransformAlreadyExistsError` | A Transform with the same source and destination |
 | `TransformNotFoundError` | The given Transform does not exist |
 | `PoseListenerError` | Invalid Pose notification registration (argument, type, duplicate) |
-| `CrossSystemTransformError` | A Transform across Systems cannot be created or forwarded (the other System is unreachable, both ends are in other Systems, or a replica is used as an endpoint). From the release after juiz 0.2.0 |
+| `CrossSystemTransformError` | A Transform across Systems cannot be created or forwarded (the other System is unreachable, both ends are in other Systems, or a replica is used as an endpoint). From juiz 0.2.1 |
 | `TransformationsNotAttachedError` | A Container not registered in a System, an object without the accessor, or a read/write outside the call |
 
 In Python they are all subclasses of `juiz.TransformationsError` (a subclass of `RuntimeError`); in C++, subclasses of `juiz::TransformationsError`.
@@ -687,4 +687,4 @@ Every sample repository has `transformations.conf` and one Component holding the
 
 ContainerProcess type names are the Container type name plus `_move`, `_set_pan` or `_pose` (such as `mobile_base_python_move`).
 
-The [across-Systems](#transforms-across-systems) version, which splits the same tree into a map System and a robot System, is `transformations_map.conf` (port 8000) and `transformations_robot.conf` (port 8001) (from the release after juiz 0.2.0). Start the map System, then the robot System, and use port 8001 in the `call` URLs above for the robot System's ContainerProcesses.
+The [across-Systems](#transforms-across-systems) version, which splits the same tree into a map System and a robot System, is `transformations_map.conf` (port 8000) and `transformations_robot.conf` (port 8001) (from juiz 0.2.1). Start the map System, then the robot System, and use port 8001 in the `call` URLs above for the robot System's ContainerProcesses.

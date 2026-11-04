@@ -507,8 +507,8 @@ system.create_pose_listener('camera0', 'print0', arg='pose', reference='map', on
 
 地図を持つ System とロボットの System のように、**別のプロセス(別の機械でもよい)の System の Container から Transform を張れます**。ロボットの System の中で「地図から見たカメラの位置」を読めるようになります。
 
-:::note[juiz 0.2.0 の次の版から使えます]
-System をまたぐ Transform は、juiz 0.2.0 の次の版で入る機能です。
+:::note[juiz 0.2.1 から使えます]
+System をまたぐ Transform は、juiz 0.2.1 で入った機能です。
 :::
 
 ```text
@@ -662,7 +662,7 @@ map0.pose_state()                      # {identifier, system, version, changed, 
 | `TransformAlreadyExistsError` | 同じ始点と終点の Transform |
 | `TransformNotFoundError` | 指定の Transform が無い |
 | `PoseListenerError` | Pose 通知の登録の不備(引数・型・二重登録) |
-| `CrossSystemTransformError` | System をまたぐ Transform を作れない・回せない(相手の System につながらない、両端とも別 System、写しを始点にした)。juiz 0.2.0 の次の版から |
+| `CrossSystemTransformError` | System をまたぐ Transform を作れない・回せない(相手の System につながらない、両端とも別 System、写しを始点にした)。juiz 0.2.1 から |
 | `TransformationsNotAttachedError` | System に登録されていない Container、口の無いオブジェクト、呼び出しの外からの読み書き |
 
 Python ではどれも `juiz.TransformationsError`(`RuntimeError` の子)の子の例外、C++ では `juiz::TransformationsError` の子の例外になります。
@@ -687,4 +687,4 @@ Python ではどれも `juiz.TransformationsError`(`RuntimeError` の子)の子�
 
 ContainerProcess の型名は、Container の型名に `_move`・`_set_pan`・`_pose` を付けたものです(`mobile_base_python_move` など)。
 
-同じ木を地図の System とロボットの System に分けた [System をまたぐ](#system-をまたぐ-transform) 版が、`transformations_map.conf`(ポート 8000)と `transformations_robot.conf`(ポート 8001)です(juiz 0.2.0 の次の版から)。地図の System、ロボットの System の順に起動し、ロボットの System の ContainerProcess を呼ぶときは、上の `call` の URL のポートを 8001 にします。
+同じ木を地図の System とロボットの System に分けた [System をまたぐ](#system-をまたぐ-transform) 版が、`transformations_map.conf`(ポート 8000)と `transformations_robot.conf`(ポート 8001)です(juiz 0.2.1 から)。地図の System、ロボットの System の順に起動し、ロボットの System の ContainerProcess を呼ぶときは、上の `call` の URL のポートを 8001 にします。
