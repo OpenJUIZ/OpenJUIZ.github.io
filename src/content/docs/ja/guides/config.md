@@ -59,7 +59,7 @@ processes:
 | `processes` | 読み込んだ Process を実体化する定義。`p_apply` を書ける |
 | `composites` | 既にある Process を組み合わせた型(Composite)の定義(→ [Composition](/ja/guides/composition/)、juiz 0.0.22 以降) |
 | `composite_containers` | 既存の Container への参照を束ねた CompositeContainer と、その上の CompositeContainerProcess(→ [Composition](/ja/guides/composition/)) |
-| `transforms` | Container 同士をつなぐ Transform(`source`・`destination`・`translation`・`rotation`)。座標の原点の Anchor は `containers:` に `type_name: periodic_anchor` / `static_anchor` で書く(→ [Transformations](/ja/guides/transformations/)、juiz 0.2.0 から) |
+| `transforms` | Container 同士をつなぐ Transform(`source`・`destination`・`translation`・`rotation`、System をまたぐときは `rate`・`timeout` も。→ [System をまたぐ Transform](/ja/guides/transformations/#system-をまたぐ-transform)、juiz 0.2.0 の次の版から)。座標の原点の Anchor は `containers:` に `type_name: periodic_anchor` / `static_anchor` で書く(→ [Transformations](/ja/guides/transformations/)、juiz 0.2.0 から) |
 | `pose_listeners` | Container の位置姿勢が書かれたら Process を呼ぶ Pose 通知(→ [Transformations](/ja/guides/transformations/#pose-通知)) |
 | `connections` | Process の出力を別の Process の引数につなぐ定義。`source`・`destination`・`arg_name`・`connection_type`(`Push` など)を書く |
 | `ecs` | Execution Context の定義。`type_name`(`main_loop_ec` など)・`rate` [Hz]・`bind`(実行する Process)・`auto_start` を書く |
