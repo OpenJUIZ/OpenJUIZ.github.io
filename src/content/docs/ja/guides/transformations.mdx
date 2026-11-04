@@ -326,8 +326,88 @@ C++・Haskell・C ABI の Rust では、読み書きの口は**その呼び出�
 
 - サンプルの雲台は、取り付け位置はそのままにして向きだけを変えます(`pose("base0")` で今の位置を読み、向きを変えて `set_pose("base0", ...)`)。カメラは雲台の子なので、何もしなくても雲台と一緒に向きが変わります。
 - どの木にも入っていない Container への書き込みはエラー(`NoCommonAnchorError`)です。Transform は自動では作りません。先に設定ファイルか API で Transform を作ってください。
-- 木の根の Anchor、基準自身、基準が自分の子孫になる書き込みはエラー(`PoseNotWritableError`)です。
+- 木の根の Anchor、基準自身、基準が自分の子孫になる書き込みはエラー(`PoseNotWritableError`)です。[readonly の ContainerProcess](#readonly-の-containerprocess) の中からの書き込みも同じエラーです。
 - 戻り値は書いた後の `pose(C, R)` です。
+
+## readonly の ContainerProcess
+
+ContainerProcess は普通、Container を**書き込みロック**で取って呼ばれるので、同じ Container の ContainerProcess は 1 つずつしか走りません。位置姿勢を読むだけのものなど、Container を書き換えない ContainerProcess は **readonly** にできます。readonly の ContainerProcess は Container を**読み出しロック**で取って呼ばれ、同じ Container の readonly 同士は並行に走ります。
+
+:::note[juiz 0.2.2 から使えます]
+readonly の ContainerProcess は juiz 0.2.2 で入った機能です。それより前の版では使えません。
+:::
+
+- readonly の中からも `pose` で ContainerPose を読めます。`set_pose` で書くと `PoseNotWritableError` になります。
+- readonly と readonly でないものは並行に走りません。readonly でないものは、走っている readonly が終わるのを待ちます(逆も同じ)。
+- 書き込みが止まるのは「その readonly の呼び出しの中から、自分の Container へ」だけです。readonly が走っている間も、API・CLI・別の ContainerProcess・Pose 通知からの書き込みは今まで通りできます。
+- readonly かどうかは関数の書き方(manifest)で決まり、設定ファイルのインスタンスでは変えられません。Process の profile に `readonly: true` が載ります(readonly でなければ載りません)。
+- Composite の ContainerProcess では、子がそれぞれ自分のロックを取ります。readonly の子は読み出しロック、そうでない子は書き込みロックで呼ばれます。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+第 1 引数を `&ContainerImpl<T>`(`mut` なし)にすると、マクロが readonly にします。`&self` なので `set_pose` は呼べず、利用者の状態の書き換えも**型で止まります**。Container の型 `T` は `Sync` である必要があります。
+
+```rust
+#[juiz_component_container_process(container_type = "camera" arguments = {
+    default = { reference = "map" }
+})]
+fn camera_pose(c: &ContainerImpl<Camera>, reference: String) -> JuizResult<Capsule> {
+    Ok(c.pose(&reference)?.into())
+}
+```
+
+属性に `readonly = true` を書いても同じです(第 1 引数が `&mut` のままだとコンパイルエラーになります)。プラグインを既定の C ABI で読んでも、`abi: rust` で読んでも同じ書き方です。
+
+</TabItem>
+<TabItem label="Python">
+
+デコレータに `readonly=True` を付けます。
+
+```python
+@juiz_container_process(container_type="camera_python", readonly=True)
+def camera_python_pose(camera, reference: str = "map") -> PoseStamped:
+    return pose(camera, reference)
+```
+
+中で `juiz.set_pose` を呼ぶと `PoseNotWritableError` になります。ただし Python では Container のオブジェクトの属性の書き換えは**止められません**。readonly にした関数では Container の状態を書き換えないよう、書き手が守ってください。並行に走るので、書き換えるとデータ競合になります。
+
+</TabItem>
+<TabItem label="C++">
+
+manifest に `.readonly()` を付け、関数は Container を `const T*` で受け取ります。
+
+```cpp
+static auto camera_cpp_pose_manif = ProcessManifest("camera_cpp_pose")
+    .readonly()
+    .add_string_arg("reference", "基準 Container", "map");
+std::optional<juiz::Value> camera_cpp_pose(const Camera* camera, const std::string& reference) {
+    return juiz::pose_to_value(juiz::pose(camera, reference), reference);
+}
+COMPONENT_CONTAINER_PROCESS_FACTORY(Camera, camera_cpp_pose_manif, camera_cpp_pose);
+```
+
+`const T*` で受け取れば、Container の書き換えは**型で止まります**。`juiz::set_pose` に const の Container を渡すと `static_assert` でコンパイルエラーになります。`T*` のままでも動きますが、そのときは書き換えないことを書き手が守ってください。
+
+</TabItem>
+<TabItem label="Haskell">
+
+manifest に `& readonly True` を付けます。
+
+```haskell
+cameraPoseManifest :: ProcessManifest
+cameraPoseManifest = containerProcessManifest "camera_hs_pose" "camera_hs"
+  & readonly True
+  & addStringArg "reference" "reference container" "map"
+
+cameraPose :: Camera -> Text -> IO Value
+cameraPose Camera reference = poseStampedToValue reference <$> containerPose reference
+```
+
+中で `setContainerPose` を呼ぶと `JuizError`(`juizPoseNotWritableError`)になります。ただし `IORef` などで持つ Container の状態の書き換えは**止められません**。readonly にした関数では Container の状態を書き換えないよう、書き手が守ってください。
+
+</TabItem>
+</Tabs>
 
 ## Anchor の更新
 
@@ -656,7 +736,7 @@ map0.pose_state()                      # {identifier, system, version, changed, 
 | エラー | いつ |
 |---|---|
 | `NoCommonAnchorError` | 基準と相手の両方を含む Anchor が無い(読み・書き)。どの木にも入っていない Container への書き込みもこれ |
-| `PoseNotWritableError` | 木の根の Anchor・基準自身・基準が子孫になる Container への書き込み |
+| `PoseNotWritableError` | 木の根の Anchor・基準自身・基準が子孫になる Container への書き込み。[readonly の ContainerProcess](#readonly-の-containerprocess) の中からの書き込み(juiz 0.2.2 から) |
 | `InvalidPoseValueError` | 長さ 0 の四元数、NaN・無限大 |
 | `TransformTreeError` | 木の規則を破る Transform |
 | `TransformAlreadyExistsError` | 同じ始点と終点の Transform |
