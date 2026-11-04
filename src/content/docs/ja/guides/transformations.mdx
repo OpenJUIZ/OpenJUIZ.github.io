@@ -503,6 +503,154 @@ system.create_pose_listener('camera0', 'print0', arg='pose', reference='map', on
 
 3D の表示はまだありません。
 
+## System をまたぐ Transform
+
+地図を持つ System とロボットの System のように、**別のプロセス(別の機械でもよい)の System の Container から Transform を張れます**。ロボットの System の中で「地図から見たカメラの位置」を読めるようになります。
+
+:::note[juiz 0.2.0 の次の版から使えます]
+System をまたぐ Transform は、juiz 0.2.0 の次の版で入る機能です。
+:::
+
+```text
+地図の System(ポート 8000)
+map (PeriodicExecutionAnchor, 10 Hz)
+ ┊  map → odom の Transform はロボットの System が持ち、map の位置を取りに来る(写し)
+ロボットの System(ポート 8001)
+└─ odom (StaticAnchor) → base0 (台車) → pantilt0 (雲台) → camera0 (カメラ)
+```
+
+### しくみ
+
+- **Transform は終点(子)の System が持ちます**。各 Container の親は 1 つだけなので、Transform は子の情報です。`set_pose` は親 → 子の Transform を書き換えるので、子の System が持てば、書き込みは今までどおり子の System の中だけで終わります。
+- 子の System は、親の Container の位置姿勢(Anchor ごとの ContainerPose)を `rate` [Hz] ごとに親の System へ取りに行き、自分の中に**写し**として置きます。上の例ではロボットの System に `map` の写しができ、`map` を基準にした読み出しが今までと同じ計算で答えられます。値が変わっていなければ通信は版番号だけで、量は Anchor 1 つにつき Pose 1 個(200 バイト程度)です。
+- 親の System の木には、子の System の部品は入りません。親の Container には「取りに来ている System がある」印(`remote_children`)だけが付きます。
+- 写しは、さらに別の System へ取り込めます(地図 → ロボット → ロボットの腕、のような多段)。
+- 写しの stamp は親の System の時計の値のままです。System 間の時計合わせはしません。
+
+### 設定ファイルに書く
+
+子の System の `transforms:` に、始点として**親の System の Container をブローカー付きの ID** で書きます(名前は自分の System の中で探すので使えません)。HTTP のほか、`qmp://…`・`ipc://…` のブローカーでもかまいません。
+
+```yaml
+# ロボットの System(ポート 8001)の conf の抜粋
+transforms:
+  # 始点は地図の System の map。rate (Hz) ごとに取りに行き、timeout (秒) の間取れなければ写しを消す
+  - source: http://127.0.0.1:8000/container/map::periodic_anchor
+    destination: odom
+    translation: {x: 1.0, y: 2.0, z: 0.0}
+    rate: 10.0
+    timeout: 3.0
+  - source: odom
+    destination: base0
+```
+
+| キー | 既定 | 内容 |
+|---|---|---|
+| `rate` | 10.0 | 親の System へ位置を取りに行く頻度 [Hz] |
+| `timeout` | 3.0 | 取れない状態がこの秒数続いたら写しを消す。1 回の呼び出しもこの時間を超えて待たない |
+
+- 同じ始点の Transform が複数あれば、いちばん大きい `rate` といちばん小さい `timeout` を使います。System をまたがない Transform に書くと、警告を出して使いません。
+- 親の System の conf の側には `map` を置くだけでかまいません。
+- 親の System の側に書いてもかまいません。`subsystems:` でつないだ子の Container を、終点にブローカー付きの ID で書くと、子の System の `transform/create` に回して作ります(親の System には残りません)。この項目は `subsystems:` / `mastersystem:` のつなぎが済んでから作られます。
+
+```yaml
+# 地図の System の conf に書く形(子の System に回る)
+subsystems:
+  - ...                    # ロボットの System とつないでおく
+transforms:
+  - source: map
+    destination: http://127.0.0.1:8001/container/odom::static_anchor
+```
+
+### 読む
+
+子の System では、名前 `map` が写しに解決します(自分の System に同じ名前の Container があればそちらが優先で、写しは ID で指定します)。答えの `header.frame_id` は写しの ID です。
+
+```sh
+juiz -s http://127.0.0.1:8001 container pose camera0 --reference map
+# => position: x=2.1, y=2.05, z=0.32、frame_id: http://127.0.0.1:8000/container/map::periodic_anchor
+juiz -s http://127.0.0.1:8001 transform list --long
+# http://127.0.0.1:8000/container/map::periodic_anchor -> core://core/container/odom::static_anchor  translation (1, 2, 0)  rotation (0, 0, 0, 1)  (remote: ok)
+# ...
+juiz -s http://127.0.0.1:8001 anchor tree map
+# map  position (0, 0, 0)  orientation (0, 0, 0, 1)
+# └─ odom  position (1, 2, 0)  orientation (0, 0, 0, 1)
+#    └─ ...
+```
+
+ContainerProcess の中の `pose` / `set_pose`(Rust・Python・C++・Haskell)の形は変わりません。基準に `map` と書けば、写しから計算されます。
+
+親の System からは、子の System の Container を**ブローカー付きの ID** で指定すると、子の System に回して読みます。基準には親の System の Container(子の System が写しとして持っているもの)を使えます。ID の型名(`camera_python`)は Python のサンプルの例で、言語ごとに違います。
+
+```sh
+juiz container pose "http://127.0.0.1:8001/container/camera0::camera_python" --reference map
+# => position: x=2.1, y=2.05, z=0.32、frame_id: map
+juiz container list --long
+# /          map   periodic_anchor  http://127.0.0.1:8000/container/map::periodic_anchor
+#     anchor: periodic (10 Hz)
+#     remote child: <ロボットの System の UUID> -> core://core/container/odom::static_anchor
+```
+
+- `container set_pose` も同じく子の System に回して書けます(基準は親の System の Container)。
+- 基準に使えるのは、回した先の System が写しとして持つ Container だけです。親の System のほかの Container は基準にできません。
+- 2 台のロボットの System が同じ地図の写しを持っていれば、それぞれで地図から見た位置を読み、使う側で合成すれば、ロボット同士の相対位置が分かります(合成する API はありません)。
+
+### つながらなくなったとき
+
+| 状態(`remote:`) | 管理画面 | いつ | 読み出し |
+|---|---|---|---|
+| `ok` | 良好 | 取り込めている | 最新の値 |
+| `stale` | 途絶中 | 取り込みに失敗していて、最後に取れてから `timeout` 秒たっていない | 最後に取れた値(stamp で古さが分かる) |
+| `lost` | 切断 | `timeout` 秒の間取れなかった。または親の System が `remove_subsystem` で外れた | 写しが消え、`map` を基準にすると `NoCommonAnchorError`(理由に「相手の System につながらない」) |
+
+- `lost` でも Transform は消えず、取りに行き続けます。親の System が戻れば、次の取り込みで写しが自動で戻ります。起動の順番もどちらが先でもかまいません。
+- `odom` など自分の System の Container を基準にした読み書きは、親の System が止まっていても続けられます。
+- ログは、最初の失敗で WARN を 1 回、つながり直したら INFO を 1 回出します(失敗の間は DEBUG だけです)。
+- 写しの取り込みは明示的な書き込みではないので、Pose 通知は `on_update: true` のものだけが呼ばれます。
+
+### CLI・API・pyjuiz の追加
+
+```text
+juiz transform create <始点> <終点> [--rate <Hz>] [--timeout <秒>]   # 始点はブローカー付きの ID
+juiz transform list --long                         # またぐ Transform に (remote: ok | stale | lost)
+juiz container pose-state <container>              # Container の PoseState(Anchor ごとの位置)を JSON で出す
+juiz container pose <別 System の Container の ID> --reference <基準>
+juiz container list --long                         # 取りに来ている System を remote child: の行で
+```
+
+| クラス / 関数 | 追加 |
+|---|---|
+| `container/pose_state` | 新しい API。Container の PoseState を版番号つきで返す(子の System が取りに来るのもこれ) |
+| `transform/create` | 引数 `rate`・`timeout`。終点が別 System なら回す |
+| `transform/profile_full` | `remote: {system, rate, timeout, state, last_success}` |
+| `container/pose`・`container/set_pose` | `identifier` が別 System なら回す |
+| `container/profile_full` | `remote_children: [{system, destinations, last_access}]` |
+| `anchor/list`・`transformations/tree` | 写しの Anchor も入る・指定できる。`anchor/update` に写しを渡すと、すぐ 1 回取りに行く |
+
+pyjuiz では、`create_transform` に `rate`・`timeout` を渡せ、`pose_state()` で PoseState を読めます。`pose`・`set_pose`・`create_transform` に**別 System の `ContainerProxy`** を渡すと、その System へのブローカー付きの ID にして送ります。
+
+```python
+from juiz.proxy import SystemProxy, ContainerProxy, HttpProxy
+
+map_system = SystemProxy(HttpProxy('localhost', 8000))
+robot_system = SystemProxy(HttpProxy('localhost', 8001))
+map0 = ContainerProxy('map', 'localhost', 8000)
+camera0 = ContainerProxy('camera0', 'localhost', 8001)
+
+robot_system.pose('camera0', 'map')    # ロボットの System で、map の写しを基準に読む
+map_system.pose(camera0, 'map')        # 地図の System から、ロボットの System の camera0 を読む(回して読む)
+camera0.pose(map0)                     # 基準に別 System の Proxy を渡してもよい
+map0.pose_state()                      # {identifier, system, version, changed, entries: [...]}
+```
+
+実行中に作るときは、始点に別 System の Proxy を渡します: `robot_system.create_transform(map0, 'odom', translation=(1, 2, 0), rate=10.0, timeout=3.0)`。
+
+### 管理画面で見る
+
+子の System の管理画面では、「変換木」の自分の木の後に写しの木が並び、写しの Anchor と写しの始点が破線と「写し」の印で出ます。写しの始点の行と、親が別 System の容器には取り込みの状態(良好・途絶中・切断)が出ます。性質欄の「親」には写しの名前と仲介、相手の系、最後に取れた時刻、周期、timeout が出ます。
+
+親の System では、写しを取りに来られている容器に「別系の子」の印が付き、性質欄に子の系と終点が出ます。副系(サブシステム)が親の容器を取り込んでいれば、その副系の容器の位置姿勢も親の基準で表示されます。
+
 ## エラー
 
 | エラー | いつ |
@@ -514,13 +662,15 @@ system.create_pose_listener('camera0', 'print0', arg='pose', reference='map', on
 | `TransformAlreadyExistsError` | 同じ始点と終点の Transform |
 | `TransformNotFoundError` | 指定の Transform が無い |
 | `PoseListenerError` | Pose 通知の登録の不備(引数・型・二重登録) |
+| `CrossSystemTransformError` | System をまたぐ Transform を作れない・回せない(相手の System につながらない、両端とも別 System、写しを始点にした)。juiz 0.2.0 の次の版から |
 | `TransformationsNotAttachedError` | System に登録されていない Container、口の無いオブジェクト、呼び出しの外からの読み書き |
 
 Python ではどれも `juiz.TransformationsError`(`RuntimeError` の子)の子の例外、C++ では `juiz::TransformationsError` の子の例外になります。
 
 ## できないこと
 
-- **System をまたぐ Transform**: 木は 1 つの System(1 つの juiz のプロセス)の中で閉じます。サブシステムや別プロセスの Container とは Transform を結べません。
+- **親の System で子の System の木全体を組むこと**: [System をまたぐ Transform](#system-をまたぐ-transform) では、木の形は各 System の中で閉じ、親の System には印だけが付きます。
+- 親から子へ変化のたびに送ること(取り込みは子が取りに行くだけなので、1 / rate 秒ほど遅れることがあります)。
 - 過去の時刻の位置姿勢の問い合わせ(tf2 の時刻つきバッファ)。
 - 管理画面の 3D 表示。
 
@@ -536,3 +686,5 @@ Python ではどれも `juiz.TransformationsError`(`RuntimeError` の子)の子�
 | Haskell | [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) | `component/MobileRobot.hs` | `mobile_base_hs`・`pantilt_hs`・`camera_hs`・`pose_print_hs` |
 
 ContainerProcess の型名は、Container の型名に `_move`・`_set_pan`・`_pose` を付けたものです(`mobile_base_python_move` など)。
+
+同じ木を地図の System とロボットの System に分けた [System をまたぐ](#system-をまたぐ-transform) 版が、`transformations_map.conf`(ポート 8000)と `transformations_robot.conf`(ポート 8001)です(juiz 0.2.0 の次の版から)。地図の System、ロボットの System の順に起動し、ロボットの System の ContainerProcess を呼ぶときは、上の `call` の URL のポートを 8001 にします。

@@ -51,6 +51,7 @@ juiz -f increment_process.conf -d
 | 仲介 | Broker |
 | 生成器 | Factory |
 | 変換木・基点・変換・位置姿勢・基準 | Transformations・Anchor・Transform・ContainerPose・基準の Container(→ [Transformations](/ja/guides/transformations/#管理画面)) |
+| 写し・別系の子 | 別 System の Anchor の写し・別 System にいる子(→ [System をまたぐ Transform](/ja/guides/transformations/#管理画面で見る)) |
 
 ## 左のツリーと性質欄
 

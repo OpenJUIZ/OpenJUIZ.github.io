@@ -503,6 +503,154 @@ In the [web UI](/guides/web-ui/), Anchor Containers carry a "基点" (Anchor) ba
 
 There is no 3D view yet.
 
+## Transforms across Systems
+
+A Transform can start from **a Container in a System of another process (or another machine)**, such as a map System and a robot System. The robot System can then read "the camera's pose seen from the map".
+
+:::note[Available from the release after juiz 0.2.0]
+Transforms across Systems come in the release after juiz 0.2.0.
+:::
+
+```text
+Map System (port 8000)
+map (PeriodicExecutionAnchor, 10 Hz)
+ ┊  the robot System owns the map → odom Transform and fetches the pose of map (a replica)
+Robot System (port 8001)
+└─ odom (StaticAnchor) → base0 (mobile base) → pantilt0 (pan-tilt) → camera0 (camera)
+```
+
+### How it works
+
+- **The System of the destination (child) owns the Transform.** Each Container has exactly one parent, so a Transform belongs to the child. `set_pose` rewrites the parent → child Transform, so when the child's System owns it, writes still finish inside the child's System.
+- The child's System fetches the pose of the parent Container (its ContainerPose for each Anchor) from the parent's System every `1 / rate` seconds and keeps it as a **replica**. In the example, the robot System gets a replica of `map`, and reads with `map` as the reference are answered by the same computation as before. When nothing has changed, only a version number goes over the wire; otherwise one Pose (about 200 bytes) per Anchor.
+- The robot's parts do not enter the tree of the parent's System. The parent Container only gets a mark that "a System is fetching from it" (`remote_children`).
+- A replica can be fetched again by a further System (map → robot → robot arm, and so on).
+- The stamp of a replica is the parent System's clock as is. juiz does not synchronize clocks between Systems.
+
+### Writing it in the configuration file
+
+In the child System's `transforms:`, write the source as **the parent System's Container with a broker-qualified ID** (a name cannot be used, because names are looked up in your own System). Besides HTTP, `qmp://…` and `ipc://…` brokers work as well.
+
+```yaml
+# Excerpt of the robot System's conf (port 8001)
+transforms:
+  # The source is map in the map System. Fetched every rate (Hz); the replica is removed if nothing arrives for timeout (seconds)
+  - source: http://127.0.0.1:8000/container/map::periodic_anchor
+    destination: odom
+    translation: {x: 1.0, y: 2.0, z: 0.0}
+    rate: 10.0
+    timeout: 3.0
+  - source: odom
+    destination: base0
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `rate` | 10.0 | How often to fetch the pose from the parent's System [Hz] |
+| `timeout` | 3.0 | Remove the replica after this many seconds without a successful fetch. A single call never waits longer than this either |
+
+- If several Transforms share a source, the largest `rate` and the smallest `timeout` are used. On a Transform that does not cross Systems, these keys are ignored with a warning.
+- The parent System's conf only needs `map`.
+- You may also write it in the parent System's conf. With the child connected through `subsystems:`, write the child's Container as the destination with a broker-qualified ID, and the Transform is created by the child System's `transform/create` (nothing stays in the parent System). Such entries are created after the `subsystems:` / `mastersystem:` connections are made.
+
+```yaml
+# Written in the map System's conf (forwarded to the child System)
+subsystems:
+  - ...                    # connect to the robot System
+transforms:
+  - source: map
+    destination: http://127.0.0.1:8001/container/odom::static_anchor
+```
+
+### Reading
+
+In the child System, the name `map` resolves to the replica (if your own System has a Container with the same name, that one wins, and you give the replica by ID). `header.frame_id` in the answer is the replica's ID.
+
+```sh
+juiz -s http://127.0.0.1:8001 container pose camera0 --reference map
+# => position: x=2.1, y=2.05, z=0.32, frame_id: http://127.0.0.1:8000/container/map::periodic_anchor
+juiz -s http://127.0.0.1:8001 transform list --long
+# http://127.0.0.1:8000/container/map::periodic_anchor -> core://core/container/odom::static_anchor  translation (1, 2, 0)  rotation (0, 0, 0, 1)  (remote: ok)
+# ...
+juiz -s http://127.0.0.1:8001 anchor tree map
+# map  position (0, 0, 0)  orientation (0, 0, 0, 1)
+# └─ odom  position (1, 2, 0)  orientation (0, 0, 0, 1)
+#    └─ ...
+```
+
+`pose` / `set_pose` inside a ContainerProcess (Rust, Python, C++, Haskell) keep the same form. Give `map` as the reference and the replica is used.
+
+From the parent System, give the child System's Container **with a broker-qualified ID** and the read is forwarded to the child System. The reference can be a Container of the parent System that the child holds as a replica. The type name in the ID (`camera_python`) is from the Python sample and differs per language.
+
+```sh
+juiz container pose "http://127.0.0.1:8001/container/camera0::camera_python" --reference map
+# => position: x=2.1, y=2.05, z=0.32, frame_id: map
+juiz container list --long
+# /          map   periodic_anchor  http://127.0.0.1:8000/container/map::periodic_anchor
+#     anchor: periodic (10 Hz)
+#     remote child: <UUID of the robot System> -> core://core/container/odom::static_anchor
+```
+
+- `container set_pose` is forwarded to the child System in the same way (the reference is a Container of the parent System).
+- Only Containers that the target System holds as replicas can be the reference. Other Containers of the parent System cannot.
+- If two robot Systems hold replicas of the same map, read each robot's pose from the map in each System and combine them yourself to get the relative pose between the robots (there is no API that combines them).
+
+### When the connection is lost
+
+| State (`remote:`) | Web UI | When | Reads |
+|---|---|---|---|
+| `ok` | 良好 (OK) | Fetching works | The latest value |
+| `stale` | 途絶中 (Stale) | Fetches fail, but less than `timeout` seconds since the last success | The last value fetched (its stamp tells how old it is) |
+| `lost` | 切断 (Lost) | Nothing fetched for `timeout` seconds, or the parent System was removed by `remove_subsystem` | The replica is removed; reads with `map` as the reference give `NoCommonAnchorError` (the reason says the other System is unreachable) |
+
+- Even when `lost`, the Transform is kept and fetching continues. When the parent System comes back, the replica returns on the next fetch. Either System may start first.
+- Reads and writes with your own Containers such as `odom` as the reference keep working while the parent System is down.
+- The log shows one WARN at the first failure and one INFO when the connection comes back (only DEBUG while failing).
+- Fetching a replica is not an explicit write, so only Pose notifications with `on_update: true` are called.
+
+### Additions to the CLI, API and pyjuiz
+
+```text
+juiz transform create <source> <destination> [--rate <Hz>] [--timeout <seconds>]   # source is a broker-qualified ID
+juiz transform list --long                         # (remote: ok | stale | lost) on Transforms across Systems
+juiz container pose-state <container>              # the Container's PoseState (pose per Anchor) as JSON
+juiz container pose <ID of a Container in another System> --reference <reference>
+juiz container list --long                         # Systems fetching from a Container, as remote child: lines
+```
+
+| Class / function | Addition |
+|---|---|
+| `container/pose_state` | New API. Returns the Container's PoseState with a version number (this is what child Systems call) |
+| `transform/create` | Arguments `rate` and `timeout`. Forwarded when the destination is in another System |
+| `transform/profile_full` | `remote: {system, rate, timeout, state, last_success}` |
+| `container/pose`, `container/set_pose` | Forwarded when `identifier` is in another System |
+| `container/profile_full` | `remote_children: [{system, destinations, last_access}]` |
+| `anchor/list`, `transformations/tree` | Include and accept replica Anchors. `anchor/update` on a replica fetches once right away |
+
+In pyjuiz, `create_transform` takes `rate` and `timeout`, and `pose_state()` reads the PoseState. Pass **a `ContainerProxy` of another System** to `pose`, `set_pose` or `create_transform`, and it is sent as a broker-qualified ID for that System.
+
+```python
+from juiz.proxy import SystemProxy, ContainerProxy, HttpProxy
+
+map_system = SystemProxy(HttpProxy('localhost', 8000))
+robot_system = SystemProxy(HttpProxy('localhost', 8001))
+map0 = ContainerProxy('map', 'localhost', 8000)
+camera0 = ContainerProxy('camera0', 'localhost', 8001)
+
+robot_system.pose('camera0', 'map')    # in the robot System, with the map replica as the reference
+map_system.pose(camera0, 'map')        # from the map System, read camera0 of the robot System (forwarded)
+camera0.pose(map0)                     # the reference may be a Proxy of another System
+map0.pose_state()                      # {identifier, system, version, changed, entries: [...]}
+```
+
+To create one at run time, pass a Proxy of another System as the source: `robot_system.create_transform(map0, 'odom', translation=(1, 2, 0), rate=10.0, timeout=3.0)`.
+
+### In the web UI
+
+In the child System's web UI, the replica trees follow your own trees in "変換木" (Transformations), and replica Anchors and replica sources are shown with a dashed line and a "写し" (Replica) badge. The row of a replica source and Containers whose parent is in another System show the fetch state (良好 OK, 途絶中 Stale, 切断 Lost). The "親" (Parent) entry of the property pane shows the replica's name and broker, the other System, the time of the last successful fetch, the rate and the timeout.
+
+In the parent System, Containers that are being fetched get a "別系の子" (Remote child) badge, and the property pane lists the child Systems and destinations. If a subsystem fetches a Container of the parent, the poses of that subsystem's Containers are also shown with the parent's references.
+
 ## Errors
 
 | Error | When |
@@ -514,13 +662,15 @@ There is no 3D view yet.
 | `TransformAlreadyExistsError` | A Transform with the same source and destination |
 | `TransformNotFoundError` | The given Transform does not exist |
 | `PoseListenerError` | Invalid Pose notification registration (argument, type, duplicate) |
+| `CrossSystemTransformError` | A Transform across Systems cannot be created or forwarded (the other System is unreachable, both ends are in other Systems, or a replica is used as an endpoint). From the release after juiz 0.2.0 |
 | `TransformationsNotAttachedError` | A Container not registered in a System, an object without the accessor, or a read/write outside the call |
 
 In Python they are all subclasses of `juiz.TransformationsError` (a subclass of `RuntimeError`); in C++, subclasses of `juiz::TransformationsError`.
 
 ## Limitations
 
-- **Transforms across Systems**: a tree is closed within one System (one juiz process). Transforms cannot link to Containers in subsystems or other processes.
+- **Building the whole tree of a child System in the parent System**: with [Transforms across Systems](#transforms-across-systems), the shape of each tree stays inside its System, and the parent System only gets a mark.
+- Pushing every change from the parent to the child (the child only fetches, so values can lag by about 1 / rate seconds).
 - Queries for poses at past times (like the time-stamped buffer of tf2).
 - A 3D view in the web UI.
 
@@ -536,3 +686,5 @@ Every sample repository has `transformations.conf` and one Component holding the
 | Haskell | [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) | `component/MobileRobot.hs` | `mobile_base_hs`, `pantilt_hs`, `camera_hs`, `pose_print_hs` |
 
 ContainerProcess type names are the Container type name plus `_move`, `_set_pan` or `_pose` (such as `mobile_base_python_move`).
+
+The [across-Systems](#transforms-across-systems) version, which splits the same tree into a map System and a robot System, is `transformations_map.conf` (port 8000) and `transformations_robot.conf` (port 8001) (from the release after juiz 0.2.0). Start the map System, then the robot System, and use port 8001 in the `call` URLs above for the robot System's ContainerProcesses.

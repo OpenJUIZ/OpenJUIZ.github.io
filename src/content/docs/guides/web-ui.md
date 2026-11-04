@@ -51,6 +51,7 @@ The UI labels are in Japanese, with the English names used in the API and on thi
 | 仲介 | Broker |
 | 生成器 | Factory |
 | 変換木・基点・変換・位置姿勢・基準 | Transformations, Anchor, Transform, ContainerPose, reference Container (→ [Transformations](/guides/transformations/#web-ui)) |
+| 写し・別系の子 | Replica (a copy of another System's Anchor), Remote child (→ [Transforms across Systems](/guides/transformations/#in-the-web-ui)) |
 
 ## The tree and the property pane
 
