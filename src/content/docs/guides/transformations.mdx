@@ -156,6 +156,7 @@ In this release an Anchor cannot have ContainerProcesses (writing `processes:` i
 | `destination` | yes | Name or ID of the destination (child) Container |
 | `translation` | no | Position of the child's origin seen from the parent `{x, y, z}` [m]. Defaults to 0 |
 | `rotation` | no | Orientation of the child seen from the parent `{x, y, z, w}`. Defaults to no rotation |
+| `writers` | no | Names or IDs of Containers that may write this Transform with `set_transform` from their ContainerProcesses, besides the endpoints (since juiz 0.2.4, see [Reading another Container and writing a Transform](#reading-another-container-and-writing-a-transform)) |
 
 The ID of a Transform is `transform://<source ID>|<destination ID>`. Names are resolved with the same [namespace](/guides/namespace/) rules as the rest of the configuration (`robot1/base0` and so on).
 
@@ -328,6 +329,88 @@ In C++, Haskell and C ABI Rust, the accessors work **only during the call**. Rea
 - Writing to a Container that is in no tree is an error (`NoCommonAnchorError`). Transforms are never created automatically; create one first in the configuration file or through the API.
 - Writing to the root Anchor of the tree, to the reference itself, or to a Container whose descendant is the reference is an error (`PoseNotWritableError`). So is writing from inside a [readonly ContainerProcess](#readonly-containerprocesses).
 - The return value is `pose(C, R)` after the write.
+
+## Reading another Container and writing a Transform
+
+:::note[Available since juiz 0.2.4]
+`lookup` and `set_transform` were added in juiz 0.2.4. They are not available in earlier versions.
+:::
+
+`pose` / `set_pose` only work on your own Container. To handle poses or Transforms **other than your own** from inside a ContainerProcess, use these two:
+
+- **`lookup(T, R)`**: reads the ContainerPose of another Container T, seen from the reference R (like tf's lookupTransform). Example: a SLAM Container reads where the LiDAR `lidar0` is as seen from the robot `robot0`.
+- **`set_transform(S, D, t)`**: sets the value of the Transform S → D, named explicitly, to t. Examples: the SLAM Container `slam0` writes the `map → odom` correction (`odom` is an Anchor, so it cannot have ContainerProcesses), or a single simulator `sim0` writes `odom → robotN` for several robots.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```rust
+use juiz_sdk::geometry::{Quaternion, Transform, Vector3};
+
+// &self method of ContainerImpl. Returns PoseStamped
+let lidar = c.lookup("lidar0", "robot0")?;
+// &mut self method of ContainerImpl. Returns TransformStamped
+let t = c.set_transform("map", "odom", Transform::new(Vector3::new(0.1, 0.0, 0.0), Quaternion::identity()))?;
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```python
+from juiz import lookup, set_transform
+from juiz_std.geometry import Quaternion, Transform, Vector3
+
+lidar = lookup(slam, "lidar0", "robot0")   # PoseStamped
+t = set_transform(slam, "map", "odom",
+                  Transform(translation=Vector3(x=0.1, y=0.0, z=0.0), rotation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)))
+```
+
+The value of `set_transform` can be a `Transform`, a `TransformStamped`, or a dict of either. It returns a `TransformStamped`.
+
+</TabItem>
+<TabItem label="C++">
+
+```cpp
+juiz_pose_stamped lidar = juiz::lookup(slam, "lidar0", "robot0");
+juiz_transform_stamped t = juiz::set_transform(slam, "map", "odom", juiz::make_transform(0.1, 0.0, 0.0));
+// For a plane, use juiz::make_transform_2d(x, y, yaw). To make a dict, use juiz::transform_to_value(t, "map", "odom")
+```
+
+`lookup` can be called with a `const T*` (readonly) too. From C, use `juiz_container_pose_lookup` / `juiz_container_transform_set`.
+
+</TabItem>
+<TabItem label="Haskell">
+
+```haskell
+(lidar, stamp) <- lookupContainerPose "lidar0" "robot0"
+t <- setTransform "map" "odom" (ContainerTransform (0.1, 0, 0) (0, 0, 0, 1))
+pure (transformStampedToValue "map" "odom" t)
+```
+
+</TabItem>
+</Tabs>
+
+Rules for `lookup`:
+
+- It is computed the same way as `pose(T, R)`; if nothing is found, it fails with `NoCommonAnchorError`. Your own Container takes no part in the computation, so it does not need to be in any tree.
+- Names T and R are resolved in your own namespace (IDs also work). It only reads, so it can be called from a [readonly ContainerProcess](#readonly-containerprocesses).
+
+Rules for `set_transform`:
+
+- You can only write a Transform **whose endpoint (S or D) is your own Container**, or one **whose `writers` include your Container**. Anything else fails with `TransformNotWritableError`.
+- Set `writers` in an entry of `transforms:` in the configuration file, with `juiz transform create --writer <Container>` (repeatable) in the CLI, or with `create_transform(..., writers=[...])` in pyjuiz. `writers` only restricts writes from ContainerProcesses; `transform update` from the API and the CLI is open to everyone as before.
+- Transforms are not created automatically. If it does not exist, it fails with `TransformNotFoundError`. The result is the same as `transform/update` in the API, including Pose notifications.
+- It cannot be called from a readonly ContainerProcess (`TransformNotWritableError`; in Rust and C++ the types prevent it).
+
+```yaml
+transforms:
+  - source: map
+    destination: odom
+    writers: [slam0]          # slam0 is not an endpoint but can write with set_transform
+  - source: odom
+    destination: robot0
+    writers: [sim0]
+```
 
 ## Readonly ContainerProcesses
 
@@ -741,6 +824,7 @@ In the parent System, Containers that are being fetched get a "別系の子" (Re
 | `TransformTreeError` | A Transform that breaks the tree rules |
 | `TransformAlreadyExistsError` | A Transform with the same source and destination |
 | `TransformNotFoundError` | The given Transform does not exist |
+| `TransformNotWritableError` | `set_transform` on a Transform whose endpoints are not your Container and whose `writers` do not include it, or from a readonly ContainerProcess (since juiz 0.2.4) |
 | `PoseListenerError` | Invalid Pose notification registration (argument, type, duplicate) |
 | `CrossSystemTransformError` | A Transform across Systems cannot be created or forwarded (the other System is unreachable, both ends are in other Systems, or a replica is used as an endpoint). From juiz 0.2.1 |
 | `TransformationsNotAttachedError` | A Container not registered in a System, an object without the accessor, or a read/write outside the call |

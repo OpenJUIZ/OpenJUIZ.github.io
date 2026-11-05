@@ -48,13 +48,13 @@ Check the version of `juiz`, then extract libjuiz_sdk of the same version into `
 
 ```sh
 juiz --version
-# => juiz 0.2.3
+# => juiz 0.2.4
 ghc --version
 # => The Glorious Glasgow Haskell Compilation System, version 9.6.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.3
-ls ~/.juiz/sdk/0.2.3/lib
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.4
+ls ~/.juiz/sdk/0.2.4/lib
 # => libjuiz_sdk.so  ...
-git clone --depth 1 --branch v0.2.3 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.3
+git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.4
 ```
 
 </TabItem>
@@ -62,13 +62,13 @@ git clone --depth 1 --branch v0.2.3 https://github.com/OpenJUIZ/juiz.git ~/juiz-
 
 ```sh
 juiz --version
-# => juiz 0.2.3
+# => juiz 0.2.4
 ghc --version
 # => The Glorious Glasgow Haskell Compilation System, version 9.6.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.3
-ls ~/.juiz/sdk/0.2.3/lib
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.4
+ls ~/.juiz/sdk/0.2.4/lib
 # => libjuiz_sdk.dylib  ...
-git clone --depth 1 --branch v0.2.3 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.3
+git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.4
 ```
 
 </TabItem>
@@ -109,15 +109,15 @@ Create `my_juiz_hs/cabal.project` with the following content. Replace `/home/me`
 
 ```txt title="cabal.project"
 -- build this project together with hsjuiz from the juiz source
-packages: . /home/me/juiz-0.2.3/bindings/hsjuiz
+packages: . /home/me/juiz-0.2.4/bindings/hsjuiz
 
 -- hsjuiz uses only packages that come with GHC, so the Hackage index is not used (no cabal update needed)
 active-repositories: :none
 
 -- hsjuiz links to libjuiz_sdk
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.2.3/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.2.3/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.2.4/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.2.4/lib
 ```
 
 | Part | Meaning |

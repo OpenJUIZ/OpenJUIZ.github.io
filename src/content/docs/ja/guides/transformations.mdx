@@ -156,6 +156,7 @@ Anchor は `containers:` に普通の Container と同じく書きます。ID・
 | `destination` | 必須 | 終点(子)の Container の名前か ID |
 | `translation` | 任意 | 親から見た子の原点の位置 `{x, y, z}` [m]。省略時は 0 |
 | `rotation` | 任意 | 親から見た子の向き `{x, y, z, w}`。省略時は回転なし |
+| `writers` | 任意 | 端点のほかに、ContainerProcess から `set_transform` でこの Transform を書いてよい Container の名前か ID の並び(juiz 0.2.4 から、[別の Container を読む・Transform を書く](#別の-container-を読むtransform-を書く)) |
 
 Transform の ID は `transform://<始点の ID>|<終点の ID>` です。名前は他の設定と同じく[ネームスペース](/ja/guides/namespace/)の規則で解決します(`robot1/base0` など)。
 
@@ -328,6 +329,88 @@ C++・Haskell・C ABI の Rust では、読み書きの口は**その呼び出�
 - どの木にも入っていない Container への書き込みはエラー(`NoCommonAnchorError`)です。Transform は自動では作りません。先に設定ファイルか API で Transform を作ってください。
 - 木の根の Anchor、基準自身、基準が自分の子孫になる書き込みはエラー(`PoseNotWritableError`)です。[readonly の ContainerProcess](#readonly-の-containerprocess) の中からの書き込みも同じエラーです。
 - 戻り値は書いた後の `pose(C, R)` です。
+
+## 別の Container を読む・Transform を書く
+
+:::note[juiz 0.2.4 から使えます]
+`lookup` と `set_transform` は juiz 0.2.4 で入った機能です。それより前の版では使えません。
+:::
+
+`pose` / `set_pose` の相手は自分の Container だけです。ContainerProcess の中から**自分以外**の位置姿勢や Transform を扱うときは、次の 2 つを使います。
+
+- **`lookup(T, R)`**: 自分以外の Container T の、基準 R から見た ContainerPose を読みます(tf の lookupTransform に当たります)。例: SLAM の Container が、台車 `robot0` から見た LiDAR `lidar0` の位置を読む。
+- **`set_transform(S, D, t)`**: 名前で指定した Transform(S → D)の値を t にします。例: SLAM の Container `slam0` が `map → odom` の補正を書く(`odom` は Anchor なので ContainerProcess を持てません)、1 つのシミュレータ `sim0` が複数台の `odom → robotN` を書く。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```rust
+use juiz_sdk::geometry::{Quaternion, Transform, Vector3};
+
+// ContainerImpl の &self のメソッド。PoseStamped を返す
+let lidar = c.lookup("lidar0", "robot0")?;
+// ContainerImpl の &mut self のメソッド。TransformStamped を返す
+let t = c.set_transform("map", "odom", Transform::new(Vector3::new(0.1, 0.0, 0.0), Quaternion::identity()))?;
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```python
+from juiz import lookup, set_transform
+from juiz_std.geometry import Quaternion, Transform, Vector3
+
+lidar = lookup(slam, "lidar0", "robot0")   # PoseStamped
+t = set_transform(slam, "map", "odom",
+                  Transform(translation=Vector3(x=0.1, y=0.0, z=0.0), rotation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)))
+```
+
+`set_transform` の値には `Transform`・`TransformStamped`・それぞれの辞書を渡せます。戻り値は `TransformStamped` です。
+
+</TabItem>
+<TabItem label="C++">
+
+```cpp
+juiz_pose_stamped lidar = juiz::lookup(slam, "lidar0", "robot0");
+juiz_transform_stamped t = juiz::set_transform(slam, "map", "odom", juiz::make_transform(0.1, 0.0, 0.0));
+// 平面なら juiz::make_transform_2d(x, y, yaw)。辞書にするのは juiz::transform_to_value(t, "map", "odom")
+```
+
+`lookup` は `const T*`(readonly)でも呼べます。C からは `juiz_container_pose_lookup` / `juiz_container_transform_set` を使います。
+
+</TabItem>
+<TabItem label="Haskell">
+
+```haskell
+(lidar, stamp) <- lookupContainerPose "lidar0" "robot0"
+t <- setTransform "map" "odom" (ContainerTransform (0.1, 0, 0) (0, 0, 0, 1))
+pure (transformStampedToValue "map" "odom" t)
+```
+
+</TabItem>
+</Tabs>
+
+`lookup` の規則:
+
+- 計算は `pose(T, R)` と同じで、見つからなければ `NoCommonAnchorError` です。自分の Container は計算に関わらないので、自分がどの木に入っていなくてもかまいません。
+- T・R の名前は自分のネームスペースで解決します(ID も渡せます)。読むだけなので [readonly の ContainerProcess](#readonly-の-containerprocess) からも呼べます。
+
+`set_transform` の規則:
+
+- 書けるのは、**自分が端点(S か D)の Transform** か、**`writers` に自分が入っている Transform** だけです。それ以外は `TransformNotWritableError` です。
+- `writers` は設定ファイルの `transforms:` の項目、CLI の `juiz transform create --writer <Container>`(繰り返し可)、pyjuiz の `create_transform(..., writers=[...])` で付けます。`writers` は ContainerProcess からの書き込みにだけ効き、API・CLI の `transform update` は今まで通り誰でも書けます。
+- Transform は自動では作りません。無ければ `TransformNotFoundError` です。結果は API の `transform/update` と同じで、Pose 通知も出ます。
+- readonly の ContainerProcess からは書けません(`TransformNotWritableError`。Rust・C++ では型で止まります)。
+
+```yaml
+transforms:
+  - source: map
+    destination: odom
+    writers: [slam0]          # slam0 は端点ではないが set_transform で書ける
+  - source: odom
+    destination: robot0
+    writers: [sim0]
+```
 
 ## readonly の ContainerProcess
 
@@ -741,6 +824,7 @@ map0.pose_state()                      # {identifier, system, version, changed, 
 | `TransformTreeError` | 木の規則を破る Transform |
 | `TransformAlreadyExistsError` | 同じ始点と終点の Transform |
 | `TransformNotFoundError` | 指定の Transform が無い |
+| `TransformNotWritableError` | `set_transform` で、自分が端点でなく `writers` にも入っていない Transform への書き込み、readonly の中からの書き込み(juiz 0.2.4 から) |
 | `PoseListenerError` | Pose 通知の登録の不備(引数・型・二重登録) |
 | `CrossSystemTransformError` | System をまたぐ Transform を作れない・回せない(相手の System につながらない、両端とも別 System、写しを始点にした)。juiz 0.2.1 から |
 | `TransformationsNotAttachedError` | System に登録されていない Container、口の無いオブジェクト、呼び出しの外からの読み書き |
