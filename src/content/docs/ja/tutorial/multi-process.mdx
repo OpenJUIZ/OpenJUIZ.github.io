@@ -890,6 +890,7 @@ juiz -s http://127.0.0.1:8001 ec stop "http://127.0.0.1:8001/execution_context/e
 - talker の `-r` を `2.0` にして起動し直し、もう一度つないでみましょう。listener の表示の間隔が半分になります。
 - 起動する順番を入れ替えて、talker を先(8000 番)、listener を後(8001 番)に起動してみましょう。つなぐときの ID のポート番号が入れ替わるだけで、同じようにつなげます。
 - `talker_ec.conf` の `rate` を変えたり、`auto_start` を `true` にしたりして、EC の動き方の違いを確かめてみましょう。
+- つないだ接続を外してみましょう。`connection list` で出た ID を `juiz -s http://127.0.0.1:8001 connection delete "<ID>"` に渡します(`connection create` と同じく `<つなぐ元> <引数名> <つなぐ先>` でも指定できます)。listener の表示が止まります。
 
 ## まとめ
 

@@ -581,7 +581,7 @@ pose_print: x=1.00 y=0.00 yaw=0.0deg (from odom)
 juiz container pose camera0 --reference odom
 # => position: x=1.1, y=0.05, z=0.32 (PoseStamped の JSON)
 juiz container pose camera0 --reference map
-# => position: x=2.1, y=2.05, z=0.32
+# => position: x=2.1, y=2.05, z=0.32(JSON の要点)
 juiz anchor tree map
 # map  position (0, 0, 0)  orientation (0, 0, 0, 1)
 # └─ odom  position (1, 2, 0)  orientation (0, 0, 0, 1)
@@ -731,7 +731,7 @@ transforms:
 
 ```sh
 juiz -s http://127.0.0.1:8001 container pose camera0 --reference map
-# => position: x=2.1, y=2.05, z=0.32、frame_id: http://127.0.0.1:8000/container/map::periodic_anchor
+# => position: x=2.1, y=2.05, z=0.32、header.frame_id: http://127.0.0.1:8000/container/map::periodic_anchor(JSON の要点)
 juiz -s http://127.0.0.1:8001 transform list --long
 # http://127.0.0.1:8000/container/map::periodic_anchor -> core://core/container/odom::static_anchor  translation (1, 2, 0)  rotation (0, 0, 0, 1)  (remote: ok)
 # ...
@@ -747,14 +747,14 @@ ContainerProcess の中の `pose` / `set_pose`(Rust・Python・C++・Haskell)の
 
 ```sh
 juiz container pose "http://127.0.0.1:8001/container/camera0::camera_python" --reference map
-# => position: x=2.1, y=2.05, z=0.32、frame_id: map
+# => position: x=2.1, y=2.05, z=0.32、header.frame_id: map(JSON の要点)
 juiz container list --long
 # /          map   periodic_anchor  http://127.0.0.1:8000/container/map::periodic_anchor
 #     anchor: periodic (10 Hz)
 #     remote child: <ロボットの System の UUID> -> core://core/container/odom::static_anchor
 ```
 
-- `container set_pose` も同じく子の System に回して書けます(基準は親の System の Container)。
+- 書き込み(`juiz container pose … --set`、API の `container/set_pose`)も同じく子の System に回して書けます(基準は親の System の Container)。
 - 基準に使えるのは、回した先の System が写しとして持つ Container だけです。親の System のほかの Container は基準にできません。
 - 2 台のロボットの System が同じ地図の写しを持っていれば、それぞれで地図から見た位置を読み、使う側で合成すれば、ロボット同士の相対位置が分かります(合成する API はありません)。
 
