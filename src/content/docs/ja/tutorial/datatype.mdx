@@ -21,7 +21,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 <Aside type="caution" title="juiz 0.0.23 以降が必要です">
 データ型は juiz 0.0.23 から使えます。`juiz` コマンド(`juiz_app` か `juiz-cli`)と pyjuiz を 0.0.23 以降にしてください。
-`cargo install juiz_app --version 0.2.1 --locked`、`pip install pyjuiz==0.2.1` のように入れられます。
+`cargo install juiz_app --version 0.2.3 --locked`、`pip install pyjuiz==0.2.3` のように入れられます。
 </Aside>
 
 ## サンプルを用意する
@@ -38,7 +38,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 cd juiz_examples_rust
 git pull
 cargo build
-pip install pyjuiz==0.2.1   # この章では Python の Process も一緒に動かす
+pip install pyjuiz==0.2.3   # この章では Python の Process も一緒に動かす
 ```
 
 </TabItem>
@@ -48,7 +48,7 @@ pip install pyjuiz==0.2.1   # この章では Python の Process も一緒に動
 cd juiz_examples_rust
 git pull
 cargo build
-pip install pyjuiz==0.2.1   # この章では Python の Process も一緒に動かす
+pip install pyjuiz==0.2.3   # この章では Python の Process も一緒に動かす
 ```
 
 </TabItem>
@@ -60,7 +60,7 @@ git pull
 cargo build
 python -m venv .venv         # この章では Python の Process も一緒に動かす
 .venv\Scripts\activate
-pip install pyjuiz==0.2.1
+pip install pyjuiz==0.2.3
 ```
 
 venv は、`juiz` をビルドしたときと同じ Python で作り、`juiz` を起動するターミナルでも有効にしておきます([インストール](/ja/getting-started/install/) の「cargo で入れる」)。
@@ -78,7 +78,7 @@ venv は、`juiz` をビルドしたときと同じ Python で作り、`juiz` �
 cd juiz_examples_python
 git pull
 source .venv/bin/activate
-pip install -r requirements.txt  # juiz-cli 0.2.1 が入る
+pip install -r requirements.txt  # juiz-cli 0.2.3 が入る
 ```
 
 </TabItem>
@@ -88,7 +88,7 @@ pip install -r requirements.txt  # juiz-cli 0.2.1 が入る
 cd juiz_examples_python
 git pull
 source .venv/bin/activate
-pip install -r requirements.txt  # juiz-cli 0.2.1 が入る
+pip install -r requirements.txt  # juiz-cli 0.2.3 が入る
 ```
 
 </TabItem>
@@ -98,7 +98,7 @@ pip install -r requirements.txt  # juiz-cli 0.2.1 が入る
 cd juiz_examples_python
 git pull
 .venv\Scripts\activate
-pip install -r requirements.txt  # juiz-cli 0.2.1 が入る
+pip install -r requirements.txt  # juiz-cli 0.2.3 が入る
 ```
 
 </TabItem>
@@ -112,7 +112,7 @@ cd juiz_examples_cpp
 git pull
 cmake -S . -B build
 cmake --build build
-pip install pyjuiz==0.2.1   # この章では Python の Process も一緒に動かす
+pip install pyjuiz==0.2.3   # この章では Python の Process も一緒に動かす
 ```
 
 C++ の型は、CMake がインストール済みの `juiz` コマンド(`juiz idl`)で作ります。先に `juiz` を入れておいてください(見つからないと CMake がエラーで止まります)。
@@ -125,7 +125,7 @@ Windows では `cmake --build build --config Release` でビルドします。pi
 cd juiz_examples_haskell
 git pull
 ./build.sh
-pip install pyjuiz==0.2.1   # この章では Python の Process も一緒に動かす
+pip install pyjuiz==0.2.3   # この章では Python の Process も一緒に動かす
 ```
 
 Haskell の型は、`build.sh` が juiz のソースからビルドした `juiz-idl` で `build/gen-hs` に作ります(Rust が要るのはこのためです)。
