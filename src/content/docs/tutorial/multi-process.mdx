@@ -890,6 +890,7 @@ Also, in addition to the address in the EC's ID, give the juiz the EC lives in w
 - Restart the talker with `-r 2.0` and connect again. The listener prints twice as often.
 - Swap the startup order: start the talker first (port 8000) and the listener second (port 8001). Only the port numbers in the IDs swap; you connect them the same way.
 - Change `rate` in `talker_ec.conf` or set `auto_start` to `true`, and see how the EC behaves differently.
+- Remove the connection. Pass an ID printed by `connection list` to `juiz -s http://127.0.0.1:8001 connection delete "<ID>"` (you can also give `<source> <argument> <destination>` as in `connection create`). The listener stops printing.
 
 ## Summary
 

@@ -581,7 +581,7 @@ Read the camera's pose. The pan-tilt unit turned 90 degrees to the left, so the 
 juiz container pose camera0 --reference odom
 # => position: x=1.1, y=0.05, z=0.32 (PoseStamped as JSON)
 juiz container pose camera0 --reference map
-# => position: x=2.1, y=2.05, z=0.32
+# => position: x=2.1, y=2.05, z=0.32 (excerpt of the JSON)
 juiz anchor tree map
 # map  position (0, 0, 0)  orientation (0, 0, 0, 1)
 # └─ odom  position (1, 2, 0)  orientation (0, 0, 0, 1)
@@ -731,7 +731,7 @@ In the child System, the name `map` resolves to the replica (if your own System 
 
 ```sh
 juiz -s http://127.0.0.1:8001 container pose camera0 --reference map
-# => position: x=2.1, y=2.05, z=0.32, frame_id: http://127.0.0.1:8000/container/map::periodic_anchor
+# => position: x=2.1, y=2.05, z=0.32, header.frame_id: http://127.0.0.1:8000/container/map::periodic_anchor (excerpt of the JSON)
 juiz -s http://127.0.0.1:8001 transform list --long
 # http://127.0.0.1:8000/container/map::periodic_anchor -> core://core/container/odom::static_anchor  translation (1, 2, 0)  rotation (0, 0, 0, 1)  (remote: ok)
 # ...
@@ -747,14 +747,14 @@ From the parent System, give the child System's Container **with a broker-qualif
 
 ```sh
 juiz container pose "http://127.0.0.1:8001/container/camera0::camera_python" --reference map
-# => position: x=2.1, y=2.05, z=0.32, frame_id: map
+# => position: x=2.1, y=2.05, z=0.32, header.frame_id: map (excerpt of the JSON)
 juiz container list --long
 # /          map   periodic_anchor  http://127.0.0.1:8000/container/map::periodic_anchor
 #     anchor: periodic (10 Hz)
 #     remote child: <UUID of the robot System> -> core://core/container/odom::static_anchor
 ```
 
-- `container set_pose` is forwarded to the child System in the same way (the reference is a Container of the parent System).
+- Writes (`juiz container pose … --set`, the API `container/set_pose`) are forwarded to the child System in the same way (the reference is a Container of the parent System).
 - Only Containers that the target System holds as replicas can be the reference. Other Containers of the parent System cannot.
 - If two robot Systems hold replicas of the same map, read each robot's pose from the map in each System and combine them yourself to get the relative pose between the robots (there is no API that combines them).
 

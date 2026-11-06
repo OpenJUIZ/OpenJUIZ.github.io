@@ -51,15 +51,16 @@ processes:
 |---|---|
 | `name` | システムの名前 |
 | `namespace` | System 全体の既定のネームスペース。各要素にも書ける(→ [ネームスペース](/ja/guides/namespace/)、juiz 0.0.21 以降) |
-| `option` | 既定で動くモジュールの設定。`http_broker` の `start` を `true` にすると、`port` で指定したポートで HTTP ブローカーが起動します。`pythonpath` は Python の Process が `import` する場所の追加(プラグインの場所から見た相対パス)、`type_check.on_call` は呼び出し時の型の検査(→ [データ型](/ja/guides/datatype/#型の検査)、juiz 0.0.23 以降) |
+| `option` | 既定で動くモジュールの設定。`http_broker` の `start` を `true` にすると、`port` で指定したポートで HTTP ブローカーが起動します。`pythonpath` は Python の Process が `import` する場所の追加(プラグインの場所から見た相対パス)、`type_check.on_call` は呼び出し時の型の検査(→ [データ型](/ja/guides/datatype/#型の検査)、juiz 0.0.23 以降)。`http_broker` には `cors_allow_origins`・`static_filepaths`・`webui: false` も書ける(→ [管理画面](/ja/guides/web-ui/)) |
 | `brokers` | 追加で立てるブローカー。`type_name` が `qmp`(QUIC)か `ipc`(同じマシンの中)で、`name` を書く。HTTP ブローカーの本文の上限は `option.http_broker.max_body_bytes`(→ [ブローカーの選び方と大きなデータ](/ja/guides/large-data/)、IPC は juiz 0.0.26 以降) |
+| `subsystems` / `mastersystem` | サブシステム(または親)としてつなぐ別の juiz。`brokers` と同じく `type_name`(`http`・`qmp`・`ipc`)と待ち受け先を書く(→ [ブローカーの選び方と大きなデータ](/ja/guides/large-data/#サブシステムとしてつなぐ)、[System をまたぐ Transform](/ja/guides/transformations/#system-をまたぐ-transform)) |
 | `topics` | Topic ごとの設定。`shared_memory` で、同じマシンの別プロセスへ共有メモリで流す(→ [共有メモリで Topic を流す](/ja/guides/large-data/#共有メモリで-topic-を流す)、juiz 0.0.26 以降) |
-| `plugins` | 読み込む共有ライブラリ（ファクトリー）の定義。`container_factories` は Container、`process_factories` は Process |
+| `plugins` | 読み込む共有ライブラリ（ファクトリー）の定義。`process_factories` は Process、`container_factories` は Container、`components` は Component(複数の要素をまとめた 1 ファイル)、`ec_factories` は Execution Context、`broker_factories` はブローカー |
 | `containers` | 読み込んだ Container を実体化する定義と、その Container に結びつく ContainerProcess。ContainerProcess の項目には `p_apply` を書ける |
-| `processes` | 読み込んだ Process を実体化する定義。`p_apply` を書ける |
+| `processes` | 読み込んだ Process を実体化する定義。`p_apply`・`publishes`・`subscribes` を書ける。juiz の知らないキーは起動時に警告が出る |
 | `composites` | 既にある Process を組み合わせた型(Composite)の定義(→ [Composition](/ja/guides/composition/)、juiz 0.0.22 以降) |
 | `composite_containers` | 既存の Container への参照を束ねた CompositeContainer と、その上の CompositeContainerProcess(→ [Composition](/ja/guides/composition/)) |
-| `transforms` | Container 同士をつなぐ Transform(`source`・`destination`・`translation`・`rotation`、System をまたぐときは `rate`・`timeout` も。→ [System をまたぐ Transform](/ja/guides/transformations/#system-をまたぐ-transform)、juiz 0.2.1 から)。座標の原点の Anchor は `containers:` に `type_name: periodic_anchor` / `static_anchor` で書く(→ [Transformations](/ja/guides/transformations/)、juiz 0.2.0 から) |
+| `transforms` | Container 同士をつなぐ Transform(`source`・`destination`・`translation`・`rotation`、System をまたぐときは `rate`・`timeout` も。→ [System をまたぐ Transform](/ja/guides/transformations/#system-をまたぐ-transform)、juiz 0.2.1 から。`writers` は `set_transform` で書ける Container、juiz 0.2.4 から)。座標の原点の Anchor は `containers:` に `type_name: periodic_anchor` / `static_anchor` で書く(→ [Transformations](/ja/guides/transformations/)、juiz 0.2.0 から) |
 | `pose_listeners` | Container の位置姿勢が書かれたら Process を呼ぶ Pose 通知(→ [Transformations](/ja/guides/transformations/#pose-通知)) |
 | `connections` | Process の出力を別の Process の引数につなぐ定義。`source`・`destination`・`arg_name`・`connection_type`(`Push` など)を書く |
 | `ecs` | Execution Context の定義。`type_name`(`main_loop_ec` など)・`rate` [Hz]・`bind`(実行する Process)・`auto_start` を書く |
