@@ -1,0 +1,114 @@
+---
+title: 3. Checking the map and the position
+description: Compare the map you built with the simulator's map, and compare the true position, the odometry, and the SLAM estimate in the tree of coordinate frames.
+sidebar:
+  order: 3
+prev:
+  link: /exercises/slam/mapping/
+  label: 2. Building the map
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Finally, check how correct the map and the estimated position are.
+In a simulator the answer (the true room and the true position) is known, so you can check against it.
+
+## Compare the maps
+
+Open the saved `map.png` in an image viewer and compare it with the map on the mobile_sim screen.
+
+- If it shows the outer walls, the middle wall with its doorway, the two pillars in the left room, and the round obstacle in the right room, you succeeded.
+- The SLAM map is built 20 m square, so the room is surrounded by a gray (unknown) margin.
+- Places the LiDAR could not see, such as behind the round obstacle, stay gray. Only what the robot "saw" ends up on the map.
+
+The SLAM map frame `map` starts from the odometry at the moment mapper_gmapping receives its first scan.
+mobile_sim counts odometry from the robot's initial position, so if you restarted the apps before building the map as on the previous page, `map` is almost the same as the room's frame `world`.
+
+## Compare the three positions
+
+So far you have met three kinds of "position" of the robot.
+
+| Position | Reference | Written by |
+| --- | --- | --- |
+| True position | `world` (the room) | mobile_sim. Known only because it is a simulator |
+| Odometry | `odom0` (the odometry origin) | mobile_sim. Computed from wheel rotation; drift accumulates |
+| SLAM estimate | `map` (the SLAM map) | mapper_gmapping. Computed by matching scans against the map |
+
+In terminal 4, look at the three trees of coordinate frames in turn. The output below is an example after one lap of the room, back near the start (numbers rounded to two decimals).
+
+```sh
+juiz anchor tree world
+```
+
+```text
+world  position (0, 0, 0)  orientation (0, 0, 0, 1)
+└─ robot0  position (-1.89, -0.00, 0)  orientation (0, 0, 1.00, 0.00)
+   └─ lidar0  position (-1.89, -0.00, 0.20)  orientation (0, 0, 1.00, 0.00)
+```
+
+```sh
+juiz anchor tree odom0
+```
+
+```text
+odom0  position (0, 0, 0)  orientation (0, 0, 0, 1)
+└─ robot0  position (-1.31, -0.17, 0)  orientation (0, 0, -1.00, 0.06)
+   └─ lidar0  position (-1.31, -0.17, 0.20)  orientation (0, 0, -1.00, 0.06)
+```
+
+```sh
+juiz anchor tree map
+```
+
+```text
+map  position (0, 0, 0)  orientation (0, 0, 0, 1)
+└─ slam_odom0  position (-0.56, -0.01, 0)  orientation (0, 0, -0.07, 1.00)
+   └─ odom0  position (-0.56, -0.01, 0)  orientation (0, 0, -0.07, 1.00)
+      └─ robot0  position (-1.88, 0.01, 0)  orientation (0, 0, -1.00, -0.01)
+         └─ lidar0  position (-1.88, 0.01, 0.20)  orientation (0, 0, -1.00, -0.01)
+```
+
+- The true position is (-1.89, 0.00).
+- The odometry says (-1.31, -0.17): about 0.6 m off after a single lap.
+- The SLAM estimate is (-1.88, 0.01), about 2 cm from the true position.
+
+## The tree spans the apps
+
+`juiz anchor tree map` asks mobile_sim on port 8000. Yet the tree starts from `map`, which belongs to mapper_gmapping.
+
+```text
+map ─▶ slam_odom0 ─▶ odom0 ─▶ robot0 ─▶ lidar0
+└ mapper_gmapping ┘    └───── mobile_sim ──────┘
+```
+
+- `map` and `slam_odom0` are Anchors of mapper_gmapping. `slam_odom0` is "the odometry origin as seen by SLAM", and the Transform `map → slam_odom0` holds the odometry drift found by SLAM (0.56 m and a little rotation in the example above). mapper_gmapping rewrites this value on every scan.
+- `slam_odom0 → odom0` is a **Transform across Systems** written in the configuration file of mapper_gmapping. Its destination is `odom0` in mobile_sim, so it is created inside mobile_sim.
+- As a result, inside mobile_sim, `map` through `lidar0` form one tree, and either app can tell where the robot and the LiDAR are on the map.
+
+You can also read the estimated position directly from mapper_gmapping (port 8001).
+
+```sh
+juiz -s http://localhost:8001 container pose mapper0 --reference map
+```
+
+If you have used ROS, you may notice this has the same shape as the tf tree `map → odom → base_link`.
+juiz builds it from the ContainerPoses and Transforms of separately distributed apps.
+See [Guide: Transformations](/guides/transformations/) for details.
+
+## Stopping
+
+Press Ctrl+C in each terminal. Stop the dependent apps first: mapper_gmapping, then teleop_twist, then mobile_sim.
+
+## Try it
+
+- Press "地図を捨てて最初から" (*discard the map and start over*), then drive fast with fast turns. Walls are more likely to come out doubled or distorted.
+- Save a map without returning to the start, and compare it with one where you came back after a full lap.
+- Check "LiDAR の光線を描く" (*draw LiDAR rays*) on the mobile_sim screen and drive while watching what the robot sees. You will see why the gray areas could not be observed.
+
+## Summary
+
+- You built a map that looks like the simulator's map, from LiDAR and odometry alone.
+- Odometry drifts as the robot moves, and SLAM corrects that drift by matching against the map.
+- The true position, the odometry, and the SLAM estimate are ContainerPoses seen from `world`, `odom0`, and `map`. The tree of coordinate frames becomes one across the apps through a Transform across Systems.
+
+This is the end of the SLAM exercise. Go back to the [list of exercises](/exercises/), or look up the features you are curious about in the [Guides](/guides/process/).

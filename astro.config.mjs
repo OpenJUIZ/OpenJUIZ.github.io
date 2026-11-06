@@ -86,6 +86,19 @@ export default defineConfig({
 					],
 				},
 				{
+					label: 'Exercises',
+					translations: { ja: '演習' },
+					// 第 1〜8 章とは別立て。演習ごとにグループにする
+					items: [
+						'exercises',
+						{
+							label: 'SLAM: building a map',
+							translations: { ja: 'SLAM: 地図を作る' },
+							items: ['exercises/slam', { autogenerate: { directory: 'exercises/slam' } }],
+						},
+					],
+				},
+				{
 					label: 'Concepts',
 					translations: { ja: 'コンセプト' },
 					items: [{ autogenerate: { directory: 'concepts' } }],

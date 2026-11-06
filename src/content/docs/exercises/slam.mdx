@@ -1,0 +1,100 @@
+---
+title: "SLAM: building a map"
+description: An exercise where you drive a robot in a simulator with a keyboard or a gamepad and build a map with SLAM from its LiDAR and odometry. This page introduces the apps and the setup.
+sidebar:
+  order: 1
+  label: Overview and setup
+next:
+  link: /exercises/slam/simulator/
+  label: 1. Driving the robot
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+In this exercise you drive a mobile robot in a simulator and build a map of the room with **SLAM** (Simultaneous Localization and Mapping: estimating the robot's own position and building a map at the same time).
+The goal is to build, from the robot's sensor readings alone, a map that looks like the one the simulator uses.
+
+<Aside type="tip" title="What you will see">
+- Three separately distributed juiz apps becoming one robot system, connected by topics and IDs
+- Odometry (the position computed from wheel rotation) drifting more and more, and SLAM correcting it by matching against the map
+- Coordinate frames (Transformations) forming a single tree across separate apps
+</Aside>
+
+## The apps
+
+All of them are `.juizapp` packages published by OpenJUIZ. No build is needed.
+
+| App | Role | Screen |
+| --- | --- | --- |
+| [mobile_sim](https://github.com/OpenJUIZ/mobile_sim) | A simulator of a mobile robot on a plane. Moves the robot on a map and publishes LiDAR scans and odometry | http://localhost:8000/ |
+| [teleop_twist](https://github.com/OpenJUIZ/teleop_twist) | Reads a keyboard or a gamepad in the browser and publishes velocity commands | http://localhost:8002/ |
+| [mapper_gmapping](https://github.com/OpenJUIZ/mapper_gmapping) | Estimates a map and the robot's position from scans and odometry with GMapping | http://localhost:8001/ |
+
+The screens of these apps are in Japanese. These pages give the English meaning of the labels you need.
+
+## How they fit together
+
+Each app runs as its own `juiz`, and they connect to mobile_sim over IPC.
+The values they exchange use the standard types `juiz_std` from [chapter 8 of the tutorial](/tutorial/datatype/).
+
+```text
+teleop_twist ── cmd_vel (Twist2D) ──▶ mobile_sim ── scan (LaserScan), odom (Pose2DStamped) ──▶ mapper_gmapping
+   (8002)                                (8000)                                                    (8001)
+```
+
+- **teleop_twist** turns your input into a velocity `Twist2D` and publishes it on the topic `cmd_vel` at 20 Hz.
+- **mobile_sim** moves the robot by `cmd_vel`, and publishes LiDAR scans (`LaserScan`) on the topic `scan` and odometry (`Pose2DStamped`) on the topic `odom`. Like real wheels, the odometry has errors added on purpose.
+- **mapper_gmapping** subscribes to `scan` and `odom`, builds a map, and estimates where the robot is.
+
+teleop_twist and mapper_gmapping declare in their packages that they depend on mobile_sim (`depends` in `juizapp.yaml`).
+`juiz run` looks for the running mobile_sim over IPC, checks its version, and then connects. So **start mobile_sim first**.
+
+## Setup
+
+<Steps>
+
+1. Install the `juiz` command, version 0.2.4 or later.
+
+   ```sh
+   pip install juiz-cli==0.2.4
+   ```
+
+   A juiz installed with `cargo install juiz_app` also works (see [Installation](/getting-started/install/)).
+
+2. Make a working directory. You start all three apps from here, and the maps you build are saved here.
+
+   ```sh
+   mkdir slam_exercise
+   cd slam_exercise
+   ```
+
+3. Download the `.juizapp` of each app from its Releases into the working directory.
+
+   - mobile_sim: `mobile_sim-<version>.juizapp` of the 0.3 series from [Releases](https://github.com/OpenJUIZ/mobile_sim/releases)
+   - teleop_twist: `teleop_twist-<version>.juizapp` from [Releases](https://github.com/OpenJUIZ/teleop_twist/releases)
+   - mapper_gmapping: `mapper_gmapping-<version>.juizapp` of the 0.4 series from [Releases](https://github.com/OpenJUIZ/mapper_gmapping/releases)
+
+   Every package contains plugins for Linux (x86_64, arm64), macOS (Intel, Apple silicon), and Windows (x86_64).
+
+</Steps>
+
+You use four terminals. Open all of them in the working directory (if you installed with pip into a venv, activate the venv in each).
+
+| Terminal | Role |
+| --- | --- |
+| 1 | mobile_sim |
+| 2 | teleop_twist |
+| 3 | mapper_gmapping |
+| 4 | Looking inside with the `juiz` command |
+
+<Aside type="note" title="Chapters worth reading">
+You can follow along just by typing the commands, but these pages help you understand what is going on.
+
+- [Chapter 4, Connecting Processes](/tutorial/connect/): topics and Execution Contexts
+- [Chapter 6, Connecting separate processes](/tutorial/multi-process/): separate juiz instances connected by IDs
+- [Chapter 8, Data types](/tutorial/datatype/): types such as `Twist2D`
+- [Guide: Transformations](/guides/transformations/): Anchors and Transforms
+- [Guide: App packages (.juizapp)](/guides/app-package/): `juiz run` and `depends`
+</Aside>
+
+When you are ready, move on to [1. Driving the robot](/exercises/slam/simulator/).

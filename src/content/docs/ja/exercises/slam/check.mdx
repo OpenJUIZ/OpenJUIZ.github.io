@@ -1,0 +1,114 @@
+---
+title: 3. 地図と位置を確かめる
+description: 作った地図をシミュレータの地図と見比べ、真の位置・オドメトリ・SLAM の推定を座標系の木で比べます。
+sidebar:
+  order: 3
+prev:
+  link: /ja/exercises/slam/mapping/
+  label: 2. 地図を作る
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+最後に、作った地図と推定した位置が、どのくらい正しいかを確かめます。
+シミュレータでは答え(真の部屋と真の位置)がわかっているので、答え合わせができます。
+
+## 地図を見比べる
+
+保存した `map.png` を画像ビューアで開き、mobile_sim の画面の地図と見比べてみましょう。
+
+- 外周の壁、真ん中の壁と出入口、左の部屋の 2 本の柱、右の部屋の円い障害物が写っていれば成功です。
+- SLAM の地図は 20 m 四方の広さで作るので、部屋の周りは灰色(不明)の余白になります。
+- 円い障害物の裏側など、LiDAR から見えなかった所は灰色のまま残ります。地図に写るのは、ロボットが「見た」所だけです。
+
+SLAM の地図の座標系 `map` は、mapper_gmapping が最初のスキャンを受け取ったときのオドメトリを出発点にします。
+mobile_sim のオドメトリはロボットの最初の位置から数え始めるので、前のページで起動し直してから地図を作った場合は、`map` は部屋の座標系 `world` とほぼ同じになります。
+
+## 3 つの位置を比べる
+
+ロボットには、ここまでで 3 種類の「位置」が出てきました。
+
+| 位置 | 基準 | 誰が書くか |
+| --- | --- | --- |
+| 真の位置 | `world`(部屋) | mobile_sim。シミュレータなのでわかる答え |
+| オドメトリ | `odom0`(オドメトリの原点) | mobile_sim。車輪の回転から求めたもので、ずれが積み重なる |
+| SLAM の推定 | `map`(SLAM の地図) | mapper_gmapping。スキャンを地図と照らし合わせて求める |
+
+ターミナル 4 で、3 つの座標系の木を順に見てみましょう。下の出力は、部屋を一周して出発点の近くに戻ったときの例です(数は小数 2 けたに丸めています)。
+
+```sh
+juiz anchor tree world
+```
+
+```text
+world  position (0, 0, 0)  orientation (0, 0, 0, 1)
+└─ robot0  position (-1.89, -0.00, 0)  orientation (0, 0, 1.00, 0.00)
+   └─ lidar0  position (-1.89, -0.00, 0.20)  orientation (0, 0, 1.00, 0.00)
+```
+
+```sh
+juiz anchor tree odom0
+```
+
+```text
+odom0  position (0, 0, 0)  orientation (0, 0, 0, 1)
+└─ robot0  position (-1.31, -0.17, 0)  orientation (0, 0, -1.00, 0.06)
+   └─ lidar0  position (-1.31, -0.17, 0.20)  orientation (0, 0, -1.00, 0.06)
+```
+
+```sh
+juiz anchor tree map
+```
+
+```text
+map  position (0, 0, 0)  orientation (0, 0, 0, 1)
+└─ slam_odom0  position (-0.56, -0.01, 0)  orientation (0, 0, -0.07, 1.00)
+   └─ odom0  position (-0.56, -0.01, 0)  orientation (0, 0, -0.07, 1.00)
+      └─ robot0  position (-1.88, 0.01, 0)  orientation (0, 0, -1.00, -0.01)
+         └─ lidar0  position (-1.88, 0.01, 0.20)  orientation (0, 0, -1.00, -0.01)
+```
+
+- 真の位置は (-1.89, 0.00) です。
+- オドメトリは (-1.31, -0.17) で、一周しただけで 0.6 m ほどずれています。
+- SLAM の推定は (-1.88, 0.01) で、真の位置との差は 2 cm ほどです。
+
+## 座標系の木はアプリをまたいでいる
+
+`juiz anchor tree map` は、8000 番の mobile_sim に聞いています。それなのに、mapper_gmapping が持っているはずの `map` から木がたどれています。
+
+```text
+map ─▶ slam_odom0 ─▶ odom0 ─▶ robot0 ─▶ lidar0
+└ mapper_gmapping ┘    └───── mobile_sim ──────┘
+```
+
+- `map` と `slam_odom0` は mapper_gmapping の Anchor です。`slam_odom0` は「SLAM から見たオドメトリの原点」で、`map → slam_odom0` の Transform には、SLAM が求めたオドメトリのずれの分(上の例では 0.56 m と、少しの回転)が入ります。mapper_gmapping はスキャンのたびにこの値を書き直します。
+- `slam_odom0 → odom0` は、mapper_gmapping の設定ファイルに書いてある **System をまたぐ Transform** です。終点が mobile_sim の `odom0` なので、mobile_sim の中に作られます。
+- そのため、mobile_sim の中で `map` から `lidar0` までが 1 本の木になり、どちらのアプリからでも「地図の上でロボットや LiDAR がどこにあるか」を読めます。
+
+mapper_gmapping(8001 番)から、推定した位置を直接読むこともできます。
+
+```sh
+juiz -s http://localhost:8001 container pose mapper0 --reference map
+```
+
+ROS を使ったことがある人は、`map → odom → base_link` の tf の木と同じ形だと気づいたかもしれません。
+juiz では、これを別々に配布されたアプリの ContainerPose と Transform で組み立てています。
+詳しくは [ガイド: 座標系(Transformations)](/ja/guides/transformations/) を見てください。
+
+## 終わり方
+
+それぞれのターミナルで Ctrl+C を押して止めます。依存している側から、mapper_gmapping → teleop_twist → mobile_sim の順に止めます。
+
+## やってみよう
+
+- 「地図を捨てて最初から」を押してから、速い速度・速い旋回で走らせてみましょう。壁が二重になったり、ゆがんだりしやすくなります。
+- 出発点に戻らずに地図を保存して、一周して戻ってきたときの地図と比べてみましょう。
+- mobile_sim の画面で「LiDAR の光線を描く」をオンにして、ロボットが何を見ているかを見ながら走らせてみましょう。灰色のまま残った所が、なぜ見えなかったのかがわかります。
+
+## まとめ
+
+- シミュレータの地図と同じような地図を、LiDAR とオドメトリだけから作れました。
+- オドメトリは走るほどずれますが、SLAM は地図と照らし合わせてそのずれを直します。
+- 真の位置・オドメトリ・SLAM の推定は、それぞれ `world`・`odom0`・`map` から見た ContainerPose として読めます。座標系の木は、System をまたぐ Transform でアプリをまたいで 1 本になっています。
+
+これで SLAM の演習はおしまいです。[演習の一覧](/ja/exercises/) に戻るか、[ガイド](/ja/guides/process/) で気になった機能を調べてみてください。
