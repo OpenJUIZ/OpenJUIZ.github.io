@@ -1,0 +1,98 @@
+---
+title: "SLAM: 地図を作る"
+description: シミュレータの中のロボットをキーボードやゲームパッドで走らせ、LiDAR とオドメトリから SLAM で地図を作る演習です。使うアプリと準備を説明します。
+sidebar:
+  order: 1
+  label: 概要と準備
+next:
+  link: /ja/exercises/slam/simulator/
+  label: 1. ロボットを動かす
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+この演習では、シミュレータの中の移動ロボットを走らせながら、**SLAM**(Simultaneous Localization and Mapping、自己位置の推定と地図づくりを同時に行う技術)で部屋の地図を作ります。
+ゴールは、シミュレータが使っている地図と同じような地図を、ロボットのセンサの値だけから作れるところまでです。
+
+<Aside type="tip" title="この演習でわかること">
+- 別々に配布された 3 つの juiz アプリが、トピックと ID でつながって 1 つのロボットシステムになる様子
+- オドメトリ(車輪の回転から求めた位置)にはずれが積み重なり、SLAM がそれを地図と照らし合わせて直す様子
+- 座標系(Transformations)が別々のアプリをまたいで 1 本の木になる様子
+</Aside>
+
+## 使うアプリ
+
+どれも OpenJUIZ で公開している `.juizapp` です。ビルドは要りません。
+
+| アプリ | 役割 | 画面 |
+| --- | --- | --- |
+| [mobile_sim](https://github.com/OpenJUIZ/mobile_sim) | 平面を走る移動ロボットのシミュレータ。地図の上でロボットを動かし、LiDAR のスキャンとオドメトリを出す | http://localhost:8000/ |
+| [teleop_twist](https://github.com/OpenJUIZ/teleop_twist) | ブラウザでキーボードかゲームパッドの入力を読み、速度の指令を出す | http://localhost:8002/ |
+| [mapper_gmapping](https://github.com/OpenJUIZ/mapper_gmapping) | GMapping で、スキャンとオドメトリから地図と自己位置を推定する | http://localhost:8001/ |
+
+## 全体の構成
+
+3 つのアプリはそれぞれ別の `juiz` として動き、mobile_sim を中心に IPC でつながります。
+やり取りするのは、[チュートリアル第 8 章](/ja/tutorial/datatype/) で扱った標準の型 `juiz_std` の値です。
+
+```text
+teleop_twist ── cmd_vel(Twist2D)──▶ mobile_sim ── scan(LaserScan)・odom(Pose2DStamped)──▶ mapper_gmapping
+   (8002)                              (8000)                                                (8001)
+```
+
+- **teleop_twist** は、入力から作った速度 `Twist2D` をトピック `cmd_vel` に 20 Hz で出します。
+- **mobile_sim** は `cmd_vel` を受けてロボットを動かし、LiDAR のスキャン `LaserScan` をトピック `scan` に、オドメトリ `Pose2DStamped` をトピック `odom` に出します。オドメトリには、本物の車輪と同じようにわざと誤差を入れてあります。
+- **mapper_gmapping** は `scan` と `odom` を受けて地図を作り、自分がどこにいるかを推定します。
+
+teleop_twist と mapper_gmapping は、パッケージの中で「mobile_sim に依存する」と宣言しています(`juizapp.yaml` の `depends`)。
+`juiz run` は動いている mobile_sim を IPC で探し、版を確かめてからつなぎます。そのため、**mobile_sim を最初に起動します**。
+
+## 準備
+
+<Steps>
+
+1. `juiz` コマンドを入れます。0.2.4 以降が必要です。
+
+   ```sh
+   pip install juiz-cli==0.2.4
+   ```
+
+   `cargo install juiz_app` で入れた juiz でもかまいません(手順は [インストール](/ja/getting-started/install/))。
+
+2. 作業用のディレクトリを作ります。3 つのアプリはどれもこのディレクトリから起動します。作った地図もここに保存されます。
+
+   ```sh
+   mkdir slam_exercise
+   cd slam_exercise
+   ```
+
+3. 3 つのアプリの `.juizapp` を、それぞれの Releases から作業用のディレクトリに取ってきます。
+
+   - mobile_sim: [Releases](https://github.com/OpenJUIZ/mobile_sim/releases) から 0.3 系の `mobile_sim-<版>.juizapp`
+   - teleop_twist: [Releases](https://github.com/OpenJUIZ/teleop_twist/releases) から `teleop_twist-<版>.juizapp`
+   - mapper_gmapping: [Releases](https://github.com/OpenJUIZ/mapper_gmapping/releases) から 0.4 系の `mapper_gmapping-<版>.juizapp`
+
+   どのパッケージにも Linux(x86_64・arm64)、macOS(Intel・Apple シリコン)、Windows(x86_64)のプラグインが入っています。
+
+</Steps>
+
+ターミナルを 4 つ使います。どれも作業用のディレクトリで開いておいてください(pip で venv に入れた場合は、どのターミナルでも venv を有効にしておきます)。
+
+| ターミナル | 役割 |
+| --- | --- |
+| 1 | mobile_sim |
+| 2 | teleop_twist |
+| 3 | mapper_gmapping |
+| 4 | `juiz` コマンドで中を見る |
+
+<Aside type="note" title="読んでおくとよい章">
+コマンドを打つだけで進められますが、次の章を読んでおくと、何が起きているかがよくわかります。
+
+- [第 4 章 Process をつなぐ](/ja/tutorial/connect/): トピックと Execution Context
+- [第 6 章 別々のプロセスをつなぐ](/ja/tutorial/multi-process/): 別々の juiz が ID でつながること
+- [第 8 章 データ型](/ja/tutorial/datatype/): `Twist2D` などの型
+- [ガイド: 座標系(Transformations)](/ja/guides/transformations/): Anchor と Transform
+- [ガイド: アプリの配布(.juizapp)](/ja/guides/app-package/): `juiz run` と `depends`
+</Aside>
+
+準備ができたら、[1. ロボットを動かす](/ja/exercises/slam/simulator/) に進みましょう。

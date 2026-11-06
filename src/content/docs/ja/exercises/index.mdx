@@ -1,0 +1,21 @@
+---
+title: 演習の進め方
+description: チュートリアルで学んだ juiz を、ロボットらしい題材で使ってみる演習です。
+sidebar:
+  order: 0
+  label: 進め方
+---
+
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+演習では、juiz で作られたアプリを組み合わせて、ロボットらしいことをやってみます。
+[チュートリアル](/ja/tutorial/) が「juiz の機能を 1 つずつ学ぶ」ためのものなのに対して、演習は「できあがったものを動かして、全体がどうつながっているかを見る」ためのものです。
+
+- 演習で使うアプリは `.juizapp` として配布されていて、`juiz run` だけで動きます。コードを書いたり、ビルドしたりする必要はありません。
+- チュートリアルを全部終えていなくても始められます。各演習の最初に、必要な準備と、読んでおくと理解が深まる章を書いてあります。
+
+## 演習の一覧
+
+<CardGrid>
+	<LinkCard title="SLAM: 地図を作る" href="/ja/exercises/slam/" description="シミュレータの中のロボットをキーボードやゲームパッドで走らせ、LiDAR とオドメトリから地図を作ります。" />
+</CardGrid>
