@@ -12,13 +12,17 @@ hero:
       link: /ja/tutorial/
       icon: open-book
       variant: secondary
+    - text: 演習
+      link: /ja/exercises/
+      icon: rocket
+      variant: secondary
     - text: GitHub
       link: https://github.com/OpenJUIZ/juiz
       icon: external
       variant: minimal
 ---
 
-import { Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkCard, Tabs, TabItem } from '@astrojs/starlight/components';
 
 JUIZ (ジュイス) は、カメラやロボット、モータやセンサなどのロボット要素を動かすソフトウェアを複数の言語で開発し、
 それらを結合して一つのソフトウェアサービスのように動作させるためのミドルウェアです。
@@ -85,3 +89,9 @@ juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_p
 Rust や C++ で書く場合は `cargo install juiz_app` で `juiz` を入れます。詳しくは [インストール](/ja/getting-started/install/) を見てください。
 
 次は [チュートリアル](/ja/tutorial/) で、小さな Process を 1 から書きながら juiz の使い方を順に学べます。
+
+## 演習
+
+チュートリアルとは別に、juiz で作られたアプリを組み合わせてロボットらしいことをやってみる [演習](/ja/exercises/) があります。コードを書かずに `juiz run` だけで始められます。
+
+<LinkCard title="SLAM: 地図を作る" href="/ja/exercises/slam/" description="シミュレータの中のロボットをキーボードやゲームパッドで走らせ、LiDAR とオドメトリから地図を作ります。" />
