@@ -12,13 +12,17 @@ hero:
       link: /tutorial/
       icon: open-book
       variant: secondary
+    - text: Exercises
+      link: /exercises/
+      icon: rocket
+      variant: secondary
     - text: GitHub
       link: https://github.com/OpenJUIZ/juiz
       icon: external
       variant: minimal
 ---
 
-import { Card, CardGrid, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkCard, Tabs, TabItem } from '@astrojs/starlight/components';
 
 JUIZ lets you write software that drives cameras, robots, motors and sensors in several languages,
 then combine those pieces so they run together as a single software service.
@@ -85,3 +89,9 @@ juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_p
 To write in Rust or C++, install `juiz` with `cargo install juiz_app`. See [Installation](/getting-started/install/) for details.
 
 Next, the [Tutorial](/tutorial/) walks you through juiz step by step, starting from a small Process you write yourself.
+
+## Exercises
+
+Apart from the tutorial, the [Exercises](/exercises/) combine apps built with juiz to do robot-like tasks. You can start with just `juiz run`, without writing any code.
+
+<LinkCard title="SLAM: building a map" href="/exercises/slam/" description="Drive a robot in a simulator with a keyboard or a gamepad, and build a map from its LiDAR and odometry." />
