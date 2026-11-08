@@ -1,0 +1,168 @@
+---
+title: 1. 一式を動かす
+description: navigation-manager stack で 6 つのアプリを順に起動し、画面からゴールを出してロボットを自律移動させます。
+sidebar:
+  order: 1
+prev:
+  link: /ja/exercises/navigation/
+  label: 概要と準備
+next:
+  link: /ja/exercises/navigation/own-map/
+  label: 2. 自分の地図で走る
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+まずはシミュレータの地図のまま、一式を動かしてみます。
+
+## 一式を起動する
+
+ターミナル 1 で、取ってきた 5 つの `.juizapp` を `navigation-manager stack` に渡します(`<版>` は取ってきたファイルの版に読み替えてください)。並べる順は問いません。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+navigation-manager stack mobile_sim-<版>.juizapp \
+    localization_amcl-<版>.juizapp planner_dijkstra-<版>.juizapp \
+    planner_dwa-<版>.juizapp navigation_hub-<版>.juizapp
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+navigation-manager stack mobile_sim-<版>.juizapp \
+    localization_amcl-<版>.juizapp planner_dijkstra-<版>.juizapp \
+    planner_dwa-<版>.juizapp navigation_hub-<版>.juizapp
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+navigation-manager stack mobile_sim-<版>.juizapp `
+    localization_amcl-<版>.juizapp planner_dijkstra-<版>.juizapp `
+    planner_dwa-<版>.juizapp navigation_hub-<版>.juizapp
+```
+
+</TabItem>
+</Tabs>
+
+次のように 1 つずつ起動していき、最後に `running.` と出たら準備完了です(パスは省いています)。
+
+```text
+started mobile_sim (:8000)
+started localization_amcl (:8002)
+started planner_dijkstra (:8003)
+started planner_dwa (:8004)
+started navigation_hub (:8006)
+topics reach the leaves through navigation_hub
+started navigation_manager (:8005)
+running. open http://localhost:8005/ . Ctrl-C to stop
+```
+
+`navigation-manager stack` は、決まった順番でアプリを起動します。
+
+| 順 | アプリ | 起動のしかた |
+| --- | --- | --- |
+| 1 | mobile_sim | `juiz run` |
+| 2 | localization_amcl | `juiz run`。依存する mobile_sim に IPC でつなぐ |
+| 3・4 | planner_dijkstra・planner_dwa | `.juizapp` を展開し、navigation_hub の木の葉として使う設定に書き換えて `juiz -f` |
+| 5 | navigation_hub | `juiz run`。根は最後に起動する(先に起動すると葉につながらない) |
+| 6 | navigation_manager | 自分自身(Python)を起動する |
+
+最後に、トピックが根を通って葉まで届いていることを確かめています(`topics reach the leaves through navigation_hub`)。
+各アプリのログは一時ディレクトリに出ます。場所は起動したときの最初の数行に `logs:` として出ます。
+
+## ゴールを出す
+
+ブラウザで http://localhost:8005/ を開きます。navigation_manager の画面です。
+
+![navigation_manager の画面。左に部屋の地図と、ロボット・粒子・オレンジの大域経路・紫の局所計画・赤のゴールが描かれ、右に状態 following と、ゴールまでの距離・推定姿勢・真の姿勢などが並ぶ](../../../../../assets/exercises/navigation/manager-sim.png)
+
+**地図の上の空いている所をクリックし、そのままロボットに向かせたい方向へドラッグして離す**と、そこがゴールになります。
+ロボットが動き出し、右上の状態が次のように変わっていきます。
+
+| 状態 | 意味 |
+| --- | --- |
+| `idle` | ゴールを待っている |
+| `planning` | planner_dijkstra に大域経路を求めさせている |
+| `following` | planner_dwa が経路に沿って走らせている |
+| `succeeded` | ゴールに着いた(位置 0.25 m・向き 0.35 rad 以内) |
+| `failed` | 経路が求まらない、または立ち往生して、引き直しても 3 回だめだった |
+| `canceled` | 「キャンセル」で止めた |
+
+地図の上の表示は次のとおりです。
+
+| 表示 | 意味 |
+| --- | --- |
+| 緑の丸 | 真の位置(mobile_sim。答え合わせ用) |
+| 青い丸と青い点 | localization_amcl が推定した位置と、その粒子 |
+| オレンジの線 | planner_dijkstra が求めた大域経路 |
+| 紫の線 | planner_dwa がこれから進もうとしている軌道(局所計画) |
+| ピンクの点 | スキャンで見えている障害物 |
+| 赤い丸 | ゴール |
+
+走っている途中で「キャンセル」を押すと、その場で止まります。止まったあとは、また別のゴールを出せます。
+
+<Aside type="caution" title="ゴールは障害物から離して置く">
+planner_dijkstra はロボットの大きさを考えずに経路を求めます。そのため、壁や柱のすぐそばのゴールや、扉の角をかすめる経路では、planner_dwa が「ぶつかる」と判断して進めなくなり(立ち往生、`stuck`)、`failed` になることがあります。
+ゴールは壁や柱から 0.5 m 以上離して置いてください。障害物の上にゴールを置くと、経路が求まらずに `failed`(`the goal is on an obstacle`)になります。
+</Aside>
+
+## 何が起きているか
+
+ゴールを出してから着くまで、次のことが順に起きています。
+
+1. 画面がゴールを navigation_manager に送ります(`POST /api/goal`)。
+2. navigation_manager が planner_dijkstra の ContainerProcess `planner_set_goal` を HTTP で呼びます。planner_dijkstra は、トピックで受けている推定位置 `amcl_pose` から、ゴールまでの大域経路を求めて返します。
+3. navigation_manager がその経路を planner_dwa の `dwa_set_path` に渡します。
+4. planner_dwa は 10 Hz で、推定位置・オドメトリ・スキャンから「経路に沿って進み、障害物をよける」速度を選び、`cmd_vel` に出します。navigation_hub が中継して mobile_sim に届き、ロボットが動きます。
+5. ロボットが動くと、localization_amcl がスキャンを地図と照らし合わせて推定位置を直し、`amcl_pose` を出します。
+6. navigation_manager は 5 Hz で推定位置と planner_dwa の状態を読み、ゴールに着いたら planner_dwa を止めます。立ち往生したら経路を引き直します。
+
+ゴールや経路の受け渡しは「1 回だけ呼んで結果がほしい」ので HTTP の呼び出し、位置や速度は「流し続ける」のでトピック、と使い分けています。
+
+ゴールは画面からだけでなく、HTTP でも出せます。ターミナル 2 で試してみましょう。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+curl -X POST localhost:8005/api/goal -H 'Content-Type: application/json' -d '{"x": -2.0, "y": 0.0, "theta": 0.0}'
+curl -X POST localhost:8005/api/cancel
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+curl -X POST localhost:8005/api/goal -H 'Content-Type: application/json' -d '{"x": -2.0, "y": 0.0, "theta": 0.0}'
+curl -X POST localhost:8005/api/cancel
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://localhost:8005/api/goal -ContentType application/json -Body '{"x": -2.0, "y": 0.0, "theta": 0.0}'
+Invoke-RestMethod -Method Post -Uri http://localhost:8005/api/cancel
+```
+
+</TabItem>
+</Tabs>
+
+`x`・`y` はメートル、`theta` はラジアンで、どれも地図の座標系 `map` の値です。
+
+## 止め方
+
+ターミナル 1 で Ctrl+C を押すと、起動したのと逆の順にすべてのアプリを止めます。
+
+## まとめ
+
+- `navigation-manager stack` で、6 つのアプリを決まった順に起動できます。
+- 画面の地図の上でドラッグするとゴールを出せます。状態は `planning` → `following` → `succeeded` と進みます。
+- ゴールや経路は HTTP で 1 回呼び、位置や速度はトピックで流し続けます。
+
+次は [2. 自分の地図で走る](/ja/exercises/navigation/own-map/) です。

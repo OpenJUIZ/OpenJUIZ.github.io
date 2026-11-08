@@ -1,0 +1,109 @@
+---
+title: Autonomous navigation
+description: An exercise where you combine localization, global path planning and local planning so that the robot drives itself to a goal on the map you built in the SLAM exercise. This page introduces the apps and the setup.
+sidebar:
+  order: 1
+  label: Overview and setup
+next:
+  link: /exercises/navigation/stack/
+  label: 1. Running the stack
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+In this exercise you give the mobile robot in the simulator a goal on the map, and the robot decides its own way and drives there: **autonomous navigation**.
+At the end you drive it on the map you built yourself in the [SLAM exercise](/exercises/slam/).
+
+<Aside type="tip" title="What you will see">
+- Five juiz apps with different roles (localization, global path planning, local planning, and the one in charge) becoming one navigation system
+- What is streamed on topics (sensor readings, the estimated position, velocity commands) and what is called over HTTP (goals, paths, maps)
+- Localization correcting the gap between the position on the map (`map`) and the odometry (`odom0`) in the tree of coordinate frames
+</Aside>
+
+## The apps
+
+| App | Role | Screen |
+| --- | --- | --- |
+| [mobile_sim](https://github.com/OpenJUIZ/mobile_sim) | The mobile robot simulator, the same one as in the SLAM exercise | http://localhost:8000/ |
+| [localization_amcl](https://github.com/OpenJUIZ/localization_amcl) | Estimates the robot's position from the map, scans and odometry with AMCL (a particle filter) | http://localhost:8002/ |
+| [planner_dijkstra](https://github.com/OpenJUIZ/planner_dijkstra) | Finds the route from the current position to the goal on the map (the global path) with Dijkstra's algorithm | http://localhost:8003/ |
+| [planner_dwa](https://github.com/OpenJUIZ/planner_dwa) | Computes velocity commands that follow the global path while avoiding obstacles in front of the robot, with DWA (Dynamic Window Approach) | http://localhost:8004/ |
+| navigation_hub ([navigation_manager](https://github.com/OpenJUIZ/navigation_manager)) | Puts the four apps above into one tree and relays topics | http://localhost:8006/ |
+| navigation_manager (same repository) | Takes a goal, has a path planned and followed, and decides when the robot has arrived. You give goals on its screen | http://localhost:8005/ |
+
+The first five are `.juizapp` packages. navigation_manager is a Python program that calls each app over HTTP from outside juiz; you install it with pip.
+None of them needs a build.
+
+The screens of these apps are in Japanese. These pages give the English meaning of the labels you need.
+
+## How they fit together
+
+navigation_hub is the root, and the other four apps form one tree under it.
+
+```text
+navigation_hub (8006) ─┬─ localization_amcl (8002) ── mobile_sim (8000)
+                       ├─ planner_dijkstra (8003)
+                       └─ planner_dwa (8004)
+
+navigation_manager (8005) ── HTTP ──▶ each app
+```
+
+While the robot heads for a goal, two kinds of exchange run at the same time.
+
+- **Topics** (streamed periodically): the scans `scan` and odometry `odom` of mobile_sim, the position `amcl_pose` estimated by localization_amcl, and the velocity commands `cmd_vel` of planner_dwa. navigation_hub receives them and publishes them again for the other apps.
+- **HTTP calls** (called once, when needed): navigation_manager passes the goal to planner_dijkstra to get a global path, and passes that path to planner_dwa. Distributing maps and canceling also go this way.
+
+<Aside type="note" title="Why a root is needed">
+In juiz 0.2.4, topics travel along the tree of Systems (the subsystem links).
+If every app had only mobile_sim as its subsystem, the `amcl_pose` of localization_amcl would not reach planner_dijkstra or planner_dwa ([juiz#449](https://github.com/OpenJUIZ/juiz/issues/449)).
+So the apps form one tree with navigation_hub as the root, and the root relays the topics. The start order is fixed too, so this exercise uses a command that starts the whole stack.
+</Aside>
+
+## Setup
+
+<Steps>
+
+1. Install the `juiz` command and navigation_manager. juiz must be 0.2.4 or later.
+
+   ```sh
+   pip install juiz-cli==0.2.4 navigation-manager
+   ```
+
+   This gives you the `navigation-manager` command.
+
+2. Make a working directory.
+
+   ```sh
+   mkdir navigation_exercise
+   cd navigation_exercise
+   ```
+
+3. Download the five `.juizapp` packages from their Releases into the working directory.
+
+   - mobile_sim: `mobile_sim-<version>.juizapp` of the 0.3 series from its [Releases](https://github.com/OpenJUIZ/mobile_sim/releases)
+   - localization_amcl: `localization_amcl-<version>.juizapp` from its [Releases](https://github.com/OpenJUIZ/localization_amcl/releases)
+   - planner_dijkstra: `planner_dijkstra-<version>.juizapp` from its [Releases](https://github.com/OpenJUIZ/planner_dijkstra/releases)
+   - planner_dwa: `planner_dwa-<version>.juizapp` from its [Releases](https://github.com/OpenJUIZ/planner_dwa/releases)
+   - navigation_hub: `navigation_hub-<version>.juizapp` from the [Releases of navigation_manager](https://github.com/OpenJUIZ/navigation_manager/releases)
+
+   Every package contains plugins for Linux (x86_64, arm64), macOS (Intel, Apple silicon), and Windows (x86_64).
+
+4. Copy the map `map.yaml` and `map.png` you saved in the [SLAM exercise](/exercises/slam/mapping/) into the working directory. You use them on the second page.
+
+</Steps>
+
+You use two terminals: one to run the stack, and one to look inside with the `juiz` command. Open both in the working directory (if you installed with pip into a venv, activate the venv in both).
+
+<Aside type="caution" title="Stop the apps of the previous exercise">
+teleop_twist from the SLAM exercise also uses port 8002. If teleop_twist, mapper_gmapping or mobile_sim is still running, the ports or IPC names clash and the stack does not start. Stop them with Ctrl+C first.
+</Aside>
+
+<Aside type="note" title="Chapters worth reading">
+- [Chapter 4, Connecting Processes](/tutorial/connect/): topics
+- [Chapter 6, Connecting separate processes](/tutorial/multi-process/): subsystems and IDs
+- [Guide: Transformations](/guides/transformations/): Anchors and Transforms
+- [Guide: App packages (.juizapp)](/guides/app-package/): `juiz run`
+- [SLAM exercise](/exercises/slam/): mobile_sim and how to build a map
+</Aside>
+
+When you are ready, go on to [1. Running the stack](/exercises/navigation/stack/).
