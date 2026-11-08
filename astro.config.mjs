@@ -96,6 +96,11 @@ export default defineConfig({
 							translations: { ja: 'SLAM: 地図を作る' },
 							items: ['exercises/slam', { autogenerate: { directory: 'exercises/slam' } }],
 						},
+						{
+							label: 'Autonomous navigation',
+							translations: { ja: '自律移動' },
+							items: ['exercises/navigation', { autogenerate: { directory: 'exercises/navigation' } }],
+						},
 					],
 				},
 				{

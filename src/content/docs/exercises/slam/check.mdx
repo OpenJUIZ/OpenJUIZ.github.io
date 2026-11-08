@@ -6,6 +6,9 @@ sidebar:
 prev:
   link: /exercises/slam/mapping/
   label: 2. Building the map
+next:
+  link: /exercises/navigation/
+  label: "Exercise: autonomous navigation"
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -111,4 +114,4 @@ Press Ctrl+C in each terminal. Stop the dependent apps first: mapper_gmapping, t
 - Odometry drifts as the robot moves, and SLAM corrects that drift by matching against the map.
 - The true position, the odometry, and the SLAM estimate are ContainerPoses seen from `world`, `odom0`, and `map`. The tree of coordinate frames becomes one across the apps through a Transform across Systems.
 
-This is the end of the SLAM exercise. Go back to the [list of exercises](/exercises/), or look up the features you are curious about in the [Guides](/guides/process/).
+This is the end of the SLAM exercise. You will use the map you built, `map.yaml` and `map.png`, in the next exercise, [Autonomous navigation](/exercises/navigation/). You can also go back to the [list of exercises](/exercises/), or look up the features you are curious about in the [Guides](/guides/process/).

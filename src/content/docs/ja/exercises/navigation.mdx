@@ -1,0 +1,107 @@
+---
+title: 自律移動
+description: SLAM の演習で作った地図の上で、自己位置推定・経路計画・局所計画を組み合わせて、ロボットをゴールまで自律移動させる演習です。使うアプリと準備を説明します。
+sidebar:
+  order: 1
+  label: 概要と準備
+next:
+  link: /ja/exercises/navigation/stack/
+  label: 1. 一式を動かす
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+この演習では、シミュレータの中の移動ロボットに地図の上のゴールを与え、ロボットが自分で道を決めてそこまで走る**自律移動**(ナビゲーション)をやってみます。
+最後は、[SLAM の演習](/ja/exercises/slam/) で自分が作った地図を使って走らせます。
+
+<Aside type="tip" title="この演習でわかること">
+- 自己位置推定・大域経路の計画・局所計画・全体の指揮という役割の違う 5 つの juiz アプリが、1 つのナビゲーションの仕組みになる様子
+- トピックで流し続けるもの(センサーの値、推定した位置、速度の指令)と、HTTP で呼ぶもの(ゴール、経路、地図)の使い分け
+- 地図の上の位置(`map`)とオドメトリ(`odom0`)のずれを、自己位置推定が座標系の木で直す様子
+</Aside>
+
+## 使うアプリ
+
+| アプリ | 役割 | 画面 |
+| --- | --- | --- |
+| [mobile_sim](https://github.com/OpenJUIZ/mobile_sim) | 移動ロボットのシミュレータ。SLAM の演習と同じもの | http://localhost:8000/ |
+| [localization_amcl](https://github.com/OpenJUIZ/localization_amcl) | AMCL(粒子フィルタ)で、地図・スキャン・オドメトリからロボットの位置を推定する | http://localhost:8002/ |
+| [planner_dijkstra](https://github.com/OpenJUIZ/planner_dijkstra) | 今の位置からゴールまでの道筋(大域経路)を、地図の上でダイクストラ法で求める | http://localhost:8003/ |
+| [planner_dwa](https://github.com/OpenJUIZ/planner_dwa) | 大域経路に沿いながら、目の前の障害物をよけて進む速度の指令を DWA(Dynamic Window Approach)で求める | http://localhost:8004/ |
+| navigation_hub([navigation_manager](https://github.com/OpenJUIZ/navigation_manager)) | 上の 4 つを 1 本の木にまとめ、トピックを中継する | http://localhost:8006/ |
+| navigation_manager(同じリポジトリ) | ゴールを受けて計画させ、追わせ、着いたかを判断する。画面からゴールを出す | http://localhost:8005/ |
+
+はじめの 5 つは `.juizapp` です。navigation_manager は juiz の外から各アプリを HTTP で呼ぶ Python のプログラムで、pip で入れます。
+どれもビルドは要りません。
+
+## 全体の構成
+
+navigation_hub を根にして、ほかの 4 つのアプリを 1 本の木にします。
+
+```text
+navigation_hub (8006) ─┬─ localization_amcl (8002) ── mobile_sim (8000)
+                       ├─ planner_dijkstra (8003)
+                       └─ planner_dwa (8004)
+
+navigation_manager (8005) ── HTTP ──▶ 各アプリ
+```
+
+ロボットがゴールに向かう間、次の 2 種類のやり取りが同時に動いています。
+
+- **トピック**(周期的に流し続けるもの): mobile_sim のスキャン `scan` とオドメトリ `odom`、localization_amcl が推定した位置 `amcl_pose`、planner_dwa の速度の指令 `cmd_vel`。navigation_hub がこれらを受けて、ほかのアプリに向けて出し直します。
+- **HTTP の呼び出し**(必要なときだけ 1 回呼ぶもの): navigation_manager が、ゴールを planner_dijkstra に渡して大域経路を求めさせ、その経路を planner_dwa に渡します。地図を配る、キャンセルする、もここです。
+
+<Aside type="note" title="なぜ根が要るのか">
+juiz 0.2.4 では、トピックは System の木(副系のつながり)をたどって届きます。
+すべてのアプリが mobile_sim だけを副系にする形だと、localization_amcl の `amcl_pose` が planner_dijkstra や planner_dwa に届きません([juiz#449](https://github.com/OpenJUIZ/juiz/issues/449))。
+そこで navigation_hub を根にした 1 本の木にし、根で中継しています。起動する順番も決まっているので、この演習では一式を起動するコマンドを使います。
+</Aside>
+
+## 準備
+
+<Steps>
+
+1. `juiz` コマンドと navigation_manager を入れます。juiz は 0.2.4 以降が必要です。
+
+   ```sh
+   pip install juiz-cli==0.2.4 navigation-manager
+   ```
+
+   `navigation-manager` コマンドが使えるようになります。
+
+2. 作業用のディレクトリを作ります。
+
+   ```sh
+   mkdir navigation_exercise
+   cd navigation_exercise
+   ```
+
+3. 5 つの `.juizapp` を、それぞれの Releases から作業用のディレクトリに取ってきます。
+
+   - mobile_sim: [Releases](https://github.com/OpenJUIZ/mobile_sim/releases) から 0.3 系の `mobile_sim-<版>.juizapp`
+   - localization_amcl: [Releases](https://github.com/OpenJUIZ/localization_amcl/releases) から `localization_amcl-<版>.juizapp`
+   - planner_dijkstra: [Releases](https://github.com/OpenJUIZ/planner_dijkstra/releases) から `planner_dijkstra-<版>.juizapp`
+   - planner_dwa: [Releases](https://github.com/OpenJUIZ/planner_dwa/releases) から `planner_dwa-<版>.juizapp`
+   - navigation_hub: [navigation_manager の Releases](https://github.com/OpenJUIZ/navigation_manager/releases) から `navigation_hub-<版>.juizapp`
+
+   どのパッケージにも Linux(x86_64・arm64)、macOS(Intel・Apple シリコン)、Windows(x86_64)のプラグインが入っています。
+
+4. [SLAM の演習](/ja/exercises/slam/mapping/) で保存した地図 `map.yaml` と `map.png` を、作業用のディレクトリにコピーします。2 つ目のページで使います。
+
+</Steps>
+
+ターミナルは 2 つ使います。1 つは一式を動かすため、もう 1 つは `juiz` コマンドで中を見るためです。どちらも作業用のディレクトリで開いておいてください(pip で venv に入れた場合は、どちらでも venv を有効にしておきます)。
+
+<Aside type="caution" title="前の演習のアプリは止めておく">
+SLAM の演習の teleop_twist も 8002 番を使います。teleop_twist・mapper_gmapping・mobile_sim が動いたままだと、ポートや IPC の名前がぶつかって一式が起動しません。先に Ctrl+C で止めておいてください。
+</Aside>
+
+<Aside type="note" title="読んでおくとよい章">
+- [第 4 章 Process をつなぐ](/ja/tutorial/connect/): トピック
+- [第 6 章 別々のプロセスをつなぐ](/ja/tutorial/multi-process/): 副系(subsystem)と ID
+- [ガイド: 座標系(Transformations)](/ja/guides/transformations/): Anchor と Transform
+- [ガイド: アプリの配布(.juizapp)](/ja/guides/app-package/): `juiz run`
+- [SLAM の演習](/ja/exercises/slam/): mobile_sim と地図の作り方
+</Aside>
+
+準備ができたら、[1. 一式を動かす](/ja/exercises/navigation/stack/) に進みましょう。

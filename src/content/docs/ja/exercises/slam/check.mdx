@@ -6,6 +6,9 @@ sidebar:
 prev:
   link: /ja/exercises/slam/mapping/
   label: 2. 地図を作る
+next:
+  link: /ja/exercises/navigation/
+  label: "演習: 自律移動"
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -111,4 +114,4 @@ juiz では、これを別々に配布されたアプリの ContainerPose と Tr
 - オドメトリは走るほどずれますが、SLAM は地図と照らし合わせてそのずれを直します。
 - 真の位置・オドメトリ・SLAM の推定は、それぞれ `world`・`odom0`・`map` から見た ContainerPose として読めます。座標系の木は、System をまたぐ Transform でアプリをまたいで 1 本になっています。
 
-これで SLAM の演習はおしまいです。[演習の一覧](/ja/exercises/) に戻るか、[ガイド](/ja/guides/process/) で気になった機能を調べてみてください。
+これで SLAM の演習はおしまいです。作った地図 `map.yaml` と `map.png` は、次の [自律移動の演習](/ja/exercises/navigation/) で使います。[演習の一覧](/ja/exercises/) に戻るか、[ガイド](/ja/guides/process/) で気になった機能を調べてみることもできます。
