@@ -52,7 +52,7 @@ navigation_manager (8005) ── HTTP ──▶ 各アプリ
 - **HTTP の呼び出し**(必要なときだけ 1 回呼ぶもの): navigation_manager が、ゴールを planner_dijkstra に渡して大域経路を求めさせ、その経路を planner_dwa に渡します。地図を配る、キャンセルする、もここです。
 
 <Aside type="note" title="なぜ根が要るのか">
-juiz 0.2.4 では、トピックは System の木(副系のつながり)をたどって届きます。
+juiz(0.2.5 時点)では、トピックは System の木(副系のつながり)をたどって届きます。
 すべてのアプリが mobile_sim だけを副系にする形だと、localization_amcl の `amcl_pose` が planner_dijkstra や planner_dwa に届きません([juiz#449](https://github.com/OpenJUIZ/juiz/issues/449))。
 そこで navigation_hub を根にした 1 本の木にし、根で中継しています。起動する順番も決まっているので、この演習では一式を起動するコマンドを使います。
 </Aside>
@@ -61,10 +61,10 @@ juiz 0.2.4 では、トピックは System の木(副系のつながり)をた�
 
 <Steps>
 
-1. `juiz` コマンドと navigation_manager を入れます。juiz は 0.2.4 以降が必要です。
+1. `juiz` コマンドと navigation_manager を入れます。juiz は 0.2.5 以降、navigation_manager は 0.3.2 以降が必要です。
 
    ```sh
-   pip install juiz-cli==0.2.4 navigation-manager
+   pip install juiz-cli==0.2.5 navigation-manager
    ```
 
    `navigation-manager` コマンドが使えるようになります。

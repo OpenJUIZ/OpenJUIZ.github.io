@@ -68,9 +68,16 @@ running. open http://localhost:8005/ . Ctrl-C to stop
 | --- | --- | --- |
 | 1 | mobile_sim | `juiz run` |
 | 2 | localization_amcl | `juiz run`. Connects to mobile_sim, which it depends on, over IPC |
-| 3, 4 | planner_dijkstra, planner_dwa | Extracts the `.juizapp`, rewrites its configuration as a leaf of the navigation_hub tree, and runs `juiz -f` |
+| 3, 4 | planner_dijkstra, planner_dwa | `juiz run --depend mobile_sim=none --remap old=new ...`. Starts them as leaves of the navigation_hub tree (see below) |
 | 5 | navigation_hub | `juiz run`. The root starts last (if it starts first, it cannot connect to the leaves) |
 | 6 | navigation_manager | Starts itself (Python) |
+
+The `.juizapp` packages of planner_dijkstra and planner_dwa both say that they depend on mobile_sim. A plain `juiz run` would connect them to mobile_sim, giving mobile_sim two parents, and the topics would stop arriving. So two options of `juiz run` start them as leaves:
+
+- `--depend mobile_sim=none`: do not connect to mobile_sim, which the app depends on
+- `--remap old=new`: rename a topic written in the conf (for example `--remap amcl_pose=nav/amcl_pose`). The pairs come from `leaves/<app name>.yaml` in the `.juizapp` of navigation_hub
+
+Nothing is extracted from the `.juizapp`, and no conf is rewritten. The part of planner_dwa that serves its screen (the bridge that reads AMCL and the planner over HTTP) is turned off by setting the environment variables `DWA_BRIDGE_AMCL_URL` and `DWA_BRIDGE_PLANNER_URL` to empty.
 
 At the end it checks that topics reach the leaves through the root (`topics reach the leaves through navigation_hub`).
 The log of each app goes to a temporary directory, printed as `logs:` in the first lines.
