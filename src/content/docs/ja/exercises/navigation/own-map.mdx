@@ -106,7 +106,7 @@ map  position (0, 0, 0)  orientation (0, 0, 0, 1)
 
 <Aside type="caution" title="ロボットの位置がずれているとき">
 SLAM の地図を作る前に mobile_sim を起動し直さなかったなどで、`map` と `world` がずれていると、localization_amcl の最初の仮定が外れます。
-粒子がまとまらなかったり、青い丸が緑の丸から離れたりしたら、localization_amcl の画面(http://localhost:8002/)で「初期姿勢を指定」を押し、地図の上でロボットのいる所を押して、向いている方へドラッグして教えてください。
+粒子がまとまらなかったり、青い丸が緑の丸から離れたりしたら、localization_amcl の画面([http://localhost:8002/](http://localhost:8002/))で「初期姿勢を指定」を押し、地図の上でロボットのいる所を押して、向いている方へドラッグして教えてください。
 
 ![localization_amcl の画面。左に地図・粒子・推定した姿勢、右に「初期姿勢を指定」「大域的な推定」などのボタンが並ぶ](../../../../../assets/exercises/navigation/amcl.png)
 </Aside>

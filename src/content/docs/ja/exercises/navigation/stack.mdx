@@ -113,9 +113,10 @@ planner_dijkstra と planner_dwa の `.juizapp` は、どちらも mobile_sim �
 
 走っている途中で「キャンセル」を押すと、その場で止まります。止まったあとは、また別のゴールを出せます。
 
-<Aside type="caution" title="ゴールは障害物から離して置く">
-planner_dijkstra はロボットの大きさを考えずに経路を求めます。そのため、壁や柱のすぐそばのゴールや、扉の角をかすめる経路では、planner_dwa が「ぶつかる」と判断して進めなくなり(立ち往生、`stuck`)、`failed` になることがあります。
-ゴールは壁や柱から 0.5 m 以上離して置いてください。障害物の上にゴールを置くと、経路が求まらずに `failed`(`the goal is on an obstacle`)になります。
+<Aside type="note" title="障害物のそばのゴール">
+planner_dijkstra はロボットの大きさを考えて経路を求めます。ロボットの中心は障害物から「半径 0.2 m + 余裕 0.05 m」より近くには入らず、壁から 0.6 m までは離れた所を好むので、経路は扉の真ん中寄りを通ります。
+壁や柱のすぐそば(0.25 m より近く)にゴールを置くと、一番近い通れる所にゴールを寄せて走り、状態の欄に `the goal is too close to obstacles: moved to (x, y)` と出ます。
+障害物の上にゴールを置くと、経路が求まらずに `failed`(`the goal is on an obstacle`)になります。
 </Aside>
 
 ## 何が起きているか

@@ -115,9 +115,10 @@ The drawing on the map:
 
 Pressing キャンセル (cancel) while driving stops the robot there. After it stops you can give another goal.
 
-<Aside type="caution" title="Keep goals away from obstacles">
-planner_dijkstra computes paths without considering the size of the robot. So with a goal right next to a wall or a pillar, or a path that grazes the corner of the doorway, planner_dwa may decide it would collide and be unable to move on (stuck, `stuck`), ending in `failed`.
-Place goals at least 0.5 m away from walls and pillars. A goal on an obstacle cannot be planned and ends in `failed` (`the goal is on an obstacle`).
+<Aside type="note" title="Goals near obstacles">
+planner_dijkstra plans with the size of the robot in mind. The center of the robot never comes closer to an obstacle than "radius 0.2 m + margin 0.05 m", and the path prefers to stay up to 0.6 m away from walls, so it goes through the middle of the doorway.
+If you put a goal right next to a wall or a pillar (closer than 0.25 m), the goal is moved to the nearest place the robot can reach, and the state shows `the goal is too close to obstacles: moved to (x, y)`.
+A goal on an obstacle cannot be planned and ends in `failed` (`the goal is on an obstacle`).
 </Aside>
 
 ## What is happening
