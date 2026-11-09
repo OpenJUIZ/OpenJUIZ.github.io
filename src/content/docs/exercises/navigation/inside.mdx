@@ -1,6 +1,6 @@
 ---
 title: 3. Looking inside
-description: Use the juiz command and the screens of the apps to look at the shape of the tree, the topic relays, the parameters of the local planner and localization, and make things fail on purpose.
+description: Use the juiz command and the screens of the apps to look at the shape of the tree, the topic relays, the global path and the size of the robot, the parameters of the local planner and localization, and make things fail on purpose.
 sidebar:
   order: 3
 prev:
@@ -55,6 +55,40 @@ The five `relay_...` Processes receive topics and publish them again under other
 When `navigation-manager stack` starts planner_dijkstra and planner_dwa as leaves, it renames the topics they subscribe to as `nav/...`, and the topic planner_dwa publishes as `cmd_vel_dwa`, with the `--remap` option of `juiz run` (for example `--remap odom=nav/odom --remap cmd_vel=cmd_vel_dwa`). The pairs are written in `leaves/planner_dijkstra.yaml` and `leaves/planner_dwa.yaml` in the `.juizapp` of navigation_hub.
 Through the relays at the root, apps on different branches are connected by topics.
 
+## The global planner
+
+Open the planner_dijkstra screen (http://localhost:8003/) and give a goal on the navigation_manager screen.
+
+![The planner_dijkstra screen. On the left, a map where walls and pillars are surrounded by dark gray and light gray bands, and a blue path through the middle of the doorway; on the right, controls for the goal and the map, and results such as the path length and the size of the robot](../../../../assets/exercises/navigation/planner.png)
+
+planner_dijkstra finds the path with Dijkstra's algorithm on a map whose obstacles are inflated by the size of the robot (a costmap). While 膨らませた地図を表示 (show the inflated map) is checked (the default), the screen draws that map.
+
+| Display | Meaning |
+| --- | --- |
+| Black | Obstacles |
+| Dark gray band | Where the center of the robot cannot go (within `robot_radius` + `safety_margin` of an obstacle) |
+| Light gray blur | Passable, but costs more the closer it is to an obstacle (within `inflation_radius` of an obstacle) |
+| Blue line | The path |
+
+Because of the dark gray band, the path does not graze pillars or the corners of the doorway. It also tries to avoid the light gray area, so it goes through the middle of the doorway. That makes the path easy for planner_dwa to follow.
+
+When started this way, planner_dijkstra also has no mobile_sim as its subsystem, so the screen says "mobile_sim は見つかりません" (mobile_sim not found) at the top. The map and the path are still drawn.
+
+How obstacles are inflated is set by the arguments of the container (in `app.conf` of the `.juizapp`), and you can change it with the ContainerProcess `planner_set_inflation`.
+
+| Argument | Default | Meaning |
+| --- | --- | --- |
+| `robot_radius` | 0.2 m | The radius of the robot. Keep it the same as `robot_radius` of planner_dwa |
+| `safety_margin` | 0.05 m | A margin added to the radius |
+| `inflation_radius` | 0.6 m | Cells closer than this to an obstacle cost more |
+| `inflation_weight` | 2.0 | How much more they cost (0 only keeps the band the robot cannot enter) |
+
+```sh
+juiz -s http://localhost:8003 container-process call -p "http://localhost:8003/container_process/set_inflation0::planner_set_inflation:planner0" '{"robot_radius": 0.3, "safety_margin": null, "inflation_radius": null, "inflation_weight": null}'
+```
+
+Values given as `null` are kept. The settings after the change come back as the return value. The inflated map is redrawn too, so check on the screen that the dark gray band became wider.
+
 ## The local planner
 
 Open the planner_dwa screen (http://localhost:8004/) and give a goal on the navigation_manager screen.
@@ -102,7 +136,15 @@ The values you change here go back to the defaults when you stop the stack.
 Try these on the navigation_manager screen.
 
 - **Put a goal on an obstacle**: drag on a pillar or a wall. planner_dijkstra cannot find a path, and after three replans the state becomes `failed` (`the goal is on an obstacle`).
-- **Put a goal right next to an obstacle**: with a goal right next to a pillar or the round obstacle (closer than 0.5 m), planner_dwa may decide it would collide as it gets close and stop, going `stuck` → replan → `failed` (`local planner is stuck`). This is because planner_dijkstra plans without considering the robot's size (radius 0.2 m).
+- **Put a goal right next to an obstacle**: with a goal right next to a pillar or the round obstacle (closer than 0.25 m), planner_dijkstra moves the goal to the nearest place the robot can reach, and the state shows `the goal is too close to obstacles: moved to (x, y)`. The robot drives to the moved goal and ends in `succeeded`.
+- **Make it forget the size of the robot**: set all four to 0 as below, and planner_dijkstra plans on the map as it is, without the size of the robot.
+
+  ```sh
+  juiz -s http://localhost:8003 container-process call -p "http://localhost:8003/container_process/set_inflation0::planner_set_inflation:planner0" '{"robot_radius": 0, "safety_margin": 0, "inflation_radius": 0, "inflation_weight": 0}'
+  ```
+
+  Now give a goal from the left room to the small room at the bottom right (for example x 2.5, y -3.0). The path grazes the corner of the doorway, and planner_dwa may decide it would collide as it gets close and stop, going `stuck` → replan → `failed` (`local planner is stuck`).
+  When you have seen it, set it back with `{"robot_radius": 0.2, "safety_margin": 0.05, "inflation_radius": 0.6, "inflation_weight": 2.0}`.
 - **Cancel halfway**: press キャンセル (cancel) while driving. planner_dwa stops and the state becomes `canceled`.
 
 ## Localization
@@ -118,6 +160,6 @@ To recover, press 初期位置を真の姿勢に (set the initial pose to the tr
 
 - The five apps are connected as one tree with navigation_hub as the root. The `relay_...` Processes at the root relay the topics.
 - DWA tries candidate trajectories and picks a velocity. You can change its parameters on the screen or with `dwa_set_params`.
-- planner_dijkstra does not consider the robot's size, so goals right next to obstacles tend to get stuck.
+- planner_dijkstra plans on a map whose obstacles are inflated by the size of the robot, so paths keep away from walls and the corners of the doorway. You can change how much with `planner_set_inflation`.
 
 This is the end of the autonomous navigation exercise. Go back to the [list of exercises](/exercises/), or read how the apps are built in their repositories.

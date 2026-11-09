@@ -1,6 +1,6 @@
 ---
 title: 3. 中を見る
-description: juiz コマンドと各アプリの画面で、木の形・トピックの中継・局所計画のパラメータ・自己位置推定を確かめ、わざと失敗させてみます。
+description: juiz コマンドと各アプリの画面で、木の形・トピックの中継・大域経路とロボットの大きさ・局所計画のパラメータ・自己位置推定を確かめ、わざと失敗させてみます。
 sidebar:
   order: 3
 prev:
@@ -55,9 +55,43 @@ juiz -s http://localhost:8006 process list
 `navigation-manager stack` は planner_dijkstra と planner_dwa を葉として起動するとき、`juiz run` の `--remap` で、購読するトピックを `nav/...` に、planner_dwa が出すトピックを `cmd_vel_dwa` に付け替えています(例: `--remap odom=nav/odom --remap cmd_vel=cmd_vel_dwa`)。付け替える組は navigation_hub の `.juizapp` の `leaves/planner_dijkstra.yaml`・`leaves/planner_dwa.yaml` に書いてあります。
 根の中継を通ることで、別々の枝にあるアプリどうしがトピックでつながります。
 
+## 大域経路をのぞく
+
+planner_dijkstra の画面([http://localhost:8003/](http://localhost:8003/))を開き、navigation_manager の画面からゴールを出してみましょう。
+
+![planner_dijkstra の画面。左に、壁や柱の周りが濃い灰色と薄い灰色の帯で囲まれた地図と、扉の真ん中を通る青い経路、右に目標・地図の操作と、経路の長さやロボットの大きさなどの結果が並ぶ](../../../../../assets/exercises/navigation/planner.png)
+
+planner_dijkstra は、地図の障害物をロボットの大きさだけ膨らませた地図(コストマップ)の上で、ダイクストラ法で経路を求めます。画面の「膨らませた地図を表示」に印が付いている(既定)と、その地図が描かれます。
+
+| 表示 | 意味 |
+| --- | --- |
+| 黒 | 障害物 |
+| 濃い灰色の帯 | ロボットの中心が入れない所(障害物から `robot_radius` + `safety_margin` 以内) |
+| 薄い灰色のぼかし | 通れるが、障害物に近いほど重みを上げる所(障害物から `inflation_radius` 以内) |
+| 青い線 | 求めた経路 |
+
+濃い灰色の帯があるので、経路は柱や扉の角をかすめません。さらに薄い灰色の所を避けようとするので、扉の真ん中寄りを通ります。planner_dwa が追いやすい経路になります。
+
+この形で動かしているときは、planner_dijkstra も mobile_sim を副系に持たないので、画面の上に「mobile_sim は見つかりません」と出ます。地図と経路は描かれます。
+
+膨らませ方は、コンテナの引数(`.juizapp` の `app.conf`)で決まっていて、ContainerProcess `planner_set_inflation` で変えられます。
+
+| 引数 | 既定 | 意味 |
+| --- | --- | --- |
+| `robot_radius` | 0.2 m | ロボットの半径。planner_dwa の `robot_radius` と揃える |
+| `safety_margin` | 0.05 m | 半径に足す余裕 |
+| `inflation_radius` | 0.6 m | 障害物からこの距離までは重みを上げる |
+| `inflation_weight` | 2.0 | 重みの上げ方(0 なら、入れない帯を空けるだけ) |
+
+```sh
+juiz -s http://localhost:8003 container-process call -p "http://localhost:8003/container_process/set_inflation0::planner_set_inflation:planner0" '{"robot_radius": 0.3, "safety_margin": null, "inflation_radius": null, "inflation_weight": null}'
+```
+
+`null` にした値は今のまま変わりません。戻り値として、変えた後の設定が返ってきます。膨らませた地図も描き直されるので、画面で濃い灰色の帯が太くなったことを確かめてください。
+
 ## 局所計画をのぞく
 
-planner_dwa の画面(http://localhost:8004/)を開き、navigation_manager の画面からゴールを出してみましょう。
+planner_dwa の画面([http://localhost:8004/](http://localhost:8004/))を開き、navigation_manager の画面からゴールを出してみましょう。
 
 ![planner_dwa の画面。左に青い大域経路と、ロボットから扇形に広がる灰色の候補の軌道、緑の選んだ軌道、赤い scan の点、右にパラメータのスライダーと状態が並ぶ](../../../../../assets/exercises/navigation/dwa.png)
 
@@ -102,12 +136,20 @@ Windows の PowerShell では JSON の中の `"` の渡し方が版によって�
 navigation_manager の画面で、次のことを試してみましょう。
 
 - **障害物の上にゴールを置く**: 柱や壁の上でドラッグすると、planner_dijkstra が経路を求められず、引き直しを 3 回したあと `failed`(`the goal is on an obstacle`)になります。
-- **障害物のすぐそばにゴールを置く**: 柱や円い障害物のすぐそば(0.5 m より近く)にゴールを置くと、近づいたところで planner_dwa がぶつかると判断して止まり、`stuck` → 引き直し → `failed`(`local planner is stuck`)になることがあります。planner_dijkstra がロボットの大きさ(半径 0.2 m)を考えずに経路を求めているためです。
+- **障害物のすぐそばにゴールを置く**: 柱や円い障害物のすぐそば(0.25 m より近く)にゴールを置くと、planner_dijkstra がゴールを一番近い通れる所に寄せ、状態の欄に `the goal is too close to obstacles: moved to (x, y)` と出ます。ロボットは寄せた先まで走って `succeeded` になります。
+- **ロボットの大きさを忘れさせる**: 次のように 4 つとも 0 にすると、planner_dijkstra はロボットの大きさを考えず、地図をそのまま使って経路を求めます。
+
+  ```sh
+  juiz -s http://localhost:8003 container-process call -p "http://localhost:8003/container_process/set_inflation0::planner_set_inflation:planner0" '{"robot_radius": 0, "safety_margin": 0, "inflation_radius": 0, "inflation_weight": 0}'
+  ```
+
+  この状態で、左の部屋から右下の小部屋(たとえば x 2.5、y -3.0)へゴールを出すと、経路が扉の角をかすめ、近づいたところで planner_dwa がぶつかると判断して止まり、`stuck` → 引き直し → `failed`(`local planner is stuck`)になることがあります。
+  確かめたら、`{"robot_radius": 0.2, "safety_margin": 0.05, "inflation_radius": 0.6, "inflation_weight": 2.0}` で元に戻してください。
 - **途中でキャンセルする**: 走っている途中で「キャンセル」を押すと、planner_dwa が止まり、状態は `canceled` になります。
 
 ## 自己位置推定をのぞく
 
-localization_amcl の画面(http://localhost:8002/)では、粒子と推定した姿勢、誤差の楕円を見られます。
+localization_amcl の画面([http://localhost:8002/](http://localhost:8002/))では、粒子と推定した姿勢、誤差の楕円を見られます。
 ロボットが走っている間、粒子がロボットの周りにまとまっていることを確かめてください。
 
 試しに、「大域的な推定(粒子を地図全体に撒く)」を押してみましょう。粒子が地図全体に散らばり、推定した位置は「どこにいるかわからない」状態になります。
@@ -118,6 +160,6 @@ localization_amcl の画面(http://localhost:8002/)では、粒子と推定し�
 
 - navigation_hub を根にした木で、5 つのアプリが 1 つにつながっています。根の `relay_...` がトピックを中継しています。
 - DWA は候補の軌道を試して速度を選びます。パラメータは画面や `dwa_set_params` で変えられます。
-- planner_dijkstra はロボットの大きさを考えないので、障害物のすぐそばのゴールは立ち往生しやすくなります。
+- planner_dijkstra は障害物をロボットの大きさだけ膨らませた地図の上で経路を求めるので、経路は壁や扉の角から離れます。膨らませ方は `planner_set_inflation` で変えられます。
 
 これで自律移動の演習はおしまいです。[演習の一覧](/ja/exercises/) に戻るか、各アプリのリポジトリで中の作りを読んでみてください。
