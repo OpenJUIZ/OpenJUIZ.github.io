@@ -52,7 +52,7 @@ The five `relay_...` Processes receive topics and publish them again under other
 | `relay_amcl_pose` | `amcl_pose` | `nav/amcl_pose` | localization_amcl → planner_dijkstra, planner_dwa |
 | `relay_cmd_vel` | `cmd_vel_dwa` | `cmd_vel` | planner_dwa → mobile_sim |
 
-When `navigation-manager stack` starts planner_dijkstra and planner_dwa as leaves, it rewrites the topics they subscribe to as `nav/...`, and the topic planner_dwa publishes as `cmd_vel_dwa`.
+When `navigation-manager stack` starts planner_dijkstra and planner_dwa as leaves, it renames the topics they subscribe to as `nav/...`, and the topic planner_dwa publishes as `cmd_vel_dwa`, with the `--remap` option of `juiz run` (for example `--remap odom=nav/odom --remap cmd_vel=cmd_vel_dwa`). The pairs are written in `leaves/planner_dijkstra.yaml` and `leaves/planner_dwa.yaml` in the `.juizapp` of navigation_hub.
 Through the relays at the root, apps on different branches are connected by topics.
 
 ## The local planner

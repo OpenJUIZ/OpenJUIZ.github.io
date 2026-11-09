@@ -52,7 +52,7 @@ juiz -s http://localhost:8006 process list
 | `relay_amcl_pose` | `amcl_pose` | `nav/amcl_pose` | localization_amcl → planner_dijkstra・planner_dwa |
 | `relay_cmd_vel` | `cmd_vel_dwa` | `cmd_vel` | planner_dwa → mobile_sim |
 
-`navigation-manager stack` が planner_dijkstra と planner_dwa を葉として起動するとき、購読するトピックを `nav/...` に、planner_dwa が出すトピックを `cmd_vel_dwa` に書き換えています。
+`navigation-manager stack` は planner_dijkstra と planner_dwa を葉として起動するとき、`juiz run` の `--remap` で、購読するトピックを `nav/...` に、planner_dwa が出すトピックを `cmd_vel_dwa` に付け替えています(例: `--remap odom=nav/odom --remap cmd_vel=cmd_vel_dwa`)。付け替える組は navigation_hub の `.juizapp` の `leaves/planner_dijkstra.yaml`・`leaves/planner_dwa.yaml` に書いてあります。
 根の中継を通ることで、別々の枝にあるアプリどうしがトピックでつながります。
 
 ## 局所計画をのぞく

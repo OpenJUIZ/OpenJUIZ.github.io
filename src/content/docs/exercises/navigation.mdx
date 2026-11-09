@@ -54,7 +54,7 @@ While the robot heads for a goal, two kinds of exchange run at the same time.
 - **HTTP calls** (called once, when needed): navigation_manager passes the goal to planner_dijkstra to get a global path, and passes that path to planner_dwa. Distributing maps and canceling also go this way.
 
 <Aside type="note" title="Why a root is needed">
-In juiz 0.2.4, topics travel along the tree of Systems (the subsystem links).
+In juiz (as of 0.2.5), topics travel along the tree of Systems (the subsystem links).
 If every app had only mobile_sim as its subsystem, the `amcl_pose` of localization_amcl would not reach planner_dijkstra or planner_dwa ([juiz#449](https://github.com/OpenJUIZ/juiz/issues/449)).
 So the apps form one tree with navigation_hub as the root, and the root relays the topics. The start order is fixed too, so this exercise uses a command that starts the whole stack.
 </Aside>
@@ -63,10 +63,10 @@ So the apps form one tree with navigation_hub as the root, and the root relays t
 
 <Steps>
 
-1. Install the `juiz` command and navigation_manager. juiz must be 0.2.4 or later.
+1. Install the `juiz` command and navigation_manager. juiz must be 0.2.5 or later, and navigation_manager 0.3.2 or later.
 
    ```sh
-   pip install juiz-cli==0.2.4 navigation-manager
+   pip install juiz-cli==0.2.5 navigation-manager
    ```
 
    This gives you the `navigation-manager` command.
