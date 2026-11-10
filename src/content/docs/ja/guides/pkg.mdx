@@ -1,0 +1,265 @@
+---
+title: 雛形から始める(juiz pkg)
+description: juiz pkg create で、ビルド・起動・呼び出し・.juizapp での配布までそのまま通るプロジェクトの雛形を作ります。juiz pkg add で型を足し、--idl で JIDL から型付きの雛形も作れます。
+sidebar:
+  order: 12
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+Process・Container・Component を作り始めるときのプロジェクトを、コマンド 1 つで作れます。
+
+```sh
+juiz pkg create my_robot -b rust
+```
+
+作った雛形は、手を加えずにビルド → `juiz -f app/app.conf` で起動 → 呼び出し → `juiz pack` で [.juizapp](../app-package/) にして配布、まで通ります。
+ビルドのファイルに書く SDK(juiz_sdk・pyjuiz・libjuiz_sdk・hsjuiz)の版は、雛形を作った juiz 自身の版にそろえて書かれます。チュートリアルでつまずきやすい「`juiz --version` と同じ版にそろえる」を手で直す必要はありません。
+
+<Aside type="caution" title="juiz 0.2.6 以降が必要です">
+`juiz pkg` は juiz 0.2.6 から使えます。`juiz --version` で確かめてください。`pip install juiz-cli` で入れた juiz にも、`cargo install juiz_app` で入れた juiz にも入っています。
+</Aside>
+
+<Aside type="tip" title="チュートリアルとの関係">
+雛形の中身は、[チュートリアル](../../tutorial/)の第 1・2・5 章で 1 から作るものと同じ形です。仕組みを知りたいときはチュートリアルを、すぐに始めたいときは雛形を使ってください。
+</Aside>
+
+## 作る
+
+```sh
+juiz pkg create <名前> -b <言語> [-t <種類>] [-o <ディレクトリ>]
+```
+
+| オプション | 既定 | 意味 |
+| --- | --- | --- |
+| `<名前>` | (必須) | 英小文字で始まり、英小文字・数字・`_` だけの名前(`my_robot` など)。Component の名前、パッケージ名、型名の頭になります |
+| `-b`, `--lang` | (必須) | `rust` / `python` / `cpp` / `haskell` |
+| `-t`, `--template` | `component` | 入れる型の種類。`component` / `process` / `container`(下の表) |
+| `--idl <file.jidl>` | なし | 例の型の代わりに、JIDL の宣言から型付きの関数を作ります([下](#jidl-から型付きの雛形を作るidl))。Rust だけ |
+| `-o`, `--output` | `./<名前>` | 作るディレクトリ。既にあって空でなければエラーになり、何も書きません |
+| `--license` | `none` | `mit-apache` で LICENSE-MIT・LICENSE-APACHE を置き、各ファイルのライセンスの欄に `MIT OR Apache-2.0` を書きます |
+| `--author` | `git config user.name` | `--license mit-apache` のときの著作権者 |
+| `--juiz-sdk-dir` | `~/.juiz/sdk/<版>` | C++・Haskell のみ。libjuiz_sdk を置いた場所 |
+| `--hsjuiz-dir` | `~/juiz-<版>/bindings/hsjuiz` | Haskell のみ。hsjuiz のソースの場所 |
+
+名前の規則に合わないときは、直した名前の例を添えたエラーになります(`My-Robot` なら `my_robot` など)。言語のキーワード(`type`・`class` など)や `juiz`・`std`・`test` なども使えません。
+
+### 入る型
+
+どの種類でも、作るのは 1 つの Component です。種類で変わるのは、その中に入る型だけです。名前が `my_robot` のとき:
+
+| 型 | 種類 | 引数(既定値) | 戻り値 | 働き | 入る `-t` |
+| --- | --- | --- | --- | --- | --- |
+| `my_robot_add` | Process | `a: int`(0)、`b: int`(0) | int | `a + b` を返す | `component`・`process` |
+| `my_robot` | Container | `initial_value: int`(0) | — | 整数 `value` を 1 つ持つ | `component`・`container` |
+| `my_robot_increment` | ContainerProcess | `step: int`(1) | int | `value += step` して `value` を返す | `component`・`container` |
+| `my_robot_get` | ContainerProcess(readonly) | なし | int | `value` を返す | `component`・`container` |
+
+引数と戻り値には型が付いているので、[管理画面](../web-ui/)の呼び出しフォームや、接続するときの型の検査がそのまま効きます。
+
+### 中身
+
+`-b rust` の例です。
+
+```text
+my_robot/
+├─ Cargo.toml              ビルドのファイル(言語ごと)
+├─ src/lib.rs              Component のソース(言語ごと)
+├─ app/
+│  ├─ app.conf             起動する設定ファイル。.juizapp の entry
+│  └─ juizapp.yaml         .juizapp のマニフェスト
+├─ scripts/
+│  ├─ dev.sh   dev.ps1     ビルドしてプラグインを app/plugins/<ターゲット>/ に置く
+│  └─ pack.sh  pack.ps1    dist/my_robot-0.1.0.juizapp を作る
+├─ README.md               この雛形の使い方(英語)
+└─ .gitignore
+```
+
+| 言語 | ビルドのファイル | Component のソース | scripts |
+| --- | --- | --- | --- |
+| Rust | `Cargo.toml` | `src/lib.rs` | `dev`・`pack`(`.sh`・`.ps1`) |
+| Python | `pyproject.toml` | `app/python/<名前>.py` | `pack` だけ(ビルドが無いため) |
+| C++ | `CMakeLists.txt` | `src/<名前>.cpp` | `dev`・`pack`(`.sh`・`.ps1`) |
+| Haskell | `cabal.project`、`<名前-kebab>.cabal` | `src/<Name>.hs` | `dev.sh`・`pack.sh`・`bundle-plugin-deps.sh` |
+
+`app/app.conf` には、入っている型のインスタンス(`my_robot_add0`、`my_robot0` など)と、`my_robot_increment0` を 1 秒ごとに呼ぶ実行コンテキスト `main_ec`(`auto_start: false` なので、起動しただけでは動きません)が書かれています。HTTP のポートは 8000 です。
+雛形の中のコメントと README は英語です。
+
+## ビルドして動かす
+
+作ると、次に打つコマンドが表示されます(README.md にも同じものが書かれています)。言語ごとに、最初の準備だけが違います。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz pkg create my_robot -b rust
+cd my_robot
+scripts/dev.sh                  # cargo build して app/plugins/<ターゲット>/ に置く
+juiz -f app/app.conf -d         # 起動(このままにしておく)
+```
+
+Windows では `scripts\dev.ps1` を使います。`scripts/dev.sh --release`(Windows は `-Release`)で release ビルドになります。
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz pkg create my_robot -b python
+cd my_robot
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -e .                # pyproject.toml の pyjuiz(juiz と同じ版)を入れる
+juiz -f app/app.conf -d         # 起動(このままにしておく)
+```
+
+Windows では `python -m venv .venv`、`.venv\Scripts\activate` です。juiz を `pip install juiz-cli` で入れているなら、同じ venv に入れておくと簡単です。
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz pkg create my_robot -b cpp
+cd my_robot
+# 初回だけ: libjuiz_sdk(juiz と同じ版)を ~/.juiz/sdk/<版> に置く
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.6
+scripts/dev.sh                  # cmake でビルドし、プラグインと libjuiz_sdk を app/plugins/<ターゲット>/ に置く
+juiz -f app/app.conf -d         # 起動(このままにしておく)
+```
+
+cmake と C++ コンパイラが要ります。Windows では `install-juiz-sdk.ps1` と `scripts\dev.ps1` を使います(手順は [インストール](../../getting-started/install/) の C++ を見てください)。
+`juiz pkg create` は SDK が無いときに入れるコマンドを表示するので、`0.2.6` の所はその表示のとおりにしてください。
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz pkg create my_robot -b haskell
+cd my_robot
+# 初回だけ: hsjuiz のソースと libjuiz_sdk(どちらも juiz と同じ版)を用意する
+git clone --depth 1 --branch v0.2.6 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.6
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.6
+scripts/dev.sh                  # cabal build して app/plugins/<ターゲット>/ に置く
+juiz -f app/app.conf -d         # 起動(このままにしておく)
+```
+
+ghc と cabal が要ります。`cabal.project` には hsjuiz と libjuiz_sdk の場所が絶対パスで書かれます。用意してから作っても、作ってから用意してもかまいません(無ければ、作るときに警告と用意するコマンドが表示されます)。
+Haskell は Linux と macOS だけです(Windows では雛形は作れますが、動かせません)。
+
+</TabItem>
+</Tabs>
+
+別の端末から呼び出します。`my_robot_get` は `my_robot_increment` を呼んだ回数だけ増えた値を返します。
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/my_robot_add0::my_robot_add" '{"a": 1, "b": 2}' -p
+# => CapsulePtr((value:Value(3), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/my_robot_increment0::my_robot_increment:my_robot0" '{"step": 1}' -p
+# => CapsulePtr((value:Value(1), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/my_robot_get0::my_robot_get:my_robot0" '{}' -p
+# => CapsulePtr((value:Value(1), option: []))
+```
+
+ここから先は、Component のソースの関数を書き換え、型を足して(次の節)、自分の部品に育てていきます。
+
+## 型を足す(juiz pkg add)
+
+雛形の Component に、Process や Container を足せます。雛形のディレクトリで打ちます。
+
+```sh
+juiz pkg add process my_robot_sum         # Process my_robot_sum
+juiz pkg add container my_robot_arm       # Container my_robot_arm と my_robot_arm_increment・my_robot_arm_get
+```
+
+| 引数 | 足す型 | 中身 |
+| --- | --- | --- |
+| `process <名前>` | Process `<名前>` | `my_robot_add` と同じ(`a + b`) |
+| `container <名前>` | Container `<名前>`、ContainerProcess `<名前>_increment`・`<名前>_get` | `my_robot` などと同じ |
+
+- 書き換えるのは **Component のソース 1 つと `app/app.conf` だけ**です。新しいファイルは作らず、Cargo.toml・CMakeLists.txt・.cabal も直しません。
+- 言語と Component の名前は `app/app.conf` から読みます。別のディレクトリの雛形には `-C <ディレクトリ>` を付けます。
+- 同じ名前が conf やソースに既にあればエラーになり、何も変えません。ソースの形を大きく変えていて足す場所が見つからないときも、エラーになって手で足すよう案内されます。
+- README.md の型の表は直しません。
+
+足した後は、ビルドのある言語では `scripts/dev.sh` でビルドし直し、juiz を起動し直します。打つコマンドは `juiz pkg add` が表示します。
+
+## JIDL から型付きの雛形を作る(--idl)
+
+[データ型](../datatype/)の JIDL に書いた `process`・`container` の宣言から、引数と戻り値に型の付いた関数を持つ雛形を作れます。今は **Rust だけ**です。
+
+```text
+// arm.jidl
+namespace my.arm;
+import idl "juiz_std/geometry.jidl";
+
+/** Move the arm tip to the target */
+process juiz_std.geometry.Pose2D move_to(juiz_std.geometry.Pose2D target, double speed = 1.0);
+
+container gripper {
+  container_process boolean grip(double force = 1.0);
+}
+```
+
+```sh
+juiz pkg create my_arm -b rust --idl arm.jidl
+```
+
+```text
+my_arm/
+├─ Cargo.toml        [build-dependencies] に juiz_idl。juiz_std の型を使うときは juiz_std_types も
+├─ build.rs          idl/ の .jidl から Rust の型を作る
+├─ idl/arm.jidl      渡した .jidl(と import している .jidl)の写し
+├─ src/lib.rs        宣言ごとの関数。本体は todo!()
+├─ app/app.conf      宣言の型ごとのインスタンス(move_to0、gripper0、grip0)
+└─ …                 app/juizapp.yaml・scripts/・README.md は普通の雛形と同じ
+```
+
+`src/lib.rs` の関数は `juiz idl -g rust-skeleton` と同じもので、本体が `todo!()` です。本体を書いてから `scripts/dev.sh` でビルドします。本体を書く前に呼び出すと失敗します。
+
+```rust
+pub fn move_to(target: ::juiz_std_types::juiz_std::geometry::Pose2D, speed: f64) -> JuizResult<::juiz_std_types::juiz_std::geometry::Pose2D> {
+    let _ = (target, speed);                    // 本体を書くときはこの 2 行を消す
+    todo!("write the body of move_to")
+}
+```
+
+- `-t` とは一緒に使えません。例の型(`my_arm_add` など)は入りません。
+- 宣言のある名前空間は 1 つにしてください(1 つの雛形は 1 つの Component です)。`juiz_std` は数えません。
+- `import` する .jidl は、渡した .jidl と同じディレクトリかその下に置いてください。相対パスのまま `idl/` に写すためです。
+- JIDL には状態の型を書けないので、Container の状態は空の struct になります。ContainerProcess は `&mut ContainerImpl<…>` で受けます。
+- 呼び出しの例(作ったときの表示と README)の引数は、既定値か、型から作った値(数は 0、文字列は `""` など)です。
+
+## 配布する
+
+`scripts/pack.sh`(Windows は `scripts\pack.ps1`)で release ビルドをして、`dist/<名前>-0.1.0.juizapp` を作ります。受け取った人は `juiz run` だけで動かせます。
+
+```sh
+scripts/pack.sh
+juiz run dist/my_robot-0.1.0.juizapp
+```
+
+- 既にビルドしてあるものをそのまま入れるときは `scripts/pack.sh --no-build` です。
+- 複数の OS のプラグインを 1 つの .juizapp に入れるときは、それぞれの OS で `scripts/dev.sh --release` して `app/plugins/<ターゲット>/` を 1 か所に集めてから `scripts/pack.sh --no-build` します。ターゲット名は `juiz pkg target` で表示できます。
+- `--license mit-apache` で作ったときは、LICENSE-MIT・LICENSE-APACHE も .juizapp に入ります。
+- パッケージの版は `0.1.0` から始まります。版を上げるときは、`app/juizapp.yaml` とビルドのファイル(Cargo.toml・pyproject.toml・CMakeLists.txt・.cabal)の両方を直してください。
+
+.juizapp の中身や `juiz run` の動きは [アプリの配布(.juizapp)](../app-package/) を見てください。
+
+## 版について
+
+雛形には、`juiz pkg` を動かした juiz の版が書かれます。
+
+| ファイル | 書き方 |
+| --- | --- |
+| Cargo.toml | `juiz_sdk = "=0.2.6"` |
+| pyproject.toml | `pyjuiz==0.2.6` |
+| CMakeLists.txt | `JUIZ_VERSION "0.2.6"`(`find_package(... EXACT)`) |
+| cabal.project | hsjuiz・libjuiz_sdk のパスに版が入る |
+| app/juizapp.yaml | `juiz: ">=0.2.6"`(C++・Haskell は `"=0.2.6"`) |
+
+C++ と Haskell の .juizapp は libjuiz_sdk を同梱するので、動かす juiz と版が一致しないと読み込めません。そのため `juiz: "=<版>"` にしてあり、違う版の juiz で `juiz run` すると、最初に版の違いを示して止まります。
+juiz を上げたときは、雛形を作り直すか、上の表の版を手で直してください。
+
+## juiz-pkg
+
+同じものが単体のコマンド `juiz-pkg` としても入れられます(`cargo install juiz_pkg`)。引数と動きは `juiz pkg` と同じですが、雛形に書かれるのは juiz_pkg の版です。juiz と版がずれないよう、ふだんは `juiz pkg` を使ってください。
