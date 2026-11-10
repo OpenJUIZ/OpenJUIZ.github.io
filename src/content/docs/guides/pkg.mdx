@@ -1,0 +1,264 @@
+---
+title: Starting from a skeleton (juiz pkg)
+description: juiz pkg create makes a project skeleton that builds, starts, answers calls and packs into a .juizapp as is. Add types with juiz pkg add, and make a typed skeleton from JIDL with --idl.
+sidebar:
+  order: 12
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+One command makes the project you need to start writing Processes, Containers and Components.
+
+```sh
+juiz pkg create my_robot -b rust
+```
+
+Without any changes, the skeleton builds, starts with `juiz -f app/app.conf`, answers calls, and packs into a [.juizapp](../app-package/) with `juiz pack` for distribution.
+The SDK version written in the build files (juiz_sdk, pyjuiz, libjuiz_sdk, hsjuiz) is the version of the juiz that made the skeleton. You do not have to match it to `juiz --version` by hand, which is a common stumbling point in the tutorial.
+
+<Aside type="caution" title="Requires juiz 0.2.6 or later">
+`juiz pkg` is available from juiz 0.2.6. Check it with `juiz --version`. It is included both in juiz installed with `pip install juiz-cli` and in juiz installed with `cargo install juiz_app`.
+</Aside>
+
+<Aside type="tip" title="The skeleton and the tutorial">
+The skeleton has the same shape as the projects you build from scratch in chapters 1, 2 and 5 of the [tutorial](../../tutorial/). Use the tutorial to learn how things work, and the skeleton to get started quickly.
+</Aside>
+
+## Create
+
+```sh
+juiz pkg create <name> -b <lang> [-t <template>] [-o <dir>]
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `<name>` | (required) | A name that starts with a lowercase letter and has only lowercase letters, digits and `_` (such as `my_robot`). It becomes the Component name, the package name and the prefix of the type names |
+| `-b`, `--lang` | (required) | `rust` / `python` / `cpp` / `haskell` |
+| `-t`, `--template` | `component` | Which types to put in: `component` / `process` / `container` (table below) |
+| `--idl <file.jidl>` | none | Make typed functions from the declarations of a JIDL file instead of the example types ([below](#make-a-typed-skeleton-from-jidl-idl)). Rust only |
+| `-o`, `--output` | `./<name>` | The directory to create. If it exists and is not empty, it is an error and nothing is written |
+| `--license` | `none` | `mit-apache` puts LICENSE-MIT and LICENSE-APACHE and writes `MIT OR Apache-2.0` in the license field of each file |
+| `--author` | `git config user.name` | The copyright holder for `--license mit-apache` |
+| `--juiz-sdk-dir` | `~/.juiz/sdk/<version>` | C++ and Haskell only. Where libjuiz_sdk is |
+| `--hsjuiz-dir` | `~/juiz-<version>/bindings/hsjuiz` | Haskell only. Where the hsjuiz source is |
+
+A name that breaks the rules is an error with a suggested fix (`my_robot` for `My-Robot`, for example). Language keywords (`type`, `class` and so on) and names such as `juiz`, `std` and `test` are not allowed either.
+
+### Types inside
+
+Every template makes one Component. The template only decides which types go into it. For the name `my_robot`:
+
+| Type | Kind | Arguments (default) | Returns | What it does | In `-t` |
+| --- | --- | --- | --- | --- | --- |
+| `my_robot_add` | Process | `a: int` (0), `b: int` (0) | int | Returns `a + b` | `component`, `process` |
+| `my_robot` | Container | `initial_value: int` (0) | - | Holds one integer `value` | `component`, `container` |
+| `my_robot_increment` | ContainerProcess | `step: int` (1) | int | `value += step`, returns `value` | `component`, `container` |
+| `my_robot_get` | ContainerProcess (readonly) | - | int | Returns `value` | `component`, `container` |
+
+The arguments and return values are typed, so the call form of the [web UI](../web-ui/) and the type check on connection work right away.
+
+### Files
+
+For `-b rust`:
+
+```text
+my_robot/
+├─ Cargo.toml              build file (per language)
+├─ src/lib.rs              the Component source (per language)
+├─ app/
+│  ├─ app.conf             the configuration to start. The entry of the .juizapp
+│  └─ juizapp.yaml         the .juizapp manifest
+├─ scripts/
+│  ├─ dev.sh   dev.ps1     build and put the plugin in app/plugins/<target>/
+│  └─ pack.sh  pack.ps1    make dist/my_robot-0.1.0.juizapp
+├─ README.md               how to use this skeleton
+└─ .gitignore
+```
+
+| Language | Build files | Component source | scripts |
+| --- | --- | --- | --- |
+| Rust | `Cargo.toml` | `src/lib.rs` | `dev`, `pack` (`.sh`, `.ps1`) |
+| Python | `pyproject.toml` | `app/python/<name>.py` | only `pack` (nothing to build) |
+| C++ | `CMakeLists.txt` | `src/<name>.cpp` | `dev`, `pack` (`.sh`, `.ps1`) |
+| Haskell | `cabal.project`, `<name-kebab>.cabal` | `src/<Name>.hs` | `dev.sh`, `pack.sh`, `bundle-plugin-deps.sh` |
+
+`app/app.conf` has an instance of each type (`my_robot_add0`, `my_robot0` and so on) and an execution context `main_ec` that calls `my_robot_increment0` every second (it has `auto_start: false`, so it does not run just because juiz started). The HTTP port is 8000.
+
+## Build and run
+
+`juiz pkg create` prints the commands to type next (README.md has the same ones). Only the first preparation differs between languages.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```sh
+juiz pkg create my_robot -b rust
+cd my_robot
+scripts/dev.sh                  # cargo build and put the plugin in app/plugins/<target>/
+juiz -f app/app.conf -d         # start (keep it running)
+```
+
+On Windows, use `scripts\dev.ps1`. `scripts/dev.sh --release` (`-Release` on Windows) makes a release build.
+
+</TabItem>
+<TabItem label="Python">
+
+```sh
+juiz pkg create my_robot -b python
+cd my_robot
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -e .                # installs pyjuiz from pyproject.toml (same version as juiz)
+juiz -f app/app.conf -d         # start (keep it running)
+```
+
+On Windows, use `python -m venv .venv` and `.venv\Scripts\activate`. If you installed juiz with `pip install juiz-cli`, installing it into the same venv is the easiest.
+
+</TabItem>
+<TabItem label="C++">
+
+```sh
+juiz pkg create my_robot -b cpp
+cd my_robot
+# once: put libjuiz_sdk (same version as juiz) in ~/.juiz/sdk/<version>
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.6
+scripts/dev.sh                  # build with cmake and put the plugin and libjuiz_sdk in app/plugins/<target>/
+juiz -f app/app.conf -d         # start (keep it running)
+```
+
+You need cmake and a C++ compiler. On Windows, use `install-juiz-sdk.ps1` and `scripts\dev.ps1` (see C++ in [Installation](../../getting-started/install/)).
+When the SDK is missing, `juiz pkg create` prints the command to install it. Use the version it prints instead of `0.2.6`.
+
+</TabItem>
+<TabItem label="Haskell">
+
+```sh
+juiz pkg create my_robot -b haskell
+cd my_robot
+# once: get the hsjuiz source and libjuiz_sdk (both the same version as juiz)
+git clone --depth 1 --branch v0.2.6 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.6
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.6
+scripts/dev.sh                  # cabal build and put the plugin in app/plugins/<target>/
+juiz -f app/app.conf -d         # start (keep it running)
+```
+
+You need ghc and cabal. `cabal.project` has the absolute paths of hsjuiz and libjuiz_sdk. You can get them before or after creating the skeleton (if they are missing, `juiz pkg create` warns and prints the commands to get them).
+Haskell works on Linux and macOS only (on Windows the skeleton is created but cannot run).
+
+</TabItem>
+</Tabs>
+
+Call the types from another terminal. `my_robot_get` returns the value increased by each call of `my_robot_increment`.
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/my_robot_add0::my_robot_add" '{"a": 1, "b": 2}' -p
+# => CapsulePtr((value:Value(3), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/my_robot_increment0::my_robot_increment:my_robot0" '{"step": 1}' -p
+# => CapsulePtr((value:Value(1), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/my_robot_get0::my_robot_get:my_robot0" '{}' -p
+# => CapsulePtr((value:Value(1), option: []))
+```
+
+From here, rewrite the functions in the Component source and add types (next section) to grow it into your own component.
+
+## Add types (juiz pkg add)
+
+You can add a Process or a Container to the Component of a skeleton. Run it in the skeleton directory.
+
+```sh
+juiz pkg add process my_robot_sum         # Process my_robot_sum
+juiz pkg add container my_robot_arm       # Container my_robot_arm with my_robot_arm_increment and my_robot_arm_get
+```
+
+| Argument | Types added | What they do |
+| --- | --- | --- |
+| `process <name>` | Process `<name>` | Same as `my_robot_add` (`a + b`) |
+| `container <name>` | Container `<name>`, ContainerProcess `<name>_increment` and `<name>_get` | Same as `my_robot` and its ContainerProcesses |
+
+- It edits **only the Component source and `app/app.conf`**. It creates no new files and does not touch Cargo.toml, CMakeLists.txt or the .cabal file.
+- The language and the Component name are read from `app/app.conf`. For a skeleton in another directory, add `-C <dir>`.
+- If the name is already in the conf or the source, it is an error and nothing changes. If you have reshaped the source so much that the place to add is not found, it is also an error that tells you to add it by hand.
+- It does not update the type table in README.md.
+
+After adding, rebuild with `scripts/dev.sh` (for languages with a build) and restart juiz. `juiz pkg add` prints the commands.
+
+## Make a typed skeleton from JIDL (--idl)
+
+From the `process` and `container` declarations of a [data type](../datatype/) JIDL file, you can make a skeleton whose functions have typed arguments and return values. For now this is **Rust only**.
+
+```text
+// arm.jidl
+namespace my.arm;
+import idl "juiz_std/geometry.jidl";
+
+/** Move the arm tip to the target */
+process juiz_std.geometry.Pose2D move_to(juiz_std.geometry.Pose2D target, double speed = 1.0);
+
+container gripper {
+  container_process boolean grip(double force = 1.0);
+}
+```
+
+```sh
+juiz pkg create my_arm -b rust --idl arm.jidl
+```
+
+```text
+my_arm/
+├─ Cargo.toml        juiz_idl in [build-dependencies]. Also juiz_std_types when juiz_std types are used
+├─ build.rs          makes the Rust types from the .jidl in idl/
+├─ idl/arm.jidl      a copy of the .jidl (and the .jidl files it imports)
+├─ src/lib.rs        one function per declaration. The bodies are todo!()
+├─ app/app.conf      one instance per declared type (move_to0, gripper0, grip0)
+└─ …                 app/juizapp.yaml, scripts/ and README.md are the same as a normal skeleton
+```
+
+The functions in `src/lib.rs` are the same as `juiz idl -g rust-skeleton` makes, with `todo!()` as the body. Write the bodies, then build with `scripts/dev.sh`. Calls fail until you write the bodies.
+
+```rust
+pub fn move_to(target: ::juiz_std_types::juiz_std::geometry::Pose2D, speed: f64) -> JuizResult<::juiz_std_types::juiz_std::geometry::Pose2D> {
+    let _ = (target, speed);                    // remove these two lines when you write the body
+    todo!("write the body of move_to")
+}
+```
+
+- It cannot be used together with `-t`. The example types (`my_arm_add` and so on) are not added.
+- Keep the declarations in a single namespace (one skeleton is one Component). `juiz_std` does not count.
+- Put the imported .jidl files in the same directory as the given .jidl or below it, because they are copied into `idl/` with the same relative paths.
+- JIDL has no way to type the state, so the Container state is an empty struct. ContainerProcesses take `&mut ContainerImpl<…>`.
+- The arguments in the call examples (printed on creation and in the README) are the defaults, or values made from the types (0 for numbers, `""` for strings and so on).
+
+## Distribute
+
+`scripts/pack.sh` (`scripts\pack.ps1` on Windows) makes a release build and `dist/<name>-0.1.0.juizapp`. The receiver can start it with nothing but `juiz run`.
+
+```sh
+scripts/pack.sh
+juiz run dist/my_robot-0.1.0.juizapp
+```
+
+- To pack what you have already built, use `scripts/pack.sh --no-build`.
+- To put plugins for several OSes into one .juizapp, run `scripts/dev.sh --release` on each OS, collect the `app/plugins/<target>/` directories in one place, then run `scripts/pack.sh --no-build`. `juiz pkg target` prints the target name.
+- With `--license mit-apache`, LICENSE-MIT and LICENSE-APACHE go into the .juizapp too.
+- The package version starts at `0.1.0`. When you raise it, change both `app/juizapp.yaml` and the build file (Cargo.toml, pyproject.toml, CMakeLists.txt or the .cabal file).
+
+For what is inside a .juizapp and how `juiz run` works, see [Distributing apps (.juizapp)](../app-package/).
+
+## Versions
+
+The skeleton has the version of the juiz that ran `juiz pkg`.
+
+| File | What is written |
+| --- | --- |
+| Cargo.toml | `juiz_sdk = "=0.2.6"` |
+| pyproject.toml | `pyjuiz==0.2.6` |
+| CMakeLists.txt | `JUIZ_VERSION "0.2.6"` (`find_package(... EXACT)`) |
+| cabal.project | the version is in the paths of hsjuiz and libjuiz_sdk |
+| app/juizapp.yaml | `juiz: ">=0.2.6"` (`"=0.2.6"` for C++ and Haskell) |
+
+A C++ or Haskell .juizapp bundles libjuiz_sdk, which only loads into a juiz of the same version. So it has `juiz: "=<version>"`, and `juiz run` with a different juiz version stops first and shows the version mismatch.
+When you upgrade juiz, create the skeleton again or update the versions in the table above by hand.
+
+## juiz-pkg
+
+The same thing is also available as a standalone command `juiz-pkg` (`cargo install juiz_pkg`). It takes the same arguments and works the same as `juiz pkg`, but the version written into the skeleton is the version of juiz_pkg. Use `juiz pkg` normally so that the versions do not drift from juiz.
