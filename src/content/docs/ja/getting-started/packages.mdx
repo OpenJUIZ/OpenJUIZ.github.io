@@ -181,10 +181,10 @@ CMake を使わない場合は、インクルードパスに `cjuiz/include` と
 ## Haskell
 
 [hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) で書きます。GHC 9.6 以降と cabal が必要です(Linux・macOS・Windows。Windows は 0.0.27 から)。
-hsjuiz は Hackage への公開を待っているので、いまは juiz のソースを `juiz` と同じ版のタグで取得し、その `bindings/hsjuiz` から使います。自分のパッケージの `cabal.project` に、hsjuiz のソースと libjuiz_sdk の場所を書きます。
+hsjuiz は 0.2.6 から [Hackage](https://hackage.haskell.org/package/hsjuiz) にあります。自分のパッケージの `.cabal` の `build-depends` に `hsjuiz ==0.2.6.*` のように `juiz` と同じ版を書き、`cabal.project` に libjuiz_sdk の場所を書きます。はじめに `cabal update` で Hackage の索引を取得しておきます。
 
 ```sh
-git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.4
+cabal update
 ```
 
 Windows でのコマンドは、下の「Windows」タブにまとめています。
@@ -193,44 +193,44 @@ Windows でのコマンドは、下の「Windows」タブにまとめていま�
 <TabItem label="Linux (x86_64)">
 
 ```txt title="cabal.project"
-packages: . /home/me/juiz-0.2.4/bindings/hsjuiz
+packages: .
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.2.4/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.2.4/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.2.6/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.2.6/lib
 ```
 
 </TabItem>
 <TabItem label="Linux (aarch64)">
 
 ```txt title="cabal.project"
-packages: . /home/me/juiz-0.2.4/bindings/hsjuiz
+packages: .
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.2.4/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.2.4/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.2.6/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.2.6/lib
 ```
 
 </TabItem>
 <TabItem label="macOS (Apple シリコン)">
 
 ```txt title="cabal.project"
-packages: . /Users/me/juiz-0.2.4/bindings/hsjuiz
+packages: .
 
 package hsjuiz
-  extra-lib-dirs: /Users/me/.juiz/sdk/0.2.4/lib
-  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.2.4/lib
+  extra-lib-dirs: /Users/me/.juiz/sdk/0.2.6/lib
+  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.2.6/lib
 ```
 
 </TabItem>
 <TabItem label="macOS (Intel)">
 
 ```txt title="cabal.project"
-packages: . /Users/me/juiz-0.2.4/bindings/hsjuiz
+packages: .
 
 package hsjuiz
-  extra-lib-dirs: /Users/me/.juiz/sdk/0.2.4/lib
-  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.2.4/lib
+  extra-lib-dirs: /Users/me/.juiz/sdk/0.2.6/lib
+  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.2.6/lib
 ```
 
 </TabItem>
@@ -242,16 +242,15 @@ Rust が作る libjuiz_sdk のインポートライブラリは `juiz_sdk.dll.li
 `juiz_sdk.lib` という名前で別のディレクトリに複製しておきます。
 
 ```powershell
-git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git $env:USERPROFILE\juiz-0.2.4
-mkdir $env:USERPROFILE\.juiz\sdk\0.2.4\import -Force
-Copy-Item $env:USERPROFILE\.juiz\sdk\0.2.4\lib\juiz_sdk.dll.lib $env:USERPROFILE\.juiz\sdk\0.2.4\import\juiz_sdk.lib
+mkdir $env:USERPROFILE\.juiz\sdk\0.2.6\import -Force
+Copy-Item $env:USERPROFILE\.juiz\sdk\0.2.6\lib\juiz_sdk.dll.lib $env:USERPROFILE\.juiz\sdk\0.2.6\import\juiz_sdk.lib
 ```
 
 ```txt title="cabal.project"
-packages: . C:/Users/me/juiz-0.2.4/bindings/hsjuiz
+packages: .
 
 package hsjuiz
-  extra-lib-dirs: C:/Users/me/.juiz/sdk/0.2.4/import, C:/Users/me/.juiz/sdk/0.2.4/bin
+  extra-lib-dirs: C:/Users/me/.juiz/sdk/0.2.6/import, C:/Users/me/.juiz/sdk/0.2.6/bin
 ```
 
 `import` はリンクに使う `juiz_sdk.lib` の場所、`bin` は Template Haskell を動かすときに GHC が `juiz_sdk.dll` を読み込むための場所です。
@@ -286,10 +285,10 @@ Windows では `-fno-PIC` も付けてください。付けないと、構成子
 
 `/home/me`・`/Users/me`・`C:/Users/me` は自分のホームディレクトリに読み替えてください(`cabal.project` では `~` を使えません)。
 Linux・macOS の rpath は、Template Haskell を動かすときに GHC が hsjuiz と一緒に libjuiz_sdk を読み込むために要ります。
-サンプル集 [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) の `build.sh` が、libjuiz_sdk と hsjuiz の取得からサンプルのビルドまでを自動で行うので、ひな形にも使えます。
+サンプル集 [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) の `build.sh` が、libjuiz_sdk と hsjuiz(juiz のソースから)の取得からサンプルのビルドまでを自動で行うので、ひな形にも使えます。
 
 書き方は [hsjuiz の README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) を見てください。
 
 <Aside type="note">
-hsjuiz は Hackage への公開を待っています。公開したら、`cabal.project` に hsjuiz のソースを書かずに Hackage から入れられるようになります。
+Hackage に無い 0.2.5 以前の版では、juiz のソースを同じ版のタグで取得し(`git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.4`)、`cabal.project` の `packages:` にその `bindings/hsjuiz` を足します(`packages: . /home/me/juiz-0.2.4/bindings/hsjuiz`)。[チュートリアル](/ja/tutorial/first-process/haskell/) はこの方法で書いています。
 </Aside>
