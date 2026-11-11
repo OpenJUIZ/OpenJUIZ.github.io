@@ -181,10 +181,10 @@ You can also let CMake fetch libjuiz_sdk, as [cmake/Juiz.cmake](https://github.c
 ## Haskell
 
 Write components with [hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz). You need GHC 9.6 or later and cabal (Linux, macOS, Windows; Windows is supported from 0.0.27).
-hsjuiz is waiting to be published on Hackage, so for now get the juiz source at the tag of the same version as `juiz` and use its `bindings/hsjuiz`. In the `cabal.project` of your package, write where the hsjuiz source and libjuiz_sdk are.
+hsjuiz is on [Hackage](https://hackage.haskell.org/package/hsjuiz) from 0.2.6. In the `.cabal` of your package, add hsjuiz of the same version as `juiz` to `build-depends` (such as `hsjuiz ==0.2.6.*`), and write where libjuiz_sdk is in `cabal.project`. Run `cabal update` first to get the Hackage index.
 
 ```sh
-git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.4
+cabal update
 ```
 
 The commands for Windows are in the "Windows" tab below.
@@ -193,44 +193,44 @@ The commands for Windows are in the "Windows" tab below.
 <TabItem label="Linux (x86_64)">
 
 ```txt title="cabal.project"
-packages: . /home/me/juiz-0.2.4/bindings/hsjuiz
+packages: .
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.2.4/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.2.4/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.2.6/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.2.6/lib
 ```
 
 </TabItem>
 <TabItem label="Linux (aarch64)">
 
 ```txt title="cabal.project"
-packages: . /home/me/juiz-0.2.4/bindings/hsjuiz
+packages: .
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.2.4/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.2.4/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.2.6/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.2.6/lib
 ```
 
 </TabItem>
 <TabItem label="macOS (Apple silicon)">
 
 ```txt title="cabal.project"
-packages: . /Users/me/juiz-0.2.4/bindings/hsjuiz
+packages: .
 
 package hsjuiz
-  extra-lib-dirs: /Users/me/.juiz/sdk/0.2.4/lib
-  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.2.4/lib
+  extra-lib-dirs: /Users/me/.juiz/sdk/0.2.6/lib
+  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.2.6/lib
 ```
 
 </TabItem>
 <TabItem label="macOS (Intel)">
 
 ```txt title="cabal.project"
-packages: . /Users/me/juiz-0.2.4/bindings/hsjuiz
+packages: .
 
 package hsjuiz
-  extra-lib-dirs: /Users/me/.juiz/sdk/0.2.4/lib
-  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.2.4/lib
+  extra-lib-dirs: /Users/me/.juiz/sdk/0.2.6/lib
+  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.2.6/lib
 ```
 
 </TabItem>
@@ -242,16 +242,15 @@ The import library of libjuiz_sdk that Rust builds is named `juiz_sdk.dll.lib`, 
 Copy it into a separate directory under the name `juiz_sdk.lib`.
 
 ```powershell
-git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git $env:USERPROFILE\juiz-0.2.4
-mkdir $env:USERPROFILE\.juiz\sdk\0.2.4\import -Force
-Copy-Item $env:USERPROFILE\.juiz\sdk\0.2.4\lib\juiz_sdk.dll.lib $env:USERPROFILE\.juiz\sdk\0.2.4\import\juiz_sdk.lib
+mkdir $env:USERPROFILE\.juiz\sdk\0.2.6\import -Force
+Copy-Item $env:USERPROFILE\.juiz\sdk\0.2.6\lib\juiz_sdk.dll.lib $env:USERPROFILE\.juiz\sdk\0.2.6\import\juiz_sdk.lib
 ```
 
 ```txt title="cabal.project"
-packages: . C:/Users/me/juiz-0.2.4/bindings/hsjuiz
+packages: .
 
 package hsjuiz
-  extra-lib-dirs: C:/Users/me/.juiz/sdk/0.2.4/import, C:/Users/me/.juiz/sdk/0.2.4/bin
+  extra-lib-dirs: C:/Users/me/.juiz/sdk/0.2.6/import, C:/Users/me/.juiz/sdk/0.2.6/bin
 ```
 
 `import` is where `juiz_sdk.lib` for linking is, and `bin` is where GHC loads `juiz_sdk.dll` from when it runs Template Haskell.
@@ -286,10 +285,10 @@ See the ["Windows" section of the hsjuiz README](https://github.com/OpenJUIZ/jui
 
 Replace `/home/me`, `/Users/me` or `C:/Users/me` with your home directory (`~` cannot be used in `cabal.project`).
 On Linux and macOS, the rpath is needed because GHC loads libjuiz_sdk together with hsjuiz when it runs Template Haskell.
-The `build.sh` of the [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) examples does everything from getting libjuiz_sdk and hsjuiz to building the examples, so you can also use it as a template.
+The `build.sh` of the [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) examples does everything from getting libjuiz_sdk and hsjuiz (from the juiz source) to building the examples, so you can also use it as a template.
 
 See the [hsjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz) for how to write them.
 
 <Aside type="note">
-hsjuiz is waiting to be published on Hackage. Once it is, you will be able to install it from Hackage without listing the hsjuiz source in `cabal.project`.
+For 0.2.5 and earlier, which are not on Hackage, get the juiz source at the tag of the same version (`git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.4`) and add its `bindings/hsjuiz` to `packages:` in `cabal.project` (`packages: . /home/me/juiz-0.2.4/bindings/hsjuiz`). The [tutorial](/tutorial/first-process/haskell/) uses this way.
 </Aside>

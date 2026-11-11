@@ -39,7 +39,7 @@ Windows でも 0.0.27 から Haskell で書けますが、DLL の作り方(`opti
 - `juiz` と同じ版の juiz のソース(Haskell 用のライブラリ hsjuiz を使うため)
 
 Haskell の Process は、hsjuiz(juiz の Haskell 用のライブラリ)を使って書き、libjuiz_sdk(juiz と値を受け渡す関数の共有ライブラリ)にリンクしてビルドします。
-hsjuiz は Hackage への公開を待っているので、いまは juiz のソースを `juiz` と同じ版のタグで取得し、その中の `bindings/hsjuiz` を使います。
+hsjuiz は 0.2.6 から Hackage にもありますが([言語ごとのパッケージ](/ja/getting-started/packages/#haskell))、この章では juiz のソースを `juiz` と同じ版のタグで取得し、その中の `bindings/hsjuiz` を使います。`cabal update` が要らず、Hackage に無い版でも同じ手順で使えます。
 
 `juiz` の版を確かめてから、同じ版の libjuiz_sdk を `~/.juiz/sdk/<版>` に展開し、juiz のソースを `~/juiz-<版>` に取得します(手でダウンロードする方法は [言語ごとのパッケージ](/ja/getting-started/packages/#c-と-haskell-の共通-libjuiz_sdk) にあります)。
 
