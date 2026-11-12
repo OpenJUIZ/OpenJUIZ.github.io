@@ -48,13 +48,13 @@ hsjuiz は 0.2.6 から Hackage にもありますが([言語ごとのパッケ�
 
 ```sh
 juiz --version
-# => juiz 0.2.4
+# => juiz 0.2.7
 ghc --version
 # => The Glorious Glasgow Haskell Compilation System, version 9.6.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.4
-ls ~/.juiz/sdk/0.2.4/lib
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.7
+ls ~/.juiz/sdk/0.2.7/lib
 # => libjuiz_sdk.so  ...
-git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.4
+git clone --depth 1 --branch v0.2.7 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.7
 ```
 
 </TabItem>
@@ -62,13 +62,13 @@ git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-
 
 ```sh
 juiz --version
-# => juiz 0.2.4
+# => juiz 0.2.7
 ghc --version
 # => The Glorious Glasgow Haskell Compilation System, version 9.6.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.4
-ls ~/.juiz/sdk/0.2.4/lib
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.7
+ls ~/.juiz/sdk/0.2.7/lib
 # => libjuiz_sdk.dylib  ...
-git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.4
+git clone --depth 1 --branch v0.2.7 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.7
 ```
 
 </TabItem>
@@ -109,15 +109,15 @@ mkdir process
 
 ```txt title="cabal.project"
 -- このプロジェクトと、juiz のソースにある hsjuiz をビルドする
-packages: . /home/me/juiz-0.2.4/bindings/hsjuiz
+packages: . /home/me/juiz-0.2.7/bindings/hsjuiz
 
 -- hsjuiz は GHC に付いてくるパッケージだけを使うので、Hackage の索引は使わない(cabal update 不要)
 active-repositories: :none
 
 -- hsjuiz は libjuiz_sdk にリンクする
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.2.4/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.2.4/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.2.7/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.2.7/lib
 ```
 
 | 部分 | 意味 |

@@ -35,7 +35,7 @@ juiz pkg create <name> -b <lang> [-t <template>] [-o <dir>]
 | `<name>` | (required) | A name that starts with a lowercase letter and has only lowercase letters, digits and `_` (such as `my_robot`). It becomes the Component name, the package name and the prefix of the type names |
 | `-b`, `--lang` | (required) | `rust` / `python` / `cpp` / `haskell` |
 | `-t`, `--template` | `component` | Which types to put in: `component` / `process` / `container` (table below) |
-| `--idl <file.jidl>` | none | Make typed functions from the declarations of a JIDL file instead of the example types ([below](#make-a-typed-skeleton-from-jidl-idl)). Rust only |
+| `--idl <file.jidl>` | none | Make typed functions from the declarations of a JIDL file instead of the example types ([below](#make-a-typed-skeleton-from-jidl-idl)) |
 | `-o`, `--output` | `./<name>` | The directory to create. If it exists and is not empty, it is an error and nothing is written |
 | `--license` | `none` | `mit-apache` puts LICENSE-MIT and LICENSE-APACHE and writes `MIT OR Apache-2.0` in the license field of each file |
 | `--author` | `git config user.name` | The copyright holder for `--license mit-apache` |
@@ -121,13 +121,13 @@ On Windows, use `python -m venv .venv` and `.venv\Scripts\activate`. If you inst
 juiz pkg create my_robot -b cpp
 cd my_robot
 # once: put libjuiz_sdk (same version as juiz) in ~/.juiz/sdk/<version>
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.6
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.7
 scripts/dev.sh                  # build with cmake and put the plugin and libjuiz_sdk in app/plugins/<target>/
 juiz -f app/app.conf -d         # start (keep it running)
 ```
 
 You need cmake and a C++ compiler. On Windows, use `install-juiz-sdk.ps1` and `scripts\dev.ps1` (see C++ in [Installation](../../getting-started/install/)).
-When the SDK is missing, `juiz pkg create` prints the command to install it. Use the version it prints instead of `0.2.6`.
+When the SDK is missing, `juiz pkg create` prints the command to install it. Use the version it prints instead of `0.2.7`.
 
 </TabItem>
 <TabItem label="Haskell">
@@ -136,8 +136,8 @@ When the SDK is missing, `juiz pkg create` prints the command to install it. Use
 juiz pkg create my_robot -b haskell
 cd my_robot
 # once: get the hsjuiz source and libjuiz_sdk (both the same version as juiz)
-git clone --depth 1 --branch v0.2.6 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.6
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.6
+git clone --depth 1 --branch v0.2.7 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.7
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.7
 scripts/dev.sh                  # cabal build and put the plugin in app/plugins/<target>/
 juiz -f app/app.conf -d         # start (keep it running)
 ```
@@ -184,7 +184,7 @@ After adding, rebuild with `scripts/dev.sh` (for languages with a build) and res
 
 ## Make a typed skeleton from JIDL (--idl)
 
-From the `process` and `container` declarations of a [data type](../datatype/) JIDL file, you can make a skeleton whose functions have typed arguments and return values. For now this is **Rust only**.
+From the `process` and `container` declarations of a [data type](../datatype/) JIDL file, you can make a skeleton whose functions have typed arguments and return values. It works for all four languages: Rust, Python, C++ and Haskell (Python, C++ and Haskell from 0.2.7).
 
 ```text
 // arm.jidl
@@ -203,17 +203,19 @@ container gripper {
 juiz pkg create my_arm -b rust --idl arm.jidl
 ```
 
+In every language, `idl/` gets a copy of the .jidl (and the .jidl files it imports), and `app/app.conf` gets one instance per declared type (move_to0, gripper0, grip0). The functions are the same as `juiz idl -g <lang>-skeleton` makes, with no bodies yet. Calls fail until you write the bodies. The differences between the languages are:
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
 ```text
 my_arm/
 ├─ Cargo.toml        juiz_idl in [build-dependencies]. Also juiz_std_types when juiz_std types are used
 ├─ build.rs          makes the Rust types from the .jidl in idl/
-├─ idl/arm.jidl      a copy of the .jidl (and the .jidl files it imports)
+├─ idl/arm.jidl
 ├─ src/lib.rs        one function per declaration. The bodies are todo!()
-├─ app/app.conf      one instance per declared type (move_to0, gripper0, grip0)
-└─ …                 app/juizapp.yaml, scripts/ and README.md are the same as a normal skeleton
+└─ app/app.conf
 ```
-
-The functions in `src/lib.rs` are the same as `juiz idl -g rust-skeleton` makes, with `todo!()` as the body. Write the bodies, then build with `scripts/dev.sh`. Calls fail until you write the bodies.
 
 ```rust
 pub fn move_to(target: ::juiz_std_types::juiz_std::geometry::Pose2D, speed: f64) -> JuizResult<::juiz_std_types::juiz_std::geometry::Pose2D> {
@@ -222,11 +224,72 @@ pub fn move_to(target: ::juiz_std_types::juiz_std::geometry::Pose2D, speed: f64)
 }
 ```
 
+build.rs makes the types on every build, so after changing the .jidl you only build again with `scripts/dev.sh`. ContainerProcesses take `&mut ContainerImpl<…>`.
+
+</TabItem>
+<TabItem label="Python">
+
+```text
+my_arm/
+├─ idl/arm.jidl
+├─ app/python/my_arm.py      one function per declaration. The bodies are raise NotImplementedError
+├─ app/python/my/arm/…       the types of the .jidl (written on creation)
+└─ app/app.conf
+```
+
+```python
+@juiz_process
+def move_to(target: Pose2D, speed: float = 1.0) -> Pose2D:
+    """Move the arm tip to the target"""
+    raise NotImplementedError("write the body of move_to")
+```
+
+The types are written once, on creation (the juiz_std types come with pyjuiz). When you change the .jidl, make them again with `juiz idl -g python --extern juiz_std -o app/python idl/arm.jidl` (the README says so too).
+
+</TabItem>
+<TabItem label="C++">
+
+```text
+my_arm/
+├─ CMakeLists.txt    juiz_generate_types makes the type header from the .jidl in idl/
+├─ idl/arm.jidl
+├─ src/my_arm.cpp    one function per declaration. The bodies are throw std::runtime_error
+└─ app/app.conf
+```
+
+```cpp
+std::optional<::juiz_std::geometry::Pose2D> move_to(const ::juiz_std::geometry::Pose2D& target, double speed) {
+    (void)target;
+    (void)speed;
+    throw std::runtime_error("write the body of move_to");
+}
+```
+
+The type header `build/juiz_idl/juiz_idl.h` is made on every build, so the `juiz` command must be on PATH when you build.
+
+</TabItem>
+<TabItem label="Haskell">
+
+```text
+my_arm/
+├─ my-arm.cabal      gen in hs-source-dirs, the type modules in other-modules
+├─ idl/arm.jidl
+├─ src/MyArm.hs      one function per declaration. The bodies are error "…"
+├─ gen/              the types of the .jidl (scripts/dev.sh makes them before building; not in git)
+└─ app/app.conf
+```
+
+`scripts/dev.sh` makes the types with `juiz idl -g haskell -o gen idl/arm.jidl` before building. When the .jidl gets a new namespace, add its module to `other-modules` in the .cabal file.
+
+</TabItem>
+</Tabs>
+
 - It cannot be used together with `-t`. The example types (`my_arm_add` and so on) are not added.
 - Keep the declarations in a single namespace (one skeleton is one Component). `juiz_std` does not count.
 - Put the imported .jidl files in the same directory as the given .jidl or below it, because they are copied into `idl/` with the same relative paths.
-- JIDL has no way to type the state, so the Container state is an empty struct. ContainerProcesses take `&mut ContainerImpl<…>`.
+- JIDL has no way to type the state, so the Container state is empty. Add what you need.
 - The arguments in the call examples (printed on creation and in the README) are the defaults, or values made from the types (0 for numbers, `""` for strings and so on).
+- Some declarations cannot be made in some languages, and then you get an error before any file is written: `T?` and `bytes` arguments in Python and C++, a record or enum argument without a default after an argument with a default in Python, and in Haskell a type module whose name is the same as the Component module (name `myrobot` and namespace `myrobot`, for example).
 
 ## Distribute
 
@@ -250,11 +313,11 @@ The skeleton has the version of the juiz that ran `juiz pkg`.
 
 | File | What is written |
 | --- | --- |
-| Cargo.toml | `juiz_sdk = "=0.2.6"` |
-| pyproject.toml | `pyjuiz==0.2.6` |
-| CMakeLists.txt | `JUIZ_VERSION "0.2.6"` (`find_package(... EXACT)`) |
+| Cargo.toml | `juiz_sdk = "=0.2.7"` |
+| pyproject.toml | `pyjuiz==0.2.7` |
+| CMakeLists.txt | `JUIZ_VERSION "0.2.7"` (`find_package(... EXACT)`) |
 | cabal.project | the version is in the paths of hsjuiz and libjuiz_sdk |
-| app/juizapp.yaml | `juiz: ">=0.2.6"` (`"=0.2.6"` for C++ and Haskell) |
+| app/juizapp.yaml | `juiz: ">=0.2.7"` (`"=0.2.7"` for C++ and Haskell) |
 
 A C++ or Haskell .juizapp bundles libjuiz_sdk, which only loads into a juiz of the same version. So it has `juiz: "=<version>"`, and `juiz run` with a different juiz version stops first and shows the version mismatch.
 When you upgrade juiz, create the skeleton again or update the versions in the table above by hand.
