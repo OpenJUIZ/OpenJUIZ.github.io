@@ -38,8 +38,12 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 cd juiz_examples_rust
 git pull
 cargo build
-pip install pyjuiz==0.2.7   # この章では Python の Process も一緒に動かす
+python3 -m venv .venv        # この章では Python の Process も一緒に動かす
+source .venv/bin/activate
+pip install pyjuiz==0.2.7
 ```
+
+venv は、`juiz` をビルドしたときと同じ Python で作り、`juiz` を起動するターミナルでも有効にしておきます([インストール](/ja/getting-started/install/) の「cargo で入れる」)。
 
 </TabItem>
 <TabItem label="macOS">
@@ -48,8 +52,12 @@ pip install pyjuiz==0.2.7   # この章では Python の Process も一緒に動
 cd juiz_examples_rust
 git pull
 cargo build
-pip install pyjuiz==0.2.7   # この章では Python の Process も一緒に動かす
+python3 -m venv .venv        # この章では Python の Process も一緒に動かす
+source .venv/bin/activate
+pip install pyjuiz==0.2.7
 ```
+
+venv は、`juiz` をビルドしたときと同じ Python で作り、`juiz` を起動するターミナルでも有効にしておきます([インストール](/ja/getting-started/install/) の「cargo で入れる」)。
 
 </TabItem>
 <TabItem label="Windows">
@@ -112,11 +120,13 @@ cd juiz_examples_cpp
 git pull
 cmake -S . -B build
 cmake --build build
-pip install pyjuiz==0.2.7   # この章では Python の Process も一緒に動かす
+python3 -m venv .venv        # この章では Python の Process も一緒に動かす
+source .venv/bin/activate    # Windows では .venv\Scripts\activate
+pip install pyjuiz==0.2.7
 ```
 
 C++ の型は、CMake がインストール済みの `juiz` コマンド(`juiz idl`)で作ります。先に `juiz` を入れておいてください(見つからないと CMake がエラーで止まります)。
-Windows では `cmake --build build --config Release` でビルドします。pip で入れた `juiz`(juiz-cli)には pyjuiz も入っているので、`pip install pyjuiz` は要りません。
+Windows では `cmake --build build --config Release` でビルドします。pip で入れた `juiz`(juiz-cli)には pyjuiz も入っているので、`pip install pyjuiz` は要りません。cargo で入れた `juiz` は、起動したターミナルで有効にしている venv の pyjuiz を使うので、`juiz` を起動するターミナルでもこの venv を有効にしておきます。
 
 </TabItem>
 <TabItem label="Haskell">
@@ -125,11 +135,13 @@ Windows では `cmake --build build --config Release` でビルドします。pi
 cd juiz_examples_haskell
 git pull
 ./build.sh
-pip install pyjuiz==0.2.7   # この章では Python の Process も一緒に動かす
+python3 -m venv .venv        # この章では Python の Process も一緒に動かす
+source .venv/bin/activate    # Windows では .venv\Scripts\activate
+pip install pyjuiz==0.2.7
 ```
 
 Haskell の型は、`build.sh` が juiz のソースからビルドした `juiz-idl` で `build/gen-hs` に作ります(Rust が要るのはこのためです)。
-pip で入れた `juiz`(juiz-cli)には pyjuiz も入っているので、`pip install pyjuiz` は要りません。
+pip で入れた `juiz`(juiz-cli)には pyjuiz も入っているので、`pip install pyjuiz` は要りません。cargo で入れた `juiz` は、起動したターミナルで有効にしている venv の pyjuiz を使うので、`juiz` を起動するターミナルでもこの venv を有効にしておきます。
 
 </TabItem>
 </Tabs>
@@ -767,10 +779,19 @@ print(moved.position.x)   # 3.0 (戻り値も Pose2D)
 
 ```sh
 juiz type list --long
-# NAME                       KIND    SHORT_ID          USED_BY
-# examples.geometry.Point2D  record  Point2D@5649ab39  pose_move,pose_print_python
-# examples.geometry.Pose2D   record  Pose2D@123b8c15   pose_move,pose_print_python
-# examples.geometry.Twist2D  record  Twist2D@115b9e0f  pose_move,twist_python
+# NAME                                KIND    SHORT_ID                   USED_BY
+# examples.geometry.Point2D           record  Point2D@5649ab39           pose_move,pose_print_python
+# examples.geometry.Pose2D            record  Pose2D@123b8c15            pose_move,pose_print_python
+# examples.geometry.Twist2D           record  Twist2D@115b9e0f           pose_move,twist_python
+# juiz_std.common.Header              record  Header@d3c08526            transformations
+# juiz_std.common.Time                record  Time@60b9738d              transformations
+# juiz_std.geometry.Point3D           record  Point3D@9dd48fe5           transformations
+# juiz_std.geometry.Pose              record  Pose@fbbba3a9              transformations
+# juiz_std.geometry.PoseStamped       record  PoseStamped@baf65970       transformations
+# juiz_std.geometry.Quaternion        record  Quaternion@19ea5929        transformations
+# juiz_std.geometry.Transform         record  Transform@a866b61b         transformations
+# juiz_std.geometry.TransformStamped  record  TransformStamped@6e78b3aa  transformations
+# juiz_std.geometry.Vector3           record  Vector3@4abcfbbd           transformations
 ```
 
 </TabItem>
@@ -778,10 +799,19 @@ juiz type list --long
 
 ```sh
 juiz type list --long
-# NAME                       KIND    SHORT_ID          USED_BY
-# examples.geometry.Point2D  record  Point2D@5649ab39  pose_move_python,pose_print_python
-# examples.geometry.Pose2D   record  Pose2D@123b8c15   pose_move_python,pose_print_python
-# examples.geometry.Twist2D  record  Twist2D@115b9e0f  pose_move_python,twist_python
+# NAME                                KIND    SHORT_ID                   USED_BY
+# examples.geometry.Point2D           record  Point2D@5649ab39           pose_move_python,pose_print_python
+# examples.geometry.Pose2D            record  Pose2D@123b8c15            pose_move_python,pose_print_python
+# examples.geometry.Twist2D           record  Twist2D@115b9e0f           pose_move_python,twist_python
+# juiz_std.common.Header              record  Header@d3c08526            transformations
+# juiz_std.common.Time                record  Time@60b9738d              transformations
+# juiz_std.geometry.Point3D           record  Point3D@9dd48fe5           transformations
+# juiz_std.geometry.Pose              record  Pose@fbbba3a9              transformations
+# juiz_std.geometry.PoseStamped       record  PoseStamped@baf65970       transformations
+# juiz_std.geometry.Quaternion        record  Quaternion@19ea5929        transformations
+# juiz_std.geometry.Transform         record  Transform@a866b61b         transformations
+# juiz_std.geometry.TransformStamped  record  TransformStamped@6e78b3aa  transformations
+# juiz_std.geometry.Vector3           record  Vector3@4abcfbbd           transformations
 ```
 
 </TabItem>
@@ -789,10 +819,19 @@ juiz type list --long
 
 ```sh
 juiz type list --long
-# NAME                       KIND    SHORT_ID          USED_BY
-# examples.geometry.Point2D  record  Point2D@5649ab39  pose_move_cpp,pose_print_python
-# examples.geometry.Pose2D   record  Pose2D@123b8c15   pose_move_cpp,pose_print_python
-# examples.geometry.Twist2D  record  Twist2D@115b9e0f  pose_move_cpp,twist_python
+# NAME                                KIND    SHORT_ID                   USED_BY
+# examples.geometry.Point2D           record  Point2D@5649ab39           pose_move_cpp,pose_print_python
+# examples.geometry.Pose2D            record  Pose2D@123b8c15            pose_move_cpp,pose_print_python
+# examples.geometry.Twist2D           record  Twist2D@115b9e0f           pose_move_cpp,twist_python
+# juiz_std.common.Header              record  Header@d3c08526            transformations
+# juiz_std.common.Time                record  Time@60b9738d              transformations
+# juiz_std.geometry.Point3D           record  Point3D@9dd48fe5           transformations
+# juiz_std.geometry.Pose              record  Pose@fbbba3a9              transformations
+# juiz_std.geometry.PoseStamped       record  PoseStamped@baf65970       transformations
+# juiz_std.geometry.Quaternion        record  Quaternion@19ea5929        transformations
+# juiz_std.geometry.Transform         record  Transform@a866b61b         transformations
+# juiz_std.geometry.TransformStamped  record  TransformStamped@6e78b3aa  transformations
+# juiz_std.geometry.Vector3           record  Vector3@4abcfbbd           transformations
 ```
 
 </TabItem>
@@ -800,14 +839,25 @@ juiz type list --long
 
 ```sh
 juiz type list --long
-# NAME                       KIND    SHORT_ID          USED_BY
-# examples.geometry.Point2D  record  Point2D@5649ab39  pose_move_hs,pose_print_python
-# examples.geometry.Pose2D   record  Pose2D@123b8c15   pose_move_hs,pose_print_python
-# examples.geometry.Twist2D  record  Twist2D@115b9e0f  pose_move_hs,twist_python
+# NAME                                KIND    SHORT_ID                   USED_BY
+# examples.geometry.Point2D           record  Point2D@5649ab39           pose_move_hs,pose_print_python
+# examples.geometry.Pose2D            record  Pose2D@123b8c15            pose_move_hs,pose_print_python
+# examples.geometry.Twist2D           record  Twist2D@115b9e0f           pose_move_hs,twist_python
+# juiz_std.common.Header              record  Header@d3c08526            transformations
+# juiz_std.common.Time                record  Time@60b9738d              transformations
+# juiz_std.geometry.Point3D           record  Point3D@9dd48fe5           transformations
+# juiz_std.geometry.Pose              record  Pose@fbbba3a9              transformations
+# juiz_std.geometry.PoseStamped       record  PoseStamped@baf65970       transformations
+# juiz_std.geometry.Quaternion        record  Quaternion@19ea5929        transformations
+# juiz_std.geometry.Transform         record  Transform@a866b61b         transformations
+# juiz_std.geometry.TransformStamped  record  TransformStamped@6e78b3aa  transformations
+# juiz_std.geometry.Vector3           record  Vector3@4abcfbbd           transformations
 ```
 
 </TabItem>
 </Tabs>
+
+型の一覧には、サンプルの `examples.geometry` の 3 型のあとに、juiz に組み込まれた標準型 `juiz_std` の 9 型も並びます。これは [Transformations](/ja/guides/transformations/) が使う型で、juiz がいつも読み込んでいます(USED_BY は `transformations`)。
 
 `@` の後ろは型の**指紋**で、型の中身(フィールドの名前・型・順番と、型の完全名)から計算した SHA-256 の先頭 8 桁です。
 同じ JIDL から作った型は、どの言語で作っても指紋が同じになります。言語の違う Process が、同じ 1 つの型を使っているとわかります。
