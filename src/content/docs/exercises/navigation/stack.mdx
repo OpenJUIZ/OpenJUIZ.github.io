@@ -80,6 +80,15 @@ The `.juizapp` packages of planner_dijkstra and planner_dwa both say that they d
 Nothing is extracted from the `.juizapp`, and no conf is rewritten. The part of planner_dwa that serves its screen (the bridge that reads AMCL and the planner over HTTP) is turned off by setting the environment variables `DWA_BRIDGE_AMCL_URL` and `DWA_BRIDGE_PLANNER_URL` to empty.
 
 At the end it checks that topics reach the leaves through the root (`topics reach the leaves through navigation_hub`).
+If they do not reach the leaves yet, which can happen on the first start, it restarts navigation_hub by itself. You then see lines like the following; as long as `topics reach the leaves …` follows, everything is fine.
+
+```text
+started navigation_hub (:8006)
+topics do not reach the leaves yet; restarting navigation_hub
+started navigation_hub (:8006)
+topics reach the leaves through navigation_hub
+```
+
 The log of each app goes to a temporary directory, printed as `logs:` in the first lines.
 
 ## Giving a goal

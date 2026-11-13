@@ -80,6 +80,15 @@ planner_dijkstra と planner_dwa の `.juizapp` は、どちらも mobile_sim �
 `.juizapp` を展開したり conf を書き換えたりはしません。planner_dwa の画面用の仕組み(AMCL と planner を HTTP で読みに行く bridge)は、環境変数 `DWA_BRIDGE_AMCL_URL`・`DWA_BRIDGE_PLANNER_URL` を空にして止めています。
 
 最後に、トピックが根を通って葉まで届いていることを確かめています(`topics reach the leaves through navigation_hub`)。
+初回の起動などで、まだ届いていないときは navigation_hub を自動で起動し直します。そのときは次のような行が出ますが、続けて `topics reach the leaves …` と出れば問題ありません。
+
+```text
+started navigation_hub (:8006)
+topics do not reach the leaves yet; restarting navigation_hub
+started navigation_hub (:8006)
+topics reach the leaves through navigation_hub
+```
+
 各アプリのログは一時ディレクトリに出ます。場所は起動したときの最初の数行に `logs:` として出ます。
 
 ## ゴールを出す
