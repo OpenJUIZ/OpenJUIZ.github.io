@@ -6,7 +6,7 @@ sidebar:
 ---
 
 juiz Processes can be called from other processes and other machines through brokers.
-This page explains when to use each of the three brokers (HTTP, QUIC and IPC) and how to pass large data such as camera images quickly.
+This page explains when to use each of the four brokers (HTTP, QUIC, Zenoh and IPC) and how to pass large data such as camera images quickly.
 
 :::caution[Requires juiz 0.0.26 or later]
 The IPC broker, raw-byte image transfer over the QUIC broker, shared memory, pyjuiz's `IpcProxy`, and image arguments and return values in C++ and Haskell are available from juiz 0.0.26.
@@ -15,20 +15,22 @@ The QUIC broker in 0.0.26 cannot talk to QUIC brokers of earlier versions (the w
 
 ## Choosing a broker
 
-| | HTTP (`http`) | QUIC (`qmp`) | IPC (`ipc`) |
-|---|---|---|---|
-| Reach | Other machines too | Other machines too | **Same machine only** |
-| ID prefix | `http://127.0.0.1:8000` | `qmp://127.0.0.1:5000` | `ipc://cam0` |
-| Port | Yes (8000 by default) | Yes (UDP) | No (Unix domain socket / named pipe) |
-| How images travel | Compressed to PNG (multipart) | Raw pixels | Raw pixels |
-| A call returning a 720p image | about 19 ms | about 11–13 ms | **about 1.2 ms** |
-| Browser, curl, web UI | Yes | No | No |
-| How to start | `-d` (on by default) | `brokers` in the configuration file | `--ipc <name>` or `brokers` in the configuration file |
+| | HTTP (`http`) | QUIC (`qmp`) | Zenoh (`zenoh`) | IPC (`ipc`) |
+|---|---|---|---|---|
+| Reach | Other machines too | Other machines too | Other machines too | **Same machine only** |
+| ID prefix | `http://127.0.0.1:8000` | `qmp://127.0.0.1:5000` | `zenoh://127.0.0.1:7448` | `ipc://cam0` |
+| Port | Yes (8000 by default) | Yes (UDP) | Yes (TCP, 7448 by default) | No (Unix domain socket / named pipe) |
+| How images travel | Compressed to PNG (multipart) | Raw pixels | Raw pixels (shared memory on the same machine) | Raw pixels |
+| A call returning a 720p image | about 19 ms | about 11–13 ms | about 2.4 ms (about 1.3 ms with shared memory) | **about 1.2 ms** |
+| Encryption | No | Yes | No | No (same user only) |
+| Browser, curl, web UI | Yes | No | No | No |
+| How to start | `-d` (on by default) | `brokers` in the configuration file | `brokers` in the configuration file | `--ipc <name>` or `brokers` in the configuration file |
 
 As a rule of thumb:
 
 - **For small values, or to work from a browser or the web UI**, use HTTP. It starts with `-d` as before.
 - **To send images to another machine**, use QUIC. It does not turn images into PNG, so it is faster than HTTP; on a slow network the network speed decides. See [Tutorial chapter 7](/tutorial/quic-broker/) for how to use it.
+- **To send images to another machine fast**, use Zenoh. It is several times as fast as QUIC and uses shared memory for peers on the same machine. It does not encrypt, so use it inside a network you trust. Available from the release after juiz 0.2.8. See [Zenoh broker](/guides/zenoh-broker/).
 - **To send images to another process on the same machine**, use IPC. It opens no port and is more than ten times as fast as HTTP.
 
 One juiz can have several brokers at once. Keep HTTP from `-d` and add IPC, and you can watch the system in the web UI over HTTP while receiving images over IPC.
@@ -110,7 +112,7 @@ system = connect("ipc://cam0")             # a SystemProxy; connect("http://loca
 
 Images (`Capsule::Image`) as arguments and return values, and images flowing through Topics, travel differently depending on the broker.
 
-- **IPC and QUIC** send pixels as they are, without compression. Small values go as JSON, and images sit outside the JSON as raw bytes. The receiver reads the bytes straight into the image buffer, so no extra copies are made.
+- **IPC, QUIC and Zenoh** send pixels as they are, without compression. Small values go as JSON, and images sit outside the JSON as raw bytes. The receiver reads the bytes straight into the image buffer, so no extra copies are made.
 - **HTTP** still converts images to PNG so that browsers and curl can use it. About 80% of its time goes into PNG compression and decompression.
 
 These 10 image formats can be sent.
@@ -124,7 +126,7 @@ These 10 image formats can be sent.
 
 Images in BGR order (such as OpenCV's `cv::Mat`) are reordered to RGB by juiz when a C++ or Haskell Process returns them (see [Images in C++ and Haskell](#images-in-c-and-haskell)).
 
-Arrays of 1024 or more elements that are all integers or all floats (point clouds and the like) are also sent as raw bytes over IPC and QUIC instead of as a JSON list of numbers. The distinction between integers and floats is kept.
+Arrays of 1024 or more elements that are all integers or all floats (point clouds and the like) are also sent as raw bytes over IPC, QUIC and Zenoh instead of as a JSON list of numbers. The distinction between integers and floats is kept.
 Values of type `bytes` are still sent as base64 strings for now.
 
 ### Sending large images over HTTP
@@ -220,7 +222,7 @@ When you call from outside, use [`IpcProxy`](#calling-from-python) to skip PNG.
 
 ### Images in C++ and Haskell
 
-C++ and Haskell Processes can also take and return images. Once an image is inside juiz, it is the same as a Rust image, so it travels as raw bytes over IPC and QUIC and can be connected to Processes in other languages.
+C++ and Haskell Processes can also take and return images. Once an image is inside juiz, it is the same as a Rust image, so it travels as raw bytes over IPC, QUIC and Zenoh and can be connected to Processes in other languages.
 
 In C++, use `juiz::Image` from `juiz/image.h` and add an image argument to the manifest with `add_image_arg`. With OpenCV, `to_mat` and `from_mat` in `juiz/opencv.h` convert to and from `cv::Mat` (juiz reorders BGR to RGB).
 
@@ -264,6 +266,7 @@ Time to call a Process in another process on the same machine and receive an RGB
 
 - Most of HTTP's time is PNG compression and decompression.
 - The QUIC figure is over loopback on one machine, where QUIC's own encryption and small-packet handling dominate. Between machines the network speed matters more (720p takes about 22 ms on 1 Gbps).
+- Zenoh figures are on the [Zenoh broker](/guides/zenoh-broker/#performance) page (720p: about 2.4 ms over TCP, about 1.3 ms with shared memory).
 
 Time to stream images through a Topic to another process (IPC, ms).
 
