@@ -8,8 +8,8 @@ sidebar:
 The Zenoh broker calls juiz in other processes and on other machines over [Zenoh](https://zenoh.io/)'s TCP transport. Its type name (the ID prefix) is `zenoh`.
 Like the QUIC broker (`qmp`) it reaches other machines and sends images as raw pixels instead of PNG. It is about 2.5–3 times as fast as QUIC, and it uses shared memory for peers on the same machine, which brings it close to the IPC broker.
 
-:::caution[Available from the release after juiz 0.2.8]
-The Zenoh broker ships in the release after juiz 0.2.8. Until then it is only available when you build juiz from the main branch.
+:::note[Available from juiz 0.2.9]
+The Zenoh broker is available from juiz 0.2.9.
 :::
 
 ## How it differs from the other brokers
