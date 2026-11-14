@@ -122,13 +122,13 @@ Windows では `python -m venv .venv`、`.venv\Scripts\activate` です。juiz �
 juiz pkg create my_robot -b cpp
 cd my_robot
 # 初回だけ: libjuiz_sdk(juiz と同じ版)を ~/.juiz/sdk/<版> に置く
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.7
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.8
 scripts/dev.sh                  # cmake でビルドし、プラグインと libjuiz_sdk を app/plugins/<ターゲット>/ に置く
 juiz -f app/app.conf -d         # 起動(このままにしておく)
 ```
 
 cmake と C++ コンパイラが要ります。Windows では `install-juiz-sdk.ps1` と `scripts\dev.ps1` を使います(手順は [インストール](../../getting-started/install/) の C++ を見てください)。
-`juiz pkg create` は SDK が無いときに入れるコマンドを表示するので、`0.2.7` の所はその表示のとおりにしてください。
+`juiz pkg create` は SDK が無いときに入れるコマンドを表示するので、`0.2.8` の所はその表示のとおりにしてください。
 
 </TabItem>
 <TabItem label="Haskell">
@@ -137,8 +137,8 @@ cmake と C++ コンパイラが要ります。Windows では `install-juiz-sdk.
 juiz pkg create my_robot -b haskell
 cd my_robot
 # 初回だけ: hsjuiz のソースと libjuiz_sdk(どちらも juiz と同じ版)を用意する
-git clone --depth 1 --branch v0.2.7 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.7
+git clone --depth 1 --branch v0.2.8 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.8
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.8
 scripts/dev.sh                  # cabal build して app/plugins/<ターゲット>/ に置く
 juiz -f app/app.conf -d         # 起動(このままにしておく)
 ```
@@ -314,11 +314,11 @@ juiz run dist/my_robot-0.1.0.juizapp
 
 | ファイル | 書き方 |
 | --- | --- |
-| Cargo.toml | `juiz_sdk = "=0.2.7"` |
-| pyproject.toml | `pyjuiz==0.2.7` |
-| CMakeLists.txt | `JUIZ_VERSION "0.2.7"`(`find_package(... EXACT)`) |
+| Cargo.toml | `juiz_sdk = "=0.2.8"` |
+| pyproject.toml | `pyjuiz==0.2.8` |
+| CMakeLists.txt | `JUIZ_VERSION "0.2.8"`(`find_package(... EXACT)`) |
 | cabal.project | hsjuiz・libjuiz_sdk のパスに版が入る |
-| app/juizapp.yaml | `juiz: ">=0.2.7"`(C++・Haskell は `"=0.2.7"`) |
+| app/juizapp.yaml | `juiz: ">=0.2.8"`(C++・Haskell は `"=0.2.8"`) |
 
 C++ と Haskell の .juizapp は libjuiz_sdk を同梱するので、動かす juiz と版が一致しないと読み込めません。そのため `juiz: "=<版>"` にしてあり、違う版の juiz で `juiz run` すると、最初に版の違いを示して止まります。
 juiz を上げたときは、雛形を作り直すか、上の表の版を手で直してください。
