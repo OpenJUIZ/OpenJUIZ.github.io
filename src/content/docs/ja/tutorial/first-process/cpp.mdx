@@ -40,9 +40,9 @@ C++ の Process は、libjuiz_sdk(juiz と値を受け渡す関数の共有ラ�
 
 ```sh
 juiz --version
-# => juiz 0.2.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.7
-ls ~/.juiz/sdk/0.2.7
+# => juiz 0.2.8
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.8
+ls ~/.juiz/sdk/0.2.8
 # => cjuiz  cppjuiz  lib  ...
 ```
 
@@ -51,9 +51,9 @@ ls ~/.juiz/sdk/0.2.7
 
 ```sh
 juiz --version
-# => juiz 0.2.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.7
-ls ~/.juiz/sdk/0.2.7
+# => juiz 0.2.8
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.8
+ls ~/.juiz/sdk/0.2.8
 # => cjuiz  cppjuiz  lib  ...
 ```
 
@@ -64,9 +64,9 @@ PowerShell で実行します。
 
 ```powershell
 juiz --version
-# => juiz 0.2.7
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.2.7
-ls $env:USERPROFILE\.juiz\sdk\0.2.7
+# => juiz 0.2.8
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.2.8
+ls $env:USERPROFILE\.juiz\sdk\0.2.8
 # => bin  cjuiz  cppjuiz  lib  ...
 ```
 
@@ -115,7 +115,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # juiz の版と、libjuiz_sdk を展開した場所
-set(JUIZ_VERSION "0.2.7")
+set(JUIZ_VERSION "0.2.8")
 if(WIN32)
   file(TO_CMAKE_PATH "$ENV{USERPROFILE}/.juiz/sdk/${JUIZ_VERSION}" JUIZ_SDK_DEFAULT_DIR)
 else()

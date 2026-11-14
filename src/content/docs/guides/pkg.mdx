@@ -121,13 +121,13 @@ On Windows, use `python -m venv .venv` and `.venv\Scripts\activate`. If you inst
 juiz pkg create my_robot -b cpp
 cd my_robot
 # once: put libjuiz_sdk (same version as juiz) in ~/.juiz/sdk/<version>
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.7
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.8
 scripts/dev.sh                  # build with cmake and put the plugin and libjuiz_sdk in app/plugins/<target>/
 juiz -f app/app.conf -d         # start (keep it running)
 ```
 
 You need cmake and a C++ compiler. On Windows, use `install-juiz-sdk.ps1` and `scripts\dev.ps1` (see C++ in [Installation](../../getting-started/install/)).
-When the SDK is missing, `juiz pkg create` prints the command to install it. Use the version it prints instead of `0.2.7`.
+When the SDK is missing, `juiz pkg create` prints the command to install it. Use the version it prints instead of `0.2.8`.
 
 </TabItem>
 <TabItem label="Haskell">
@@ -136,8 +136,8 @@ When the SDK is missing, `juiz pkg create` prints the command to install it. Use
 juiz pkg create my_robot -b haskell
 cd my_robot
 # once: get the hsjuiz source and libjuiz_sdk (both the same version as juiz)
-git clone --depth 1 --branch v0.2.7 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.7
+git clone --depth 1 --branch v0.2.8 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.8
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.8
 scripts/dev.sh                  # cabal build and put the plugin in app/plugins/<target>/
 juiz -f app/app.conf -d         # start (keep it running)
 ```
@@ -313,11 +313,11 @@ The skeleton has the version of the juiz that ran `juiz pkg`.
 
 | File | What is written |
 | --- | --- |
-| Cargo.toml | `juiz_sdk = "=0.2.7"` |
-| pyproject.toml | `pyjuiz==0.2.7` |
-| CMakeLists.txt | `JUIZ_VERSION "0.2.7"` (`find_package(... EXACT)`) |
+| Cargo.toml | `juiz_sdk = "=0.2.8"` |
+| pyproject.toml | `pyjuiz==0.2.8` |
+| CMakeLists.txt | `JUIZ_VERSION "0.2.8"` (`find_package(... EXACT)`) |
 | cabal.project | the version is in the paths of hsjuiz and libjuiz_sdk |
-| app/juizapp.yaml | `juiz: ">=0.2.7"` (`"=0.2.7"` for C++ and Haskell) |
+| app/juizapp.yaml | `juiz: ">=0.2.8"` (`"=0.2.8"` for C++ and Haskell) |
 
 A C++ or Haskell .juizapp bundles libjuiz_sdk, which only loads into a juiz of the same version. So it has `juiz: "=<version>"`, and `juiz run` with a different juiz version stops first and shows the version mismatch.
 When you upgrade juiz, create the skeleton again or update the versions in the table above by hand.
