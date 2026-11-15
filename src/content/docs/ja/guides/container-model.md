@@ -5,7 +5,7 @@ sidebar:
   order: 11.5
 ---
 
-Container に **3D モデル**(ContainerModel)のファイルを付けられます。設定ファイルの Container に `model:` を書くだけで、プラグインのコードは変えません。プラグインの側で、その型の Container の[既定のモデル](#型ごとの既定のモデル)を決めておくこともできます(juiz 0.2.9 の次の版から)。
+Container に **3D モデル**(ContainerModel)のファイルを付けられます。設定ファイルの Container に `model:` を書くだけで、プラグインのコードは変えません。プラグインの側で、その型の Container の[既定のモデル](#型ごとの既定のモデル)を決めておくこともできます(juiz 0.2.10 から)。
 [Transformations](/ja/guides/transformations/) と組み合わせると、「どの Container が、どこに、どんな形で」あるかがそろい、[管理画面](/ja/guides/web-ui/)の「3D」で系全体を立体で見られます。
 
 ![管理画面の 3D 表示。odom を基準に、台車 base0(青い箱と車輪)の上に雲台 pantilt0(灰色の台座とオレンジの頭)とカメラ camera0 が位置姿勢のとおりに置かれている](../../../../assets/container-model/web-ui-3d.png)
@@ -108,8 +108,8 @@ Error:setup_objects() failed in setup in system.rs
 
 ## 型ごとの既定のモデル
 
-:::caution[juiz 0.2.9 の次の版から使えます]
-型(Factory)ごとの既定のモデルは、juiz 0.2.9 の次の版で公開します。それまでは juiz の main をソースからビルドしたときだけ使えます。
+:::note[juiz 0.2.10 から使えます]
+型(Factory)ごとの既定のモデルは juiz 0.2.10 で入った機能です。それより前の版では使えません。
 :::
 
 Container の型を作るプラグインの manifest に `model` を書くと、それが**その型の既定のモデル**になります。設定ファイルの Container に `model:` を書かなくても、その型の Container にはモデルが付きます。カメラや雲台のように形の決まった部品を配るときに、プラグインとモデルのファイルを一緒に渡せます。
