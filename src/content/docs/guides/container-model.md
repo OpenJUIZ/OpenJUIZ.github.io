@@ -5,7 +5,7 @@ sidebar:
   order: 11.5
 ---
 
-You can attach a **3D model** (ContainerModel) file to a Container. You only add `model:` to the Container in the configuration file; the plugin code does not change. A plugin can also give its Container type a [default model](#default-models-per-type) (from the release after juiz 0.2.9).
+You can attach a **3D model** (ContainerModel) file to a Container. You only add `model:` to the Container in the configuration file; the plugin code does not change. A plugin can also give its Container type a [default model](#default-models-per-type) (from juiz 0.2.10).
 Together with [Transformations](/guides/transformations/), juiz knows which Container is where and what it looks like, and the "3D" view of the [web UI](/guides/web-ui/) shows the whole system in three dimensions.
 
 ![The web UI's 3D view. With odom as the reference, the pan-tilt unit pantilt0 (grey base and orange head) and the camera camera0 sit on the mobile base base0 (blue box with wheels) at their poses](../../../assets/container-model/web-ui-3d.png)
@@ -108,8 +108,8 @@ Error:setup_objects() failed in setup in system.rs
 
 ## Default models per type
 
-:::caution[Available from the release after juiz 0.2.9]
-Default models per type (Factory) will be published in the release after juiz 0.2.9. Until then they are only available when you build juiz main from source.
+:::note[Available from juiz 0.2.10]
+Default models per type (Factory) were added in juiz 0.2.10. Earlier versions do not have them.
 :::
 
 If you write `model` in the manifest of the plugin that makes a Container type, it becomes **the default model of that type**. Containers of that type get the model even when the configuration file has no `model:` for them. When you distribute a part with a fixed shape, such as a camera or a pan-tilt unit, you can ship the plugin and its model file together.
