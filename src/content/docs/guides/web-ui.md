@@ -92,6 +92,10 @@ The legend at the bottom left of the diagram also lists the line styles.
 - "自動配置" (auto layout) at the top right clears the saved positions and goes back to the automatic layout. "全体" (fit) zooms to show everything.
 - Clicking an element or a connection line selects it, and the tree and property pane follow (selecting in the tree also selects it in the diagram). A selected Process gets a targeting ring with an arc for each argument on its left and an output arc on its right; the connected ones light up.
 
+## 3D view
+
+"系の図" and "3D" at the top of the centre pane switch between views (from juiz 0.2.9). "3D" places the Containers of the chosen Anchor's tree at their poses in three dimensions and shows the 3D models attached to them. See the [3D models](/guides/container-model/#the-3d-view-in-the-web-ui) guide for attaching models and using the view.
+
 ## Showing juiz in other processes
 
 When a second juiz is registered as a subsystem of the first, as in [Chapter 6: Connecting separate processes](/tutorial/multi-process/), the first juiz's web UI shows the second one as well.

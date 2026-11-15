@@ -664,7 +664,7 @@ system.create_pose_listener('camera0', 'print0', arg='pose', reference='map', on
 
 ![管理画面。左のツリーの「変換木」に map と odom の木が入れ子で並び、右の性質欄に camera0 の位置姿勢と親 pantilt0 からの変換が出る](../../../../assets/transformations/web-ui.png)
 
-3D の表示はまだありません。
+中央の「3D」を押すと、Anchor の木を立体で表示します。Container に 3D モデルを付ければモデルが、無ければ座標軸が位置姿勢のとおりに置かれます。モデルの付け方と 3D 表示は [3D モデル](/ja/guides/container-model/) のガイドを見てください(juiz 0.2.9 から)。
 
 ## System をまたぐ Transform
 
@@ -836,7 +836,6 @@ Python ではどれも `juiz.TransformationsError`(`RuntimeError` の子)の子�
 - **親の System で子の System の木全体を組むこと**: [System をまたぐ Transform](#system-をまたぐ-transform) では、木の形は各 System の中で閉じ、親の System には印だけが付きます。
 - 親から子へ変化のたびに送ること(取り込みは子が取りに行くだけなので、1 / rate 秒ほど遅れることがあります)。
 - 過去の時刻の位置姿勢の問い合わせ(tf2 の時刻つきバッファ)。
-- 管理画面の 3D 表示。
 
 ## サンプル
 
