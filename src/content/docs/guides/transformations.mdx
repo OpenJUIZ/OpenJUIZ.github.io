@@ -664,7 +664,7 @@ In the [web UI](/guides/web-ui/), Anchor Containers carry a "基点" (Anchor) ba
 
 ![The web UI. The "変換木" group in the left tree lists the map and odom trees, nested, and the property pane on the right shows the pose of camera0 and the Transform from its parent pantilt0](../../../assets/transformations/web-ui.png)
 
-There is no 3D view yet.
+Press "3D" in the centre pane to see an Anchor's tree in three dimensions. Containers are placed at their poses, drawn as their 3D model if they have one and as axes otherwise. See the [3D models](/guides/container-model/) guide for attaching models and for the 3D view (from juiz 0.2.9).
 
 ## Transforms across Systems
 
@@ -836,7 +836,6 @@ In Python they are all subclasses of `juiz.TransformationsError` (a subclass of 
 - **Building the whole tree of a child System in the parent System**: with [Transforms across Systems](#transforms-across-systems), the shape of each tree stays inside its System, and the parent System only gets a mark.
 - Pushing every change from the parent to the child (the child only fetches, so values can lag by about 1 / rate seconds).
 - Queries for poses at past times (like the time-stamped buffer of tf2).
-- A 3D view in the web UI.
 
 ## Samples
 
