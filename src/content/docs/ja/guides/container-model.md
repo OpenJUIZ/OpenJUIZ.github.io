@@ -5,7 +5,7 @@ sidebar:
   order: 11.5
 ---
 
-Container に **3D モデル**(ContainerModel)のファイルを付けられます。設定ファイルの Container に `model:` を書くだけで、プラグインのコードは変えません。
+Container に **3D モデル**(ContainerModel)のファイルを付けられます。設定ファイルの Container に `model:` を書くだけで、プラグインのコードは変えません。プラグインの側で、その型の Container の[既定のモデル](#型ごとの既定のモデル)を決めておくこともできます(juiz 0.2.9 の次の版から)。
 [Transformations](/ja/guides/transformations/) と組み合わせると、「どの Container が、どこに、どんな形で」あるかがそろい、[管理画面](/ja/guides/web-ui/)の「3D」で系全体を立体で見られます。
 
 ![管理画面の 3D 表示。odom を基準に、台車 base0(青い箱と車輪)の上に雲台 pantilt0(灰色の台座とオレンジの頭)とカメラ camera0 が位置姿勢のとおりに置かれている](../../../../assets/container-model/web-ui-3d.png)
@@ -105,6 +105,84 @@ Error:setup_objects() failed in setup in system.rs
 - 大きさの上限は既定で 64 MiB です。`option.model.max_bytes` で変えられます。
 - `model` は**設定ファイルでだけ**書けます。API の `container/create`(pyjuiz の `SystemProxy` を含む)で `model` を渡すとエラーになります。遠くの利用者が任意のパスを指して、juiz を動かす機械のファイルを読み出せないようにするためです。
 - ネームスペースで複製したロボットが、同じモデルのファイルを指してかまいません。
+
+## 型ごとの既定のモデル
+
+:::caution[juiz 0.2.9 の次の版から使えます]
+型(Factory)ごとの既定のモデルは、juiz 0.2.9 の次の版で公開します。それまでは juiz の main をソースからビルドしたときだけ使えます。
+:::
+
+Container の型を作るプラグインの manifest に `model` を書くと、それが**その型の既定のモデル**になります。設定ファイルの Container に `model:` を書かなくても、その型の Container にはモデルが付きます。カメラや雲台のように形の決まった部品を配るときに、プラグインとモデルのファイルを一緒に渡せます。
+
+値の形は、設定ファイルの `model:` と同じです([上の表](#設定ファイルに書く))。`path` だけなら文字列でも書けます(Python・C++)。
+
+```rust
+// Rust: #[juiz_container] か #[juiz_component_container] に model = {...}
+#[juiz_container(
+    model = {
+        path = "models/pantilt.glb",
+        scale = 0.001,
+        origin = { translation = { z = -0.02 } }   // 負の数も書けます
+    }
+)]
+fn pantilt(initial_value: i64) -> JuizResult<Box<PanTilt>> { ... }
+```
+
+```python
+# Python: @juiz_container か @juiz_component_container に model=
+@juiz_container(model={"path": "models/pantilt.glb", "scale": 0.001})
+def pantilt(initial_value: int = 0):
+    ...
+
+@juiz_container(model="models/camera.glb")   # path だけなら文字列
+def camera(initial_value: int = 0):
+    ...
+```
+
+```cpp
+// C++ (cppjuiz): ContainerManifest::model()。path だけなら .model("models/pantilt.glb")
+auto manifest() {
+    return ContainerManifest("pantilt")
+        .model({
+            {"path", "models/pantilt.glb"},
+            {"scale", 0.001},
+            {"origin", {{"translation", {{"z", -0.02}}}}}
+        });
+}
+```
+
+```haskell
+-- Haskell (hsjuiz): model に conf の model: と同じ形の Value。path だけなら modelPath "models/pantilt.glb"
+manifest :: ContainerManifest
+manifest = containerManifest "pantilt_hs"
+  & model (object
+      [ "path" .= JString "models/pantilt.glb"
+      , "scale" .= JFloat 0.001
+      , "origin" .= object ["translation" .= object ["z" .= JFloat (-0.02)]]
+      ])
+```
+
+Component の Container(Rust の `#[juiz_component_container]`、Python の `@juiz_component_container`、C++ の `ComponentManifest::add_container`、Haskell の `componentContainer`)にも同じように書けます。
+
+- **相対パスはプラグインのファイル**(`libpantilt.so`・`pantilt.dll`・`pantilt.py` など)**のあるディレクトリから**です。設定ファイルからではありません。モデルのファイルはプラグインの横に置いて一緒に配ってください。
+- **インスタンスの `model:` が優先**します。設定ファイルの Container に `model:` があれば、そちらを**丸ごと**使います(キーごとには混ぜず、既定の `scale` なども引き継ぎません)。`model: null` と書けば、既定を使わずモデル無しで作ります。
+
+```yaml
+containers:
+  - type_name: pantilt
+    name: pantilt0                  # model: を書かない → 型の既定のモデル
+  - type_name: pantilt
+    name: pantilt1
+    model:                          # インスタンスの model: が丸ごと優先
+      path: models/pantilt_red.sdf
+  - type_name: pantilt
+    name: pantilt2
+    model: null                     # モデル無し
+```
+
+- ファイルは**プラグインを読み込むとき**に確かめます。無い・形式が合わないときは、その型(Factory)の登録がエラーになります。大きさの上限(`option.model.max_bytes`)は Container を作るたびに当て直します。
+- API の `container/create`(pyjuiz の `SystemProxy` を含む)で作った Container にも型の既定が付きます。API で `model` を渡せないのは今までどおりです。
+- [.juizapp](/ja/guides/app-package/) では、プラグインの横に置いたモデルのファイルはパッケージのディレクトリにあれば pack に入ります。pack はプラグインを読み込まないので、型の既定のモデルは pack では確かめません。足りなければ `juiz run` でプラグインを読み込むときにエラーになります。
 
 ## 手書きの SDF
 
@@ -274,7 +352,6 @@ HTTP では `ContainerModelFileNotFoundError` と `ContainerHasNoModelError` が
 - 1 つの Container に複数のモデル(見た目用・当たり判定用など)。
 - 複数のファイルからなるモデル(外部ファイルを参照する .gltf、SDF の `<mesh>`)の表示。
 - 実行中のモデルの差し替えや、API からのモデルの指定。
-- 型(Factory)ごとの既定のモデル。
 - URDF や、関節を持つ SDF の取り込み(link を Container、joint を Transform にする変換)。
 
 ## サンプル

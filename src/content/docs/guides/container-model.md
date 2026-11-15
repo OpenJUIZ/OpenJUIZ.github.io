@@ -5,7 +5,7 @@ sidebar:
   order: 11.5
 ---
 
-You can attach a **3D model** (ContainerModel) file to a Container. You only add `model:` to the Container in the configuration file; the plugin code does not change.
+You can attach a **3D model** (ContainerModel) file to a Container. You only add `model:` to the Container in the configuration file; the plugin code does not change. A plugin can also give its Container type a [default model](#default-models-per-type) (from the release after juiz 0.2.9).
 Together with [Transformations](/guides/transformations/), juiz knows which Container is where and what it looks like, and the "3D" view of the [web UI](/guides/web-ui/) shows the whole system in three dimensions.
 
 ![The web UI's 3D view. With odom as the reference, the pan-tilt unit pantilt0 (grey base and orange head) and the camera camera0 sit on the mobile base base0 (blue box with wheels) at their poses](../../../assets/container-model/web-ui-3d.png)
@@ -105,6 +105,84 @@ Error:setup_objects() failed in setup in system.rs
 - The default size limit is 64 MiB. Change it with `option.model.max_bytes`.
 - `model` can be set **only in the configuration file**. Passing `model` to the `container/create` API (including pyjuiz's `SystemProxy`) is an error. This stops remote users from pointing at arbitrary paths and reading files on the machine that runs juiz.
 - Robots duplicated with namespaces may point at the same model file.
+
+## Default models per type
+
+:::caution[Available from the release after juiz 0.2.9]
+Default models per type (Factory) will be published in the release after juiz 0.2.9. Until then they are only available when you build juiz main from source.
+:::
+
+If you write `model` in the manifest of the plugin that makes a Container type, it becomes **the default model of that type**. Containers of that type get the model even when the configuration file has no `model:` for them. When you distribute a part with a fixed shape, such as a camera or a pan-tilt unit, you can ship the plugin and its model file together.
+
+The value has the same shape as `model:` in the configuration file ([the table above](#writing-it-in-the-configuration-file)). If you only need `path`, you can write a string instead (Python and C++).
+
+```rust
+// Rust: model = {...} in #[juiz_container] or #[juiz_component_container]
+#[juiz_container(
+    model = {
+        path = "models/pantilt.glb",
+        scale = 0.001,
+        origin = { translation = { z = -0.02 } }   // negative numbers are fine
+    }
+)]
+fn pantilt(initial_value: i64) -> JuizResult<Box<PanTilt>> { ... }
+```
+
+```python
+# Python: model= in @juiz_container or @juiz_component_container
+@juiz_container(model={"path": "models/pantilt.glb", "scale": 0.001})
+def pantilt(initial_value: int = 0):
+    ...
+
+@juiz_container(model="models/camera.glb")   # a string when you only need path
+def camera(initial_value: int = 0):
+    ...
+```
+
+```cpp
+// C++ (cppjuiz): ContainerManifest::model(). For path only: .model("models/pantilt.glb")
+auto manifest() {
+    return ContainerManifest("pantilt")
+        .model({
+            {"path", "models/pantilt.glb"},
+            {"scale", 0.001},
+            {"origin", {{"translation", {{"z", -0.02}}}}}
+        });
+}
+```
+
+```haskell
+-- Haskell (hsjuiz): model takes a Value shaped like the conf's model:. For path only: modelPath "models/pantilt.glb"
+manifest :: ContainerManifest
+manifest = containerManifest "pantilt_hs"
+  & model (object
+      [ "path" .= JString "models/pantilt.glb"
+      , "scale" .= JFloat 0.001
+      , "origin" .= object ["translation" .= object ["z" .= JFloat (-0.02)]]
+      ])
+```
+
+Containers of a Component (`#[juiz_component_container]` in Rust, `@juiz_component_container` in Python, `ComponentManifest::add_container` in C++, `componentContainer` in Haskell) take a default model in the same way.
+
+- **A relative path is relative to the directory of the plugin file** (`libpantilt.so`, `pantilt.dll`, `pantilt.py` and so on), not to the configuration file. Put the model file next to the plugin and distribute them together.
+- **The instance's `model:` wins.** If the Container in the configuration file has `model:`, it is used **as a whole** (keys are not merged, so the default's `scale` and so on are not inherited). Write `model: null` to ignore the default and create the Container without a model.
+
+```yaml
+containers:
+  - type_name: pantilt
+    name: pantilt0                  # no model: → the type's default model
+  - type_name: pantilt
+    name: pantilt1
+    model:                          # the instance's model: wins as a whole
+      path: models/pantilt_red.sdf
+  - type_name: pantilt
+    name: pantilt2
+    model: null                     # no model
+```
+
+- The file is checked **when the plugin is loaded**. If it is missing or its format does not match, registering that type (Factory) fails. The size limit (`option.model.max_bytes`) is applied again each time a Container is created.
+- Containers created through the API's `container/create` (including pyjuiz's `SystemProxy`) also get the type's default model. Passing `model` through the API is still an error.
+- In a [.juizapp](/guides/app-package/), a model file next to the plugin is packed as long as it is inside the package directory. `juiz pack` does not load plugins, so it does not check default models; a missing file is reported when `juiz run` loads the plugin.
 
 ## Hand-written SDF
 
@@ -274,7 +352,6 @@ Over HTTP, `ContainerModelFileNotFoundError` and `ContainerHasNoModelError` are 
 - Several models per Container (one for display, one for collision, and so on).
 - Showing models made of several files (a .gltf that references external files, SDF `<mesh>`).
 - Replacing a model at run time, or setting a model through the API.
-- A default model per type (Factory).
 - Importing URDF or SDF with joints (turning links into Containers and joints into Transforms).
 
 ## Samples
