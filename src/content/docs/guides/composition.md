@@ -246,7 +246,7 @@ juiz container destroy "core://core/container/cc0::composite_container"   # dest
 - A Composite you create is an ordinary type: create instances with `process/create` (or `container_process/create` if it has slots).
 - Only Composite types can be destroyed. While instances of the type exist, or another Composite uses it as a child, it cannot be destroyed (`CompositeInUseError`); destroy those first.
 - The `namespace` of a CompositeContainer created through the API is treated as absolute.
-- The HTTP API is `POST /api/composite/create` (body `{"__manifest__": <definition>}`), `GET /api/composite/list`, `GET /api/composite/profile_full?identifier=<type name>`, `DELETE /api/composite/destroy?identifier=<type name>` and `POST /api/composite_container/create`.
+- The HTTP API is `POST /api/composite/create` (body `{"__manifest__": <definition>}`), `GET /api/composite/list`, `GET /api/composite/profile?identifier=<type name>`, `DELETE /api/composite/destroy?identifier=<type name>` and `POST /api/composite_container/create`.
 
 In Python (pyjuiz), call them from `SystemProxy`.
 

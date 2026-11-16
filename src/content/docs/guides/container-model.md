@@ -5,7 +5,7 @@ sidebar:
   order: 11.5
 ---
 
-You can attach a **3D model** (ContainerModel) file to a Container. You only add `model:` to the Container in the configuration file; the plugin code does not change. A plugin can also give its Container type a [default model](#default-models-per-type) (from juiz 0.2.10).
+You can attach a **3D model** (ContainerModel) file to a Container. You only add `model:` to the Container in the configuration file; the plugin code does not change. A plugin can also give its Container type a [default model](#default-models-per-type) (from juiz 0.2.11).
 Together with [Transformations](/guides/transformations/), juiz knows which Container is where and what it looks like, and the "3D" view of the [web UI](/guides/web-ui/) shows the whole system in three dimensions.
 
 ![The web UI's 3D view. With odom as the reference, the pan-tilt unit pantilt0 (grey base and orange head) and the camera camera0 sit on the mobile base base0 (blue box with wheels) at their poses](../../../assets/container-model/web-ui-3d.png)
@@ -18,7 +18,7 @@ Container 3D models were added in juiz 0.2.9. Earlier versions do not have them.
 
 - **juiz does not interpret the model.** It keeps the file as opaque bytes and only checks its format (the leading bytes), its size and its SHA-256. Opening the mesh and drawing it is up to the receiver (the web UI or your own tools).
 - **One model per Container.** For a robot with many parts, make one Container per part and connect them with Transforms (parts that move at a joint should already be separate Containers).
-- **A model is an attribute of the Container**, not a Process (ContainerProcess). You get it through the same kind of API as `container/profile_full`.
+- **A model is an attribute of the Container**, not a Process (ContainerProcess). You get it through the same kind of API as `container/profile`.
 - It is configured in the configuration file, so it works whatever language the Container is written in (Rust, Python, C++ or Haskell).
 - Anchors ([Transformations](/guides/transformations/)) are Containers too, so they can carry a floor or map model. CompositeContainers can have one as well.
 
@@ -280,7 +280,7 @@ The model info (type `juiz_std.model.ContainerModelInfo`) looks like this. It is
 
 | Path (GET) | Returns |
 |---|---|
-| `/api/container/profile_full?identifier=` | The usual profile, plus `model` (the model info or `null`) |
+| `/api/container/profile?identifier=` | The usual profile, plus `model` (the model info or `null`) |
 | `/api/container/model_info?identifier=` | The model info, or `null` without a model |
 | `/api/container/model?identifier=` | The raw bytes of the file |
 
