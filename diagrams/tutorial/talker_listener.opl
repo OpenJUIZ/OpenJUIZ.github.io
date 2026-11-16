@@ -1,0 +1,27 @@
+Model "talker_listener".
+
+"ec0" is an object [role: ec, name: ec0, type: main_loop_ec, rate: 1].
+"ec0" can be stopped or started.
+"ec0" is initially started.
+
+"ec0 cycle" is a process [role: ec_cycle].
+"ec0 cycle" occurs if "ec0" is started, otherwise "ec0 cycle" is skipped.
+"ec0 cycle" invokes "talker0" [order: 0].
+"ec0 cycle" invokes itself.
+
+"listener0" is a process [role: process, name: listener0, type: listener].
+"listener0" yields "listener0 out".
+"listener0" requires "talker0 out" [arg: arg1, arg_index: 0, connection: push, connection_name: con0].
+
+"listener0 out" is an object [role: value, value_kind: output].
+
+"talker0" is a process [role: process, name: talker0, type: talker].
+"talker0" yields "talker0 out".
+"talker0" invokes "listener0".
+
+"talker0 out" is an object [role: value, value_kind: output].
+
+"talker_listener" is an object [role: system, name: talker_listener].
+"talker_listener" consists of "ec0".
+"talker_listener" exhibits "listener0".
+"talker_listener" exhibits "talker0".

@@ -713,6 +713,10 @@ ecs:
 </TabItem>
 </Tabs>
 
+Drawn as an abbreviated diagram with [juiz_opm](/guides/juiz-opm/), the system in this configuration file (the talker's juiz) looks like this (see [Drawing a system](/guides/juiz-opm/#reading-the-abbreviated-diagram) for how to read it).
+
+![Abbreviated diagram: the EC ec0 is stopped and runs talker0 every second once started](../../../assets/tutorial-diagrams/talker_ec.png)
+
 In terminal 2, restart with this configuration file. It says `port: 8000`, but port 8000 is taken by the listener's juiz, so it again listens on 8001.
 
 ```sh

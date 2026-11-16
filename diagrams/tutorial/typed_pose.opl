@@ -1,0 +1,24 @@
+Model "typed_pose".
+
+"move0" is a process [role: process, name: move0, type: pose_move].
+"move0" yields "move0 out".
+"move0" requires "twist0 out" [arg: twist, arg_index: 0, connection: pull, connection_name: twist_to_move].
+"move0" invokes "print0".
+
+"move0 out" is an object [role: value, value_kind: output].
+
+"print0" is a process [role: process, name: print0, type: pose_print_python].
+"print0" yields "print0 out".
+"print0" requires "move0 out" [arg: pose, arg_index: 0, connection: push, connection_name: move_to_print].
+
+"print0 out" is an object [role: value, value_kind: output].
+
+"twist0" is a process [role: process, name: twist0, type: twist_python].
+"twist0" yields "twist0 out".
+
+"twist0 out" is an object [role: value, value_kind: output].
+
+"typed_pose" is an object [role: system, name: typed_pose].
+"typed_pose" exhibits "move0".
+"typed_pose" exhibits "print0".
+"typed_pose" exhibits "twist0".

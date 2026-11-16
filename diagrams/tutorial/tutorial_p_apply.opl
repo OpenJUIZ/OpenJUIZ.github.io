@@ -1,0 +1,38 @@
+Model "tutorial".
+
+"counter0" is an object [role: container, name: counter0, type: example_container, params: {"initial_value":3}].
+
+"get0" is a process [role: container_process, name: get0, type: example_container_get].
+"get0" affects "counter0".
+"get0" yields "get0 out".
+
+"get0 out" is an object [role: value, value_kind: output].
+
+"inc0" is a process [role: process, name: inc0, type: increment_process].
+"inc0" yields "inc0 out".
+"inc0" requires "inc0 arg1" [arg: arg1, arg_index: 0, applied: 10].
+
+"inc0 arg1" is an object [role: value, value_kind: input].
+
+"inc0 out" is an object [role: value, value_kind: output].
+
+"inc1" is a process [role: process, name: inc1, type: increment_process].
+"inc1" yields "inc1 out".
+
+"inc1 out" is an object [role: value, value_kind: output].
+
+"increment0" is a process [role: container_process, name: increment0, type: example_container_increment].
+"increment0" affects "counter0".
+"increment0" yields "increment0 out".
+"increment0" requires "increment0 arg1" [arg: arg1, arg_index: 0, applied: 5].
+
+"increment0 arg1" is an object [role: value, value_kind: input].
+
+"increment0 out" is an object [role: value, value_kind: output].
+
+"tutorial" is an object [role: system, name: tutorial].
+"tutorial" consists of "counter0".
+"tutorial" exhibits "get0".
+"tutorial" exhibits "inc0".
+"tutorial" exhibits "inc1".
+"tutorial" exhibits "increment0".

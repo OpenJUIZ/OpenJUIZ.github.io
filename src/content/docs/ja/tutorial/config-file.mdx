@@ -248,6 +248,10 @@ option:
 
 `-1` で作ったときは「型名 + `0`」という名前に決まっていましたが、設定ファイルでは好きな名前を付けられます。
 
+このシステムを [juiz_opm](/ja/guides/juiz-opm/) の略式図で描くと、次のようになります(図の読み方は [システムを図にする](/ja/guides/juiz-opm/#略式図の読み方) にあります)。
+
+![Container counter0 とその中の increment0・get0、Process inc0・inc1 の略式図](../../../../assets/tutorial-diagrams/tutorial.png)
+
 ## 動かす
 
 設定ファイルを `-f` で渡して起動します。どの言語でも同じコマンドです。
@@ -767,6 +771,10 @@ Caused by:
 ```
 
 書き間違いに、動かしてから気づくのではなく、起動したときに気づけます。
+
+`initial_value` と `p_apply` を足したあとのシステムを [juiz_opm](/ja/guides/juiz-opm/) の略式図で描くと、次のようになります(図の読み方は [システムを図にする](/ja/guides/juiz-opm/#略式図の読み方) にあります)。
+
+![counter0 の帯に initial_value 3、inc0 と increment0 の引数 arg1 に p_apply の値が付いた略式図](../../../../assets/tutorial-diagrams/tutorial_p_apply.png)
 
 ## やってみよう
 

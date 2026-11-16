@@ -248,6 +248,10 @@ Writing something in `plugins` does not run anything yet. juiz just learns the t
 
 Instances created with `-1` were always named "type name + `0`", but in a configuration file you can choose any name.
 
+Drawn as an abbreviated diagram with [juiz_opm](/guides/juiz-opm/), this system looks like this (see [Drawing a system](/guides/juiz-opm/#reading-the-abbreviated-diagram) for how to read it).
+
+![Abbreviated diagram: Container counter0 with increment0 and get0, and Processes inc0 and inc1](../../../assets/tutorial-diagrams/tutorial.png)
+
 ## Run it
 
 Pass the configuration file with `-f`. The command is the same for every language.
@@ -767,6 +771,10 @@ Caused by:
 ```
 
 You notice the typo when `juiz` starts, not later while it is running.
+
+Drawn as an abbreviated diagram with [juiz_opm](/guides/juiz-opm/), the system with `initial_value` and `p_apply` added looks like this (see [Drawing a system](/guides/juiz-opm/#reading-the-abbreviated-diagram) for how to read it).
+
+![Abbreviated diagram: initial_value 3 in the band of counter0, and p_apply values on the argument arg1 of inc0 and increment0](../../../assets/tutorial-diagrams/tutorial_p_apply.png)
 
 ## Try it yourself
 
