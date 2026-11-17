@@ -1,21 +1,21 @@
 ---
-title: "5. Component にまとめて配布する(C++)"
+title: "6. Component にまとめて配布する(C++)"
 description: Process・Container・ContainerProcess を C++ で 1 つの Component にまとめ、設定ファイル 1 行で読み込みます。
 sidebar:
   order: 3
   label: C++
 prev:
   link: /ja/tutorial/connect/cpp/
-  label: "4. Process をつなぐ(C++)"
+  label: "5. 1 つの juiz で複数のライブラリをつなぐ(C++)"
 next:
-  link: /ja/tutorial/multi-process/
-  label: "6. 別々のプロセスをつなぐ"
+  link: /ja/tutorial/quic-broker/
+  label: "7. 通信方式を選ぶ: QUIC ブローカー"
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 第 1〜3 章の雛形では、Process・Container・ContainerProcess を 1 つのソースに書いて 1 つのライブラリにし、`app/app.conf` の `plugins` の `components` に 1 行書いて読み込みました。
-一方、第 4 章のサンプルの talker と listener は、1 つの型ごとに別々のファイル(ライブラリ)にして、`process_factories` に型を 1 つずつ並べて読み込みました。
+一方、サンプル集の talker と listener は、1 つの型ごとに別々のファイル(ライブラリ)にして、`process_factories` に型を 1 つずつ並べて読み込みました。
 
 実際に「このカメラを動かす部品一式」を誰かに渡すときに、ファイルがばらばらだと不便です。
 この章では、雛形がとっていた形、つまり Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を、サンプル集の例で改めて読み、型ごとのファイルと比べます。
@@ -28,8 +28,53 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 ## サンプルを用意する
 
-第 4 章でクローンしてビルドしたサンプル集をそのまま使います。Component のサンプルも、第 4 章のビルドで一緒にできあがっています。
-まだの場合は、[第 4 章(C++)の「サンプルを用意する」](/ja/tutorial/connect/cpp/#サンプルを用意する) の手順を済ませてください。
+
+第 5 章までは、雛形から作った自分のプロジェクトを使いました。ここからは題材が増えるので、サンプル集をクローンしてビルドし、そのファイルを読みながら進めます。
+以降の章のコマンドは、すべてクローンしたリポジトリのルートで実行します。
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_cpp.git
+cd juiz_examples_cpp
+cmake -S . -B build
+cmake --build build
+```
+
+サンプル集の CMake は、`juiz` と同じ版の libjuiz_sdk とヘッダを [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から取得します(第 1 章のように `~/.juiz/sdk` に展開しておく必要はありません)。
+サンプルの型を作るのに `juiz` コマンドを使うので、`cmake` は `juiz` が使えるターミナルで実行してください。
+各サンプルは共有ライブラリとして `build/plugins` にビルドされます。ファイル名は OS によって違います。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+ls build/plugins/*.so
+# => build/plugins/liblistener_cpp.so  build/plugins/libtalker_cpp.so  ...
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+ls build/plugins/*.dylib
+# => build/plugins/liblistener_cpp.dylib  build/plugins/libtalker_cpp.dylib  ...
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+Windows(Visual Studio のジェネレータ)では、上の `cmake --build build` の代わりに `--config Release` を付けてビルドします。
+プラグインの隣には `juiz_sdk.dll` も置かれます。
+
+```powershell
+cmake --build build --config Release
+ls build/plugins/*.dll
+# => build\plugins\juiz_sdk.dll  build\plugins\listener_cpp.dll  build\plugins\talker_cpp.dll  ...
+```
+
+</TabItem>
+</Tabs>
+
+Component のサンプルも、このビルドで一緒にできあがります。
 
 この章で使う Component には、次のものが入っています。どれも、これまでの章で作ったものと同じ働きです。
 
@@ -107,7 +152,7 @@ auto component_manifest() {
 DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(component_manifest)
 ```
 
-書き方は、第 1・2 章の雛形の `src/my_juiz.cpp` と同じです。第 4 章の talker・listener のように、型ごとに別のライブラリにするときとは、次の点が違います。
+書き方は、第 1・2 章の雛形の `src/my_juiz.cpp` と同じです。サンプル集の talker・listener のように、型ごとに別のライブラリにするときとは、次の点が違います。
 
 - 型ごとのマニフェストは、`manifest()` という同じ名前の関数ではなく、`example_component_cpp_increment_manif` のように型ごとに名前を付けた変数に置きます。
 - 公開には `PROCESS_FACTORY` などの代わりに、`COMPONENT_PROCESS_FACTORY`・`COMPONENT_CONTAINER_FACTORY`・`COMPONENT_CONTAINER_PROCESS_FACTORY` を使います。これらは、関数のほかに `<関数名>_manifest()` という関数も作ります。
@@ -121,7 +166,7 @@ add_juiz_component(example_component_cpp SOURCES example_component_cpp/example_c
 
 1 つの共有ライブラリができます。ファイル名は Linux では `build/plugins/libexample_component_cpp.so`、macOS では `build/plugins/libexample_component_cpp.dylib`、Windows では `build/plugins/example_component_cpp.dll` です。
 
-第 4 章のサンプルでは型ごとに分かれていたものが、Component では 1 つのライブラリに入っています。
+サンプル集の talker・listener では型ごとに分かれていたものが、Component では 1 つのライブラリに入っています。
 それぞれの Process や ContainerProcess の中身は、これまでと変わりません。Process は冪等な関数のまま、状態に触れるのは ContainerProcess だけ、という考え方もそのままです。
 
 ## 設定ファイルを読む
@@ -153,7 +198,7 @@ containers:
         name: get0
 ```
 
-第 4 章の設定ファイル `talker_listener.conf` と比べてみましょう。
+サンプル集の設定ファイル `talker_listener.conf`(talker と listener を型ごとのファイルから読み込んでつなぐもの)と比べてみましょう。
 
 ### plugins: Component を 1 つ書く
 
@@ -165,7 +210,7 @@ plugins:
       path: "./build/plugins"
 ```
 
-第 4 章では、`process_factories` に型を 1 つずつ書いていました(Container なら `container_factories` に書き、ContainerProcess も Container の下に 1 つずつ書きます)。
+`talker_listener.conf` では、`process_factories` に型を 1 つずつ書いていました(Container なら `container_factories` に書き、ContainerProcess も Container の下に 1 つずつ書きます)。
 Component では、第 3 章の `app/app.conf` と同じく、`components` に **Component の名前を 1 つ**書くだけです。キーの名前から読み込むファイルが決まるのは、型ごとのときと同じです。
 
 Component 名 `example_component_cpp` なら、`./build/plugins` の中の `libexample_component_cpp.so`(macOS では `libexample_component_cpp.dylib`、Windows では `example_component_cpp.dll`)が読み込まれます。設定ファイルには拡張子を書かないので、同じ設定ファイルがどの OS でも使えます。
@@ -216,7 +261,7 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 ```
 
 Process は引数に 1 を足して返し、ContainerProcess は Container の値を変えたり読んだりします。
-呼び出す側から見ると、第 4 章のように型ごとのファイルから読み込んだものと区別がつきません。
+呼び出す側から見ると、サンプル集の talker・listener のように型ごとのファイルから読み込んだものと区別がつきません。
 
 ## Component は配布の単位
 
@@ -235,7 +280,7 @@ Process は引数に 1 を足して返し、ContainerProcess は Container の�
 
 - `processes` に `example_component_cpp_increment`のインスタンスをもう 1 つ書き足してみましょう。Component から読み込んだ型からも、第 3 章と同じように、いくつでもインスタンスを作れます。
 - `containers` にもう 1 つ Container(たとえば `container1`)と、それに結びつく ContainerProcess を書き足してみましょう。`container0` と `container1` は別々の値を持ちます。
-- 第 4 章の `connections` と `ecs` を書き足して、1 つ目の Process の出力を、書き足した 2 つ目の Process の `arg1` につないでみましょう。Component から読み込んだ型かどうかに関係なく、同じようにつなげます。`plugins` には `components` と `process_factories` を並べて書けるので、第 4 章の talker のような別ファイルの Process とつなぐこともできます。
+- 第 5 章の `connections` と `ecs` を書き足して、1 つ目の Process の出力を、書き足した 2 つ目の Process の `arg1` につないでみましょう。Component から読み込んだ型かどうかに関係なく、同じようにつなげます。`plugins` には `components` と `process_factories` を並べて書けるので、サンプル集の talker のような別ファイルの Process とつなぐこともできます。
 - 設定ファイルを使わずに、コマンドラインから Component を読み込むこともできます。`-1` を付けると、Component の中のすべての型から、インスタンスを 1 つずつ作ります(名前は雛形の `app/app.conf` と同じく「型名 + `0`」になります)。
 
 <Tabs syncKey="platform">
@@ -268,4 +313,4 @@ juiz --component ./build/plugins/example_component_cpp.dll -l cpp -1 -d
 - 設定ファイルでは、`plugins` の `components` に Component の名前を 1 つ書くだけで、中の型がすべて読み込まれます。
 - インスタンスの作り方、ID、呼び出し方、つなぎ方は、別々のファイルから読み込んだときと同じです。Component は動かし方を変えるものではなく、**配布の単位**です。
 
-次の章では、別々に起動した juiz どうしを、設定ファイルなしでコマンドからつなぎます。[別々のプロセスをつなぐ](/ja/tutorial/multi-process/) に進みましょう。
+次の章では、juiz どうしをつなぐ通信方式を選びます。[通信方式を選ぶ: QUIC ブローカー](/ja/tutorial/quic-broker/) に進みましょう。

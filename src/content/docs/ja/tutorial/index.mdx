@@ -27,21 +27,21 @@ import { Steps } from '@astrojs/starlight/components';
 
    雛形の設定ファイル `app/app.conf` を読んで書き換え、インスタンスを増やしたり初期値を渡したりします。読み込み(plugins)と実体化(processes / containers)の違いを学びます。
 
-4. **[Process をつなぐ: connect と Execution Context](/ja/tutorial/connect/)**
+4. **[別々のプロセスで動く Process をつなぐ: Topic](/ja/tutorial/multi-process/)**([Rust](/ja/tutorial/multi-process/rust/)・[Python](/ja/tutorial/multi-process/python/)・[C++](/ja/tutorial/multi-process/cpp/)・[Haskell](/ja/tutorial/multi-process/haskell/))
 
-   talker と listener をつなぎ、Execution Context で周期的に動かします。connect というもう一つの使い方を学びます。
+   `juiz pkg create` で talker と listener の 2 つの雛形を作り、別々の juiz で起動して、コマンドでつなぎます。続けて、Topic(publish / subscribe)で、起動するだけでつながるようにします。connect というもう一つの使い方と、Execution Context を学びます。
 
-5. **[Component にまとめて配布する](/ja/tutorial/component/)**
+5. **[1 つの juiz で複数のライブラリをつなぐ: connect と Execution Context](/ja/tutorial/connect/)**([Rust](/ja/tutorial/connect/rust/)・[Python](/ja/tutorial/connect/python/)・[C++](/ja/tutorial/connect/cpp/)・[Haskell](/ja/tutorial/connect/haskell/))
 
-   雛形がとっていた Component の形を、型ごとのファイルと比べます。Component が配布の単位であることを学びます。
+   第 4 章の 2 つのライブラリを 1 つの juiz に読み込み、設定ファイルの `connections` と Execution Context でつなぎます。Push と Pull、call と EC による実行の違いを学びます。
 
-6. **[別々のプロセスをつなぐ](/ja/tutorial/multi-process/)**
+6. **[Component にまとめて配布する](/ja/tutorial/component/)**
 
-   別々に起動した juiz どうしを、設定ファイルなしでコマンドからつなぎます。Process が場所を問わず ID(URL)でつながることを学びます。
+   雛形がとっていた Component の形を、サンプル集の型ごとのファイルと比べます。Component が配布の単位であることを学びます。
 
 7. **[通信方式を選ぶ: QUIC ブローカー](/ja/tutorial/quic-broker/)**
 
-   第 6 章の接続を、HTTP の代わりに QUIC ブローカーで行います。通信方式はブローカーとして差し替えられ、ID の先頭がそれを表すことを学びます。
+   第 4 章のような別プロセスの接続を、HTTP の代わりに QUIC ブローカーで行います。通信方式はブローカーとして差し替えられ、ID の先頭がそれを表すことを学びます。
 
 8. **[データ型: 型を決めて言語をまたいでつなぐ](/ja/tutorial/datatype/)**
 
@@ -52,9 +52,9 @@ import { Steps } from '@astrojs/starlight/components';
 ## 各章の読み方
 
 - 章の最初に「この章で学ぶこと」、最後に「まとめ」があります。
-- **第 1 章と第 2 章は、言語ごとのページに分かれています。** `juiz pkg create` で自分のプロジェクトの雛形を作り、`Cargo.toml`(Rust)・`pyproject.toml`(Python)・`CMakeLists.txt`(C++)・`cabal.project` と `.cabal`(Haskell)や、型を書いたソースの読み方を説明します。
+- **第 1・2 章と第 4〜6 章は、言語ごとのページに分かれています。** `juiz pkg create` で自分のプロジェクトの雛形を作り、`Cargo.toml`(Rust)・`pyproject.toml`(Python)・`CMakeLists.txt`(C++)・`cabal.project` と `.cabal`(Haskell)や、型を書いたソースの読み方を説明します。
 - 第 3 章は、第 1・2 章で作ったプロジェクトをそのまま使います。
-- 第 4 章からは、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp)・[Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell))をクローンして使います。各章に対応するファイルへのリンクを置いています。
+- 第 4・5 章は、第 1 章と同じく `juiz pkg create` の雛形で talker と listener を作ります。第 6 章からは、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp)・[Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell))をクローンして使います。各章に対応するファイルへのリンクを置いています。
 - 第 3 章以降のコード例は Rust・Python・C++・Haskell のタブで切り替えられます。一度選んだ言語は、ほかのページでもそのまま保たれます。
 - 用語(Process・Container・call・execute・call_partial・p_apply など)の意味は [用語集](/ja/concepts/glossary/) にまとめてあります。
 - やりたいことが決まっているときは、[ガイド](/ja/guides/process/) から逆引きで探すこともできます。
@@ -68,6 +68,6 @@ import { Steps } from '@astrojs/starlight/components';
 - Rust で進める場合は `cargo install juiz_app` で `juiz` コマンドを入れます。
 - Python だけで進める場合は、第 1 章で作業用の venv に `juiz-cli` を入れるので、先に入れておく必要はありません。Rust のツールチェーンも要りません。
 - C++ で進める場合は、`juiz` コマンド(pip と cargo のどちらで入れてもかまいません)のほかに、CMake と C++17 対応のコンパイラが必要です。libjuiz_sdk は第 1 章で用意します。
-- Haskell で進める場合は、`juiz` コマンドのほかに、GHC 9.6 以降と cabal が必要です(Linux・macOS)。libjuiz_sdk と hsjuiz は第 1 章で用意します。第 4 章からのサンプル集のビルドには Rust も使います。
+- Haskell で進める場合は、`juiz` コマンドのほかに、GHC 9.6 以降と cabal が必要です(Linux・macOS)。libjuiz_sdk と hsjuiz は第 1 章で用意します。第 6 章からのサンプル集のビルドには Rust も使います。
 
 準備ができたら、[はじめての Process](/ja/tutorial/first-process/) に進みましょう。

@@ -236,7 +236,7 @@ std::optional<juiz::Image> image_flip_cpp(const juiz::Image& img) {
     cv::flip(m, m, 1);
     return juiz::from_mat(m);        // juiz には RGB8 で入る
 }
-COMPONENT_PROCESS_FACTORY(image_flip_cpp_manif, image_flip_cpp);   // Component への登録は第5章と同じ
+COMPONENT_PROCESS_FACTORY(image_flip_cpp_manif, image_flip_cpp);   // Component への登録は第6章と同じ
 ```
 
 複製せずに読みたいときは、`juiz::with_image(cm, name, f)` で関数の間だけ画像を借りられます。

@@ -7,8 +7,8 @@ prev:
   link: /ja/tutorial/container/
   label: "2. 状態を持つ: Container と ContainerProcess"
 next:
-  link: /ja/tutorial/connect/
-  label: "4. Process をつなぐ: connect と Execution Context"
+  link: /ja/tutorial/multi-process/
+  label: "4. 別々のプロセスで動く Process をつなぐ: Topic"
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
@@ -226,8 +226,8 @@ plugins:
       path: "./target/debug"
 ```
 
-この場合は、型名 `talker` からファイル名(`libtalker.so` など)を作って探します。次の第 4 章で使うサンプル集は、この書き方をしています。
-2 つの書き方の違いは、第 5 章で扱います。
+この場合は、型名 `talker` からファイル名(`libtalker.so` など)を作って探します。第 6 章から使うサンプル集は、この書き方をしています。
+2 つの書き方の違いは、第 6 章で扱います。
 </Aside>
 
 ### processes と containers: 作る
@@ -468,4 +468,4 @@ ContainerProcess では `juiz container-process call-partial` です(HTTP API �
 - `p_apply` で Process の引数に初期値を与えられます。この値は、引数を渡さずに実行したとき(Execution Context から動かしたときなど)に使われます。call で使いたいときは call_partial を使います。
 - 設定ファイルの項目は、[ガイドの「設定ファイル」](/ja/guides/config/) にまとめてあります。
 
-次の章では、設定ファイルに Process どうしのつながりと、Process を動かすタイミングを書き足します。[Process をつなぐ: connect と Execution Context](/ja/tutorial/connect/) に進みましょう。
+次の章では、talker と listener の 2 つの雛形を作り、別々の juiz で起動してつなぎます。[別々のプロセスで動く Process をつなぐ: Topic](/ja/tutorial/multi-process/) に進みましょう。

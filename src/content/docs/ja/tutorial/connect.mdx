@@ -1,47 +1,37 @@
 ---
-title: "4. Process をつなぐ: connect と Execution Context"
-description: talker と listener をつなぎ、Execution Context で周期的に動かします。connect というもう一つの使い方を学びます。使う言語を選んでください。
+title: "5. 1 つの juiz で複数のライブラリをつなぐ: connect と Execution Context"
+description: 第 4 章の talker と listener の 2 つのライブラリを 1 つの juiz に読み込み、設定ファイルの connections と Execution Context でつないで動かします。使う言語を選んでください。
 sidebar:
-  order: 4
+  order: 5
   label: 概要
 prev:
-  link: /ja/tutorial/config-file/
-  label: "3. 設定ファイルでまとめて起動する(全言語共通)"
+  link: /ja/tutorial/multi-process/
+  label: "4. 別々のプロセスで動く Process をつなぐ: Topic"
 next: false
 ---
 
 import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-ここまでは、外から Process を呼び出して結果を受け取る **call** という使い方をしてきました。
-ロボットでは、それとは別に「センサの値を読んだら、それをすぐ制御の Process に渡す」というように、Process の出力を次の Process の入力へ流し続けたい場面がよくあります。
-この章では、文字列を出す `talker` と、受け取った文字列を表示する `listener` をつないで、周期的に動かします。
+第 4 章では、talker と listener を別々の juiz で起動して、HTTP でつなぎました。
+いつも同じコンピュータで一緒に動かす部品なら、1 つの juiz に両方のライブラリを読み込んでつなぐこともできます。値は同じプロセスの中で受け渡されるので、通信の手間がかかりません。
+この章では、第 4 章の 2 つのライブラリを 1 つの設定ファイルに並べて読み込み、`connections` と Execution Context でつなぎます。
 
 <Aside type="tip" title="この章で学ぶこと">
-- Process の出力を、別の Process の引数につなげること(**connect**)
+- 別々に作ったライブラリを、1 つの juiz に並べて読み込めること
+- 設定ファイルの `connections` で Process をつなぐこと(**connect**)と、`Push` / `Pull` の違い
 - Process をいつ実行するかは、Process 自身ではなく **Execution Context**(EC)が決めること
 - call と、EC による実行の違い
 </Aside>
 
-第 3 章までは、雛形から作った自分のプロジェクトを使いました。ここからは題材が増えるので、サンプル集をクローンしてビルドし、そのファイルを読みながら進めます。
-サンプル集の用意のしかたとコードが言語ごとに違うので、この章と次の第 5 章は言語ごとのページに分けています。使う言語を選んでください。
+第 4 章で作った `talker` と `listener` の雛形を使います。ライブラリの場所の書き方が言語ごとに違うので、使う言語を選んでください。
 
 <CardGrid>
-	<LinkCard title="Rust" href="/ja/tutorial/connect/rust/" description="juiz_examples_rust をクローンし、cargo build でビルドします。" />
-	<LinkCard title="Python" href="/ja/tutorial/connect/python/" description="juiz_examples_python をクローンし、venv に juiz-cli を入れます。" />
-	<LinkCard title="C++" href="/ja/tutorial/connect/cpp/" description="juiz_examples_cpp をクローンし、CMake でビルドします。" />
-	<LinkCard title="Haskell" href="/ja/tutorial/connect/haskell/" description="juiz_examples_haskell をクローンし、build.sh でビルドします。" />
+	<LinkCard title="Rust" href="/ja/tutorial/connect/rust/" description="2 つのクレートのプラグインを 1 つの juiz に読み込みます。" />
+	<LinkCard title="Python" href="/ja/tutorial/connect/python/" description="2 つの .py ファイルを 1 つの juiz に読み込みます。" />
+	<LinkCard title="C++" href="/ja/tutorial/connect/cpp/" description="2 つの CMake プロジェクトのプラグインを 1 つの juiz に読み込みます。" />
+	<LinkCard title="Haskell" href="/ja/tutorial/connect/haskell/" description="2 つの cabal パッケージのプラグインを 1 つの juiz に読み込みます(Linux・macOS)。" />
 </CardGrid>
 
-この章で使うのは、どの言語でも次のものです。
+この章で書く設定ファイル `talker_listener.conf` のシステムを [juiz_opm](/ja/guides/juiz-opm/) の略式図で描くと、次のようになります(図の読み方は [システムを図にする](/ja/guides/juiz-opm/#略式図の読み方) にあります)。
 
-| 役割 | 名前 |
-| --- | --- |
-| Process `talker` | 引数を持たず、決まった文字列を表示して返す |
-| Process `listener` | 引数 `arg1` で受け取った文字列を表示する |
-| 設定ファイル `talker_listener.conf` | 2 つをつないで、EC で 1 秒ごとに動かす |
-
-このシステムを [juiz_opm](/ja/guides/juiz-opm/) の略式図で描くと、次のようになります(図の読み方は [システムを図にする](/ja/guides/juiz-opm/#略式図の読み方) にあります)。
-
-![EC ec0 が talker0 を 1 秒ごとに動かし、talker0 の出力が push 接続 con0 で listener0 の引数 arg1 に渡る略式図](../../../../assets/tutorial-diagrams/talker_listener.png)
-
-ここでクローンしたサンプル集は、第 5 章から第 8 章でもそのまま使います。
+![EC ec0 が talker_talk0 を 1 秒ごとに動かし、talker_talk0 の出力が push 接続 con0 で listener_listen0 の引数 arg1 に渡る略式図](../../../../assets/tutorial-diagrams/talker_listener.png)

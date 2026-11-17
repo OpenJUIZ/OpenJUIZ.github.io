@@ -1,171 +1,88 @@
 ---
-title: "4. Connecting Processes (Rust)"
-description: Read the talker and listener examples in Rust, connect them in a configuration file and run them periodically with an Execution Context.
+title: "5. Connecting several libraries in one juiz (Rust)"
+description: Load the two Rust libraries talker and listener from chapter 4 into one juiz, and connect and run them with connections and an Execution Context in the configuration file.
 sidebar:
   order: 1
   label: Rust
 prev:
   link: /tutorial/connect/
-  label: "4. Connecting Processes"
+  label: "5. Connecting several libraries in one juiz"
 next:
   link: /tutorial/component/rust/
-  label: "5. Packaging as a Component (Rust)"
+  label: "6. Packaging as a Component (Rust)"
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-So far you have used **call**: calling a Process from outside and getting the result back.
-Robots often need something else too: "as soon as a sensor value is read, pass it to the control Process", that is, keep feeding one Process's output into the next Process's input.
-In this chapter you connect a `talker` that outputs a string to a `listener` that prints the string it receives, and run them periodically.
+In chapter 4 you started the talker and the listener in separate juiz instances and connected them over HTTP.
+For parts that always run together on the same computer, you can also load both libraries into one juiz and connect them there. The values are passed inside the same process, with no communication cost.
+In this chapter you list the two libraries from chapter 4 in one configuration file and connect them with `connections` and an Execution Context.
 
 <Aside type="tip" title="What you will learn">
-- Connecting a Process's output to another Process's argument (**connect**)
+- Libraries made separately can be loaded side by side into one juiz
+- Connecting Processes with `connections` in a configuration file (**connect**), and the difference between `Push` and `Pull`
 - When a Process runs is decided by an **Execution Context** (EC), not by the Process itself
 - The difference between call and running from an EC
 </Aside>
 
-## Prepare the samples
+## Prepare
 
-Up to chapter 3 you used your own project made from the skeleton. From here on there are more building blocks, so clone and build the example repository and read its files as you go.
-Run all commands in the following chapters from the root of the cloned repository.
+Use the two skeletons `talker` and `listener` from chapter 4 as they are. Both should be built with `scripts/dev.sh`, with their plugins in `app/plugins/<target>/`.
 
-```sh
-git clone https://github.com/OpenJUIZ/juiz_examples_rust.git
-cd juiz_examples_rust
-cargo build
-```
+Write the configuration file in the directory that holds `talker` and `listener` (one level above the two skeletons). Run all the commands in this chapter there too.
 
-The same commands work in PowerShell on Windows.
-Each example is built as a shared library in `target/debug`. The file names depend on the OS.
+## Write the configuration file
 
-<Tabs syncKey="platform">
-<TabItem label="Linux">
+Create `talker_listener.conf` with the following content.
 
-```sh
-ls target/debug/*.so
-# => target/debug/liblistener.so  target/debug/libtalker.so  ...
-```
-
-</TabItem>
-<TabItem label="macOS">
-
-```sh
-ls target/debug/*.dylib
-# => target/debug/liblistener.dylib  target/debug/libtalker.dylib  ...
-```
-
-</TabItem>
-<TabItem label="Windows">
-
-```powershell
-ls target\debug\*.dll
-# => listener.dll  talker.dll  ...
-```
-
-On Windows, the file names do not start with `lib`.
-
-</TabItem>
-</Tabs>
-
-
-This chapter uses the following.
-
-| Role | What it does |
-| --- | --- |
-| Process `talker` | Takes no arguments; prints and returns a fixed string |
-| Process `listener` | Prints the string received in the argument `arg1` |
-| Configuration file `talker_listener.conf` | Connects the two and runs them every second with an EC |
-
-## Read the Process code
-
-[`process/talker/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/process/talker/src/lib.rs)
-
-```rust
-use juiz_sdk::prelude::*;
-
-/// Outputs a string.
-///
-/// Outputs the string "Hello World".
-#[juiz_process(description = "This is talker process.")]
-fn talker() -> JuizResult<Capsule> {
-    log::trace!("talker() called");
-    let string_value = "Hello World";
-    println!("talker: {:}", string_value);
-    return Ok(jvalue!(string_value).into());
-}
-```
-
-[`process/listener/src/lib.rs`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/process/listener/src/lib.rs)
-
-```rust
-use juiz_sdk::prelude::*;
-
-#[juiz_process(
-    description = "This is listener process."
-    arguments = {
-        default = {
-            arg1 = "Hello, Juiz!"
-        }
-        description = {
-            arg1 = "This message is printed."
-        }
-    }
-)]
-fn listener(arg1: String) -> JuizResult<Capsule> {
-    log::trace!("listener({:}) called", arg1);
-    println!("listener: {:}", arg1);
-    return Ok(jvalue!("Hello World").into());
-}
-```
-
-`arguments` in `#[juiz_process]` lets you write default values and descriptions for arguments.
-
-Both are ordinary Processes, just like in chapter 1.
-`talker` does not know who receives its value, and `listener` does not know where its value comes from. Neither says anything about when it runs.
-How they are connected and when they run are all decided in the configuration file.
-
-## Read the configuration file
-
-[`talker_listener.conf`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/talker_listener.conf)
-
-```yaml
+```yaml title="talker_listener.conf"
 name: talker_listener
 option:
   http_broker:
     start: true
     port: 8000
 plugins:
-  process_factories:
+  components:
     talker:
-      path: "./target/debug"
+      language: rust
+      path: talker/app/plugins/{target}
     listener:
-      path: "./target/debug"
+      language: rust
+      path: listener/app/plugins/{target}
 processes:
-  - type_name: talker
-    name: talker0
-  - type_name: listener
-    name: listener0
+  - type_name: talker_talk
+    name: talker_talk0
+  - type_name: listener_listen
+    name: listener_listen0
 connections:
   - name: con0
     connection_type: Push
-    source: 
-      name: talker0
-      type_name: talker
+    source:
+      name: talker_talk0
+      type_name: talker_talk
     destination:
-      name: listener0
-      type_name: listener
+      name: listener_listen0
+      type_name: listener_listen
     arg_name: arg1
 ecs:
   - name: ec0
     type_name: main_loop_ec
     rate: 1.0
     bind:
-      - name: talker0
-        type_name: talker
+      - name: talker_talk0
+        type_name: talker_talk
     auto_start: true
 ```
 
-`plugins` loads the talker and listener files one by one with `process_factories`, the "one file per type" way from chapter 3. `processes` is the same as in chapter 3 and creates `talker0` and `listener0`. What is new is `connections` and `ecs`.
+Compared with the two `app/app.conf` files of chapter 4:
+
+- `components` in `plugins` lists two libraries, `talker` and `listener`. `path` is relative to the directory of this configuration file. juiz replaces `{target}` with the same target name that `juiz pkg target` prints (such as `x86_64-unknown-linux-gnu`). It points from one level up to the same place as `plugins/{target}` in the `app/app.conf` files of chapter 4.
+- `processes` lists an instance of each of the two types. The instance names are the same as in chapter 4.
+- There is a new `connections`. The EC is named `ec0` here.
+
+Drawn as an abbreviated diagram by [juiz_opm](/guides/juiz-opm/), the system looks like this (how to read it is in [Drawing a system](/guides/juiz-opm/#reading-the-abbreviated-diagram)).
+
+![Abbreviated diagram: the EC ec0 runs talker_talk0 every second, and the output of talker_talk0 goes to the argument arg1 of listener_listen0 through the push connection con0](../../../../assets/tutorial-diagrams/talker_listener.png)
 
 ### connections: connecting
 
@@ -174,25 +91,24 @@ connections:
   - name: con0
     connection_type: Push
     source:
-      name: talker0
+      name: talker_talk0
       ...
     destination:
-      name: listener0
+      name: listener_listen0
       ...
     arg_name: arg1
 ```
 
-`connections` describes how Processes are connected.
+`connections` describes how Processes are connected. It holds the same things you passed to `juiz connection create` in chapter 4.
 
-| Entry | Meaning |
+| Key | Meaning |
 | --- | --- |
 | `source` | The Process that outputs the value (instance name and type name) |
 | `destination` | The Process that receives the value |
 | `arg_name` | Which argument of `destination` receives the value |
-| `connection_type` | `Push`: when `source` runs, its output is passed to `destination`, which runs immediately |
+| `connection_type` | `Push`: when `source` runs, its output is passed to `destination`, which runs right away (`-t push` in chapter 4) |
 
-In this example, the output of `talker0` is passed to the argument `arg1` of `listener0`.
-In juiz, this way of connecting one Process's output to another Process's input is called **connect**.
+The other side is in the same juiz, so you write the instance name and type name instead of an ID.
 
 ### ecs: when to run
 
@@ -202,57 +118,88 @@ ecs:
     type_name: main_loop_ec
     rate: 1.0
     bind:
-      - name: talker0
+      - name: talker_talk0
         ...
     auto_start: true
 ```
 
-`ecs` describes **Execution Contexts** (ECs). An EC runs the Processes bound to it at set times.
+`ecs` describes **Execution Contexts** (ECs). An EC runs the Processes bound to it at certain timings.
 
-| Entry | Meaning |
+| Key | Meaning |
 | --- | --- |
-| `type_name` | The kind of EC. `main_loop_ec` repeats execution at a fixed rate |
-| `rate` | Executions per second [Hz] |
+| `type_name` | The kind of EC. `main_loop_ec` runs repeatedly at a fixed rate |
+| `rate` | Runs per second [Hz] |
 | `bind` | The Processes this EC runs |
-| `auto_start` | If `true`, the EC starts running as soon as juiz starts |
+| `auto_start` | If `true`, the EC starts running when juiz starts |
 
-The EC runs only `talker0`. `listener0` runs through the Push connection whenever `talker0` runs.
+The EC runs only `talker_talk0`. `listener_listen0` runs through the Push connection when `talker_talk0` runs.
 
 ## Run it
 
-Pass the configuration file with `-f`.
+Start juiz with the configuration file passed to `-f`.
 
 ```sh
 juiz -f talker_listener.conf -d
 ```
 
-Every second, the talker and the listener print in turn.
+One terminal shows the talker and the listener taking turns, once a second.
 
 ```
-talker: Hello World
-listener: Hello World
-talker: Hello World
-listener: Hello World
-talker: Hello World
-listener: Hello World
+talker: Hello, juiz!
+listener: Hello, juiz!
+talker: Hello, juiz!
+listener: Hello, juiz!
 ...
 ```
 
-It continues until you stop it with Ctrl+C. You can see the listener receiving and printing the string the talker outputs.
-
-From another terminal, you can also list the connections and ECs.
+It goes on until you press Ctrl+C. From another terminal you can list the Processes, connections and ECs.
 
 ```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/listener_listen0::listener_listen", "http://127.0.0.1:8000/process/talker_talk0::talker_talk"]
 juiz connection list
-# => ["connection://core://core/process/talker0::talker|arg1|core://core/process/listener0::listener"]
+# => ["connection://core://core/process/talker_talk0::talker_talk|arg1|core://core/process/listener_listen0::listener_listen"]
 juiz ec list
 # => ["http://127.0.0.1:8000/execution_context/ec0::main_loop_ec"]
 ```
 
+Both Processes are at the same `http://127.0.0.1:8000`. Both ends of the connection start with `core://`, which shows they are connected inside the same juiz (in chapter 4, the destination was `http://127.0.0.1:8000/...`).
+The Process code is unchanged since chapter 4. Whether they are in separate juiz instances or in one, you connect them the same way.
+
+## Push and Pull
+
+There is another kind of connection, `Pull`. Copy `talker_listener.conf` to `talker_listener_pull.conf` and change these two places.
+
+```yaml title="talker_listener_pull.conf (the changed parts)"
+connections:
+  - name: con0
+    connection_type: Pull
+    ...
+ecs:
+  - name: ec0
+    ...
+    bind:
+      - name: listener_listen0
+        type_name: listener_listen
+```
+
+```sh
+juiz -f talker_listener_pull.conf -d
+```
+
+The output is the same as with Push: talker and listener take turns. But who drives whom is the other way round.
+
+| Kind | What the EC runs | How the value flows |
+| --- | --- | --- |
+| `Push` | the sender (talker) | when the talker runs, it pushes its output to the listener and runs the listener too |
+| `Pull` | the receiver (listener) | when the listener runs, it runs the talker to get the value for its argument `arg1` |
+
+Use Push when you want to process every new sensor value, and Pull when the processing side wants to fetch the latest value at its own rate.
+
 ## Compare with call
 
-With the EC stopped, call the talker from outside.
-Copy `talker_listener.conf` into a configuration file with `auto_start: false` and restart with it.
+Stop the EC and call the talker from outside.
+Make a copy of `talker_listener.conf` with `auto_start: false` and restart with it.
 
 <Tabs syncKey="platform">
 <TabItem label="Linux">
@@ -281,38 +228,51 @@ juiz -f talker_listener_stop.conf -d
 </TabItem>
 </Tabs>
 
-This time nothing is printed after startup. The EC is not running, so nothing runs the Processes.
+This time nothing is printed. The EC is not running, so nothing runs the Processes.
 From another terminal, call the talker and the listener.
 
 ```sh
-juiz process call "http://127.0.0.1:8000/process/talker0::talker" '{}' -p
-# => CapsulePtr((value:Value("Hello World"), option: []))
-juiz process call "http://127.0.0.1:8000/process/listener0::listener" '{"arg1": "Hi"}' -p
-# => CapsulePtr((value:Value("Hello World"), option: []))
+juiz process call "http://127.0.0.1:8000/process/talker_talk0::talker_talk" '{}' -p
+# => CapsulePtr((value:Value("Hello, juiz!"), option: []))
+juiz process call "http://127.0.0.1:8000/process/listener_listen0::listener_listen" '{"arg1": "Hi"}' -p
+# => CapsulePtr((value:Value("Hi"), option: []))
 ```
 
-When you call the talker, the terminal running `juiz` shows only the talker's output; the listener prints nothing.
-call just "calls and returns the result"; it does not send that result down the connection. Values flow along connections only when an EC runs a Process.
-The listener, too, returns a result like any ordinary Process when you call it directly with an argument.
+When you call the talker, the terminal running `juiz` shows only `talker: Hello, juiz!`; the listener prints nothing.
+A call only runs the Process and returns the result; it does not send the result down the connection. Values flow along connections when an EC runs the Process.
+The listener, called directly with an argument, works like any Process: it prints `listener: Hi` and returns the result.
 
 So juiz has two ways to use a Process.
 
-- **call**: pass arguments from outside, call the Process, and get the result back. This is like a server and client.
-- **connect**: connect a Process's output to another Process's input and keep values flowing at times decided by an EC. This is close to dataflow robot middleware such as ROS.
+- **call**: pass arguments from outside, run it, and get the result. A server/client style.
+- **connect**: connect a Process's output to another Process's input and keep values flowing at the timing an EC decides. Close to data-flow robot middleware such as ROS.
 
-The same Process works either way. The Process's code does not need to know which way it is used.
+The same Process works both ways. Its code does not need to know which way it is used.
+
+## Separate juiz instances or one juiz
+
+| | Separate juiz instances (chapter 4) | One juiz (this chapter) |
+| --- | --- | --- |
+| Starting | start one `juiz` per part | start one `juiz` |
+| Passing values | through a broker such as HTTP | inside the same process (fast) |
+| When one fails | the other keeps running | they stop together |
+| Where they run | can be on different computers | on the same computer only |
+
+Either way the Process code is the same. You choose how to run it in the configuration files.
 
 ## Try it yourself
 
-- Change `rate` to `2.0`, restart, and confirm that the interval between outputs is halved.
-- Change the Process in `bind` from `talker0` to `listener0`. The listener keeps printing its default `Hello, Juiz!`, and the talker never runs. An EC runs only the Processes listed in `bind`, and a connection works only when its `source` runs.
-- To `app/app.conf` of `my_juiz` from chapter 3 (the one where `p_apply` of `my_juiz_add0` is `a: 10` and `my_juiz_add1` exists), add `connections` that connect the output of `my_juiz_add0` to `a` of `my_juiz_add1`, and `ecs` that runs `my_juiz_add0`. In the web UI, `my_juiz_add1` shows `10`, the result of `my_juiz_add0`, in its argument `a` (`juiz process info` shows it too).
+- Change `rate` to `2.0`, restart, and check that the interval halves.
+- Keeping Push, change the Process in `bind` from `talker_talk0` to `listener_listen0`. The listener gets its default, an empty string, and keeps printing `listener: `, while the talker never runs. An EC runs only the Processes in `bind`, and a Push connection only acts when its `source` runs.
+- Remove `connections` and write `publishes` / `subscribes` in `processes` as in chapter 4 (`publishes: [chatter]` for `talker_talk0`, `subscribes: {arg1: chatter}` for `listener_listen0`). Topics work inside one juiz too.
+- In `app/app.conf` of `my_juiz` from chapter 3 (with `p_apply` of `my_juiz_add0` set to `a: 10`, and with `my_juiz_add1`), add `connections` from the output of `my_juiz_add0` to `a` of `my_juiz_add1`, and `ecs` that runs `my_juiz_add0`. In the web UI, `my_juiz_add1` shows `10`, the result of `my_juiz_add0`, in its argument `a` (`juiz process info` shows it too).
 
 ## Summary
 
-- Writing entries in `connections` connects a Process's output to another Process's argument (connect). With `Push`, a value flows to `destination` every time `source` runs.
-- When a Process runs is decided by an Execution Context (EC), not by the Process itself. `main_loop_ec` runs the Processes in `bind` at the period set by `rate`.
-- call only returns the result and does not send values down connections. Values flow when an EC runs a Process.
-- The configuration file entries are also summarized in [the Configuration file guide](/guides/config/).
+- Listing several libraries in `components` of `plugins` runs separately made parts in one juiz.
+- `connections` connects a Process's output to another Process's argument (connect). With `Push` values flow when the sender runs, with `Pull` when the receiver runs.
+- When a Process runs is decided by an Execution Context (EC), not by the Process itself. `main_loop_ec` runs the Processes in `bind` at the `rate`.
+- A call only returns the result and does not send values down connections. Values flow when an EC runs the Process.
+- The configuration keys are also listed in [the Configuration file guide](/guides/config/).
 
-In the next chapter you learn how to bundle the Processes and Containers you have written in separate files into one project for distribution. Move on to [Packaging as a Component](/tutorial/component/).
+In the next chapter you read a Component, which bundles Processes, Containers and ContainerProcesses into one library, in the example repository. Move on to [Packaging as a Component (Rust)](/tutorial/component/rust/).

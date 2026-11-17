@@ -28,7 +28,7 @@ A type is how a Process or Container is made (its code). The name of a function 
 
 ### Component
 
-A library that bundles several types (Processes, Containers and ContainerProcesses). The skeletons made by `juiz pkg create` are written as Components. → [Chapter 5](/tutorial/component/)
+A library that bundles several types (Processes, Containers and ContainerProcesses). The skeletons made by `juiz pkg create` are written as Components. → [Chapter 6](/tutorial/component/)
 
 ### Plugin
 
@@ -66,19 +66,19 @@ The initial value of an argument written in the type's definition (in Rust, `arg
 
 ### Execution Context (EC, 実行文脈)
 
-A building block that decides when to run Processes. `main_loop_ec` executes the Processes `bind`-ed to it at a fixed rate, and `one_shot_ec` executes them once. → [Chapter 4](/tutorial/connect/)
+A building block that decides when to run Processes. `main_loop_ec` executes the Processes `bind`-ed to it at a fixed rate, and `one_shot_ec` executes them once. → [Chapter 5](/tutorial/connect/)
 
 ### connect (接続)
 
-Connecting the output of a Process to an argument of another Process, so that the robot runs as a flow of data. → [Chapter 4](/tutorial/connect/)
+Connecting the output of a Process to an argument of another Process, so that the robot runs as a flow of data. → [Chapter 4](/tutorial/multi-process/), [Chapter 5](/tutorial/connect/)
 
 ### Push and Pull (押込・引込)
 
-The two kinds of connection. With Push, when the source runs, its output is passed to the destination and the destination runs too. With Pull, when the destination runs, it runs the source to fetch the value.
+The two kinds of connection. With Push, when the source runs, its output is passed to the destination and the destination runs too. With Pull, when the destination runs, it runs the source to fetch the value. → [Chapter 5](/tutorial/connect/)
 
 ### Topic (話題) and publish / subscribe (発行・購読)
 
-A named channel. A Process sends its output under a name (publish), and it is delivered to the arguments of the Processes that receive that name (subscribe). Senders and receivers are connected without knowing each other's IDs. In the configuration file, write them under `publishes` and `subscribes`.
+A named channel. A Process sends its output under a name (publish), and it is delivered to the arguments of the Processes that receive that name (subscribe). Senders and receivers are connected without knowing each other's IDs. In the configuration file, write them under `publishes` and `subscribes`. → [Chapter 4](/tutorial/multi-process/)
 
 ## Starting and communicating
 
@@ -88,7 +88,7 @@ The YAML file you pass to `juiz -f`. It says what to load (`plugins`), what to c
 
 ### System (系)
 
-Everything in one `juiz` process: its instances, brokers and so on. When you connect another System as a **subsystem**, you can call its instances by ID as well. → [Chapter 6](/tutorial/multi-process/)
+Everything in one `juiz` process: its instances, brokers and so on. When you connect another System as a **subsystem**, you can call its instances by ID as well. In the configuration file, write it under `subsystems` or `mastersystem`. → [Chapter 4](/tutorial/multi-process/)
 
 ### Broker (仲介)
 

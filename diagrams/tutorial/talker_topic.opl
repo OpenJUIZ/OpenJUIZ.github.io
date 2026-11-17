@@ -1,0 +1,23 @@
+Model "talker".
+
+"chatter" is an object [role: topic, name: chatter].
+
+"talker" is an object [role: system, name: talker].
+"talker" consists of "chatter".
+"talker" consists of "talker_ec".
+"talker" exhibits "talker_talk0".
+
+"talker_ec" is an object [role: ec, name: talker_ec, type: main_loop_ec, rate: 1].
+"talker_ec" can be stopped or started.
+"talker_ec" is initially started.
+
+"talker_ec cycle" is a process [role: ec_cycle].
+"talker_ec cycle" occurs if "talker_ec" is started, otherwise "talker_ec cycle" is skipped.
+"talker_ec cycle" invokes "talker_talk0" [order: 0].
+"talker_ec cycle" invokes itself.
+
+"talker_talk0" is a process [role: process, name: talker_talk0, type: talker_talk].
+"talker_talk0" yields "chatter".
+"talker_talk0" yields "talker_talk0 out".
+
+"talker_talk0 out" is an object [role: value, value_kind: output].

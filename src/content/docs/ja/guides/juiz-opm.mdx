@@ -13,7 +13,7 @@ import { Tabs, TabItem } from '@astrojs/starlight/components';
 図は **略式図** という 1 種類の描き方で描きます。Process は楕円、Container は箱、EC は状態を持つ箱、System は枠で、引数は楕円の縁の小さな丸です。
 このサイトの [チュートリアル](/ja/tutorial/) の各章にある図も、このコマンドで各章の設定ファイルから描いたものです。
 
-![チュートリアル第 4 章の talker_listener を描いた略式図。EC ec0 が talker0 を 1 秒ごとに起こし、talker0 の出力が push 接続で listener0 の引数 arg1 に渡る](../../../../assets/tutorial-diagrams/talker_listener.png)
+![チュートリアル第 5 章の talker_listener を描いた略式図。EC ec0 が talker_talk0 を 1 秒ごとに起こし、talker_talk0 の出力が push 接続で listener_listen0 の引数 arg1 に渡る](../../../../assets/tutorial-diagrams/talker_listener.png)
 
 :::note[juiz とは別のコマンドです]
 juiz_opm は `juiz` コマンドには入っていません。juiz を動かすのに juiz_opm は要りません。
@@ -73,7 +73,7 @@ juiz_opm --help
 
 ## 設定ファイルを図にする
 
-[第 4 章](/ja/tutorial/connect/) の `talker_listener.conf` を例にします。サンプル集のルートで実行してください。
+[第 6 章](/ja/tutorial/component/) から使うサンプル集の `talker_listener.conf` を例にします。サンプル集のルートで実行してください。
 
 ```sh
 juiz_opm from-conf talker_listener.conf -o talker_listener.opl   # モデルを作る
@@ -162,23 +162,25 @@ OPM の規則(C1〜C12)と juiz の規則(J1〜J13)に合っているかを確�
 
 ![initial_value と p_apply を足した第 3 章の略式図。counter0 の帯に initial_value 3、my_juiz_add0 の引数 a と counter_increment0 の引数 step に p_apply の値](../../../../assets/tutorial-diagrams/tutorial_p_apply.png)
 
-### 第 4 章: talker_listener.conf
+### 第 4 章: talker と listener の app/app.conf(Topic)
 
-EC `ec0` が `talker0` を 1 秒ごとに動かし、`talker0` の出力が push 接続 `con0` で `listener0` の引数 `arg1` に渡ります。→ [4. Process をつなぐ](/ja/tutorial/connect/)
+talker の juiz では EC `talker_ec` が `talker_talk0` を 1 秒ごとに動かし、出力を Topic `chatter` に publish します。listener の juiz では `listener_listen0` が `chatter` を引数 `arg1` で subscribe します。2 つの juiz をつなぐ `mastersystem` は、図には出てきません。→ [4. 別々のプロセスで動く Process をつなぐ](/ja/tutorial/multi-process/)
+
+![talker の juiz の略式図](../../../../assets/tutorial-diagrams/talker_topic.png)
+
+![listener の juiz の略式図](../../../../assets/tutorial-diagrams/listener_topic.png)
+
+### 第 5 章: talker_listener.conf
+
+EC `ec0` が `talker_talk0` を 1 秒ごとに動かし、`talker_talk0` の出力が push 接続 `con0` で `listener_listen0` の引数 `arg1` に渡ります。→ [5. 1 つの juiz で複数のライブラリをつなぐ](/ja/tutorial/connect/)
 
 ![talker_listener の略式図](../../../../assets/tutorial-diagrams/talker_listener.png)
 
-### 第 5 章: example_component.conf
+### 第 6 章: example_component.conf
 
-Component から作った Process `proc0` と、初期値 100 の Container `container0`。→ [5. Component にまとめて配布する](/ja/tutorial/component/)
+Component から作った Process `proc0` と、初期値 100 の Container `container0`。→ [6. Component にまとめて配布する](/ja/tutorial/component/)
 
 ![example_component の略式図。Container container0 の中に add0・get0・increment0、外に Process proc0](../../../../assets/tutorial-diagrams/example_component.png)
-
-### 第 6 章: talker_ec.conf
-
-talker 側の juiz です。EC は止まった状態(`auto_start: false`)で起動します。listener 側の juiz とはコマンドでつなぐので、その接続は設定ファイルにも図にも出てきません。→ [6. 別々のプロセスをつなぐ](/ja/tutorial/multi-process/)
-
-![talker_ec の略式図。EC ec0 の stopped が太枠](../../../../assets/tutorial-diagrams/talker_ec.png)
 
 ### 第 8 章: typed_pose.conf
 

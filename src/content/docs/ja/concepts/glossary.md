@@ -28,7 +28,7 @@ sidebar:
 
 ### Component
 
-複数の型(Process・Container・ContainerProcess)を 1 つのライブラリにまとめたものです。`juiz pkg create` の雛形は Component の形で書かれています。→ [第 5 章](/ja/tutorial/component/)
+複数の型(Process・Container・ContainerProcess)を 1 つのライブラリにまとめたものです。`juiz pkg create` の雛形は Component の形で書かれています。→ [第 6 章](/ja/tutorial/component/)
 
 ### プラグイン
 
@@ -66,19 +66,19 @@ sidebar:
 
 ### Execution Context(EC、実行文脈)
 
-Process をいつ実行するかを決める部品です。`main_loop_ec` は決まった周期で、`one_shot_ec` は一度だけ、`bind` した Process を execute します。→ [第 4 章](/ja/tutorial/connect/)
+Process をいつ実行するかを決める部品です。`main_loop_ec` は決まった周期で、`one_shot_ec` は一度だけ、`bind` した Process を execute します。→ [第 5 章](/ja/tutorial/connect/)
 
 ### connect(接続)
 
-Process の出力を、別の Process の引数につなぐ使い方です。データの流れとしてロボットを動かします。→ [第 4 章](/ja/tutorial/connect/)
+Process の出力を、別の Process の引数につなぐ使い方です。データの流れとしてロボットを動かします。→ [第 4 章](/ja/tutorial/multi-process/)・[第 5 章](/ja/tutorial/connect/)
 
 ### Push と Pull(押込・引込)
 
-接続の種類です。Push は、送り元が実行されたら、その出力を送り先に渡して送り先も実行します。Pull は、送り先が実行されるときに、送り元を実行して値を取ってきます。
+接続の種類です。Push は、送り元が実行されたら、その出力を送り先に渡して送り先も実行します。Pull は、送り先が実行されるときに、送り元を実行して値を取ってきます。→ [第 5 章](/ja/tutorial/connect/)
 
 ### Topic(話題)と publish / subscribe(発行・購読)
 
-名前の付いた通り道で、Process の出力を名前で流し(publish)、その名前を受け取る Process の引数に届けます(subscribe)。送り手と受け手が互いの ID を知らなくてもつながります。設定ファイルでは `publishes`・`subscribes` に書きます。
+名前の付いた通り道で、Process の出力を名前で流し(publish)、その名前を受け取る Process の引数に届けます(subscribe)。送り手と受け手が互いの ID を知らなくてもつながります。設定ファイルでは `publishes`・`subscribes` に書きます。→ [第 4 章](/ja/tutorial/multi-process/)
 
 ## 起動と通信
 
@@ -88,7 +88,7 @@ Process の出力を、別の Process の引数につなぐ使い方です。デ
 
 ### System(系)
 
-1 つの `juiz` のプロセスの中にある、インスタンス・ブローカーなど全体のことです。別の System を**サブシステム**としてつなぐと、相手のインスタンスも ID で呼べます。→ [第 6 章](/ja/tutorial/multi-process/)
+1 つの `juiz` のプロセスの中にある、インスタンス・ブローカーなど全体のことです。別の System を**サブシステム**としてつなぐと、相手のインスタンスも ID で呼べます。設定ファイルでは `subsystems`・`mastersystem` に書きます。→ [第 4 章](/ja/tutorial/multi-process/)
 
 ### Broker(仲介)
 

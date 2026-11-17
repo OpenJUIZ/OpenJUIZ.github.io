@@ -1,19 +1,19 @@
 ---
-title: 5. Component にまとめて配布する
+title: 6. Component にまとめて配布する
 description: Process・Container・ContainerProcess を 1 つのライブラリにまとめ、設定ファイル 1 行で読み込みます。Component が配布の単位であることを学びます。使う言語を選んでください。
 sidebar:
-  order: 5
+  order: 6
   label: 概要
 prev:
   link: /ja/tutorial/connect/
-  label: "4. Process をつなぐ: connect と Execution Context"
+  label: "5. 1 つの juiz で複数のライブラリをつなぐ: connect と Execution Context"
 next: false
 ---
 
 import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 第 1〜3 章の雛形では、Process・Container・ContainerProcess を 1 つのソースに書いて 1 つのライブラリにし、`app/app.conf` の `plugins` の `components` に 1 行書いて読み込みました。
-一方、第 4 章のサンプルの talker と listener は、1 つの型ごとに別々のファイル(ライブラリ)にして、`process_factories` に型を 1 つずつ並べて読み込みました。
+一方、サンプル集の talker と listener は、1 つの型ごとに別々のファイル(ライブラリ)にして、`process_factories` に型を 1 つずつ並べて読み込みました。
 
 実際に「このカメラを動かす部品一式」を誰かに渡すときに、ファイルがばらばらだと不便です。
 この章では、雛形がとっていた形、つまり Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を、サンプル集の例で改めて読み、型ごとのファイルと比べます。
@@ -24,7 +24,7 @@ import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 - `plugins` の `components` には、型ではなく Component の名前を 1 つ書けばよいこと
 </Aside>
 
-第 4 章でクローンしてビルドしたサンプル集をそのまま使います。Component の書き方は言語ごとに違うので、使う言語を選んでください。
+この章からは、サンプル集をクローンしてビルドし、そのファイルを読みながら進めます。用意のしかたは、各言語のページの最初にあります。Component の書き方は言語ごとに違うので、使う言語を選んでください。
 
 <CardGrid>
 	<LinkCard title="Rust" href="/ja/tutorial/component/rust/" description="Component 用の属性マクロと juiz_component_manifest! で、1 つのクレートにまとめます。" />

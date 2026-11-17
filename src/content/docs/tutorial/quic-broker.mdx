@@ -1,15 +1,15 @@
 ---
 title: "7. Choosing a transport: the QUIC broker"
-description: Connect separate juiz instances as in chapter 6, but over the QUIC broker instead of HTTP. Learn that the transport is a broker you can swap, and that the start of an ID tells which one is used.
+description: Connect separate juiz instances as in chapter 4, but over the QUIC broker instead of HTTP. Learn that the transport is a broker you can swap, and that the start of an ID tells which one is used.
 sidebar:
   order: 7
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-In chapter 6 you connected separately started juiz instances through the HTTP broker.
+In chapter 4 you connected separately started juiz instances through the HTTP broker.
 In juiz, the part that talks to other juiz instances and outside programs is called a **broker**, and you choose brokers in the configuration file.
-In this chapter you connect the talker and the listener as in chapter 6, but through the QUIC broker instead of HTTP.
+In this chapter you start the talker and the listener of the example repository in separate juiz instances and connect them as in chapter 4, but through the QUIC broker instead of HTTP.
 
 <Aside type="tip" title="What you will learn">
 - The transport is chosen as a broker, without changing the Process code
@@ -307,9 +307,9 @@ The commands you type in terminal 3 can also send requests to `qmp://` IDs as th
 
 ## Start the listener
 
-As in chapter 6, this chapter uses three terminals. Open each of them at the root of the example repository (for Python, activate the venv in every terminal).
+As in chapter 4, this chapter uses three terminals. Open each of them at the root of the example repository (for Python, activate the venv in every terminal).
 
-In terminal 1, start the listener. It is the chapter 6 command with `-f listener_qmp.conf` added.
+In terminal 1, start the listener. `--process` loads the listener file of the example repository, `-1` creates one instance, and `-f listener_qmp.conf` adds the QUIC broker settings.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -475,7 +475,7 @@ The same listener has two IDs, one starting with `http://` and one with `qmp://`
 
 ## Start the talker
 
-In terminal 2, start the talker. Again, it is the chapter 6 command with `-f talker_qmp.conf` added.
+In terminal 2, start the talker. `-r 1.0` keeps running the created instance once a second. `-f talker_qmp.conf` adds the QUIC broker settings.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -599,12 +599,12 @@ juiz -s qmp://127.0.0.1:5001 process list
 </Tabs>
 
 <Aside type="note">
-As in chapter 6, the second juiz registers itself as a subsystem of the first one. This registration goes through the HTTP broker, so if you run `juiz -s qmp://127.0.0.1:5000 process list` now, the talker appears with an `http://127.0.0.1:8001/...` ID.
+Port 8000 of the HTTP broker is taken by the listener's juiz, so the second juiz listens on 8001 and registers itself as a subsystem of the first one. This registration goes through the HTTP broker, so if you run `juiz -s qmp://127.0.0.1:5000 process list` now, the talker appears with an `http://127.0.0.1:8001/...` ID.
 </Aside>
 
 ## Connect over QUIC
 
-In terminal 3, connect the talker's output to the listener's argument `arg1`. Just replace the IDs in the chapter 6 command with `qmp://` IDs.
+In terminal 3, connect the talker's output to the listener's argument `arg1`. Use `juiz connection create` as in chapter 4, with `qmp://` IDs.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
@@ -825,7 +825,6 @@ The same `value` comes back as with the HTTP broker. The `option` is empty, as w
 
 ## Try it yourself
 
-- Add the same `brokers` as in `talker_qmp.conf` to `talker_ec.conf` from chapter 6 and start it. Find the EC's ID with `juiz -s qmp://127.0.0.1:5001 ec list`, and start it with `juiz -s qmp://127.0.0.1:5001 ec start <ID>`.
 - Connect again with only the destination changed to the `http://127.0.0.1:8000/...` ID. The listener's juiz runs both brokers, so the values arrive through either ID.
 - Send `juiz -s qmp://127.0.0.1:5002 process list` to a port nobody listens on. QUIC runs over UDP, so the failure is not noticed right away; after a while you get the error `connecting to qmp broker '127.0.0.1:5002' (127.0.0.1:5002) timed out`.
 
