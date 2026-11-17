@@ -40,4 +40,8 @@ import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 | Process `listener` | 引数 `arg1` で受け取った文字列を表示する |
 | 設定ファイル `talker_listener.conf` | 2 つをつないで、EC で 1 秒ごとに動かす |
 
+このシステムを [juiz_opm](/ja/guides/juiz-opm/) の略式図で描くと、次のようになります(図の読み方は [システムを図にする](/ja/guides/juiz-opm/#略式図の読み方) にあります)。
+
+![EC ec0 が talker0 を 1 秒ごとに動かし、talker0 の出力が push 接続 con0 で listener0 の引数 arg1 に渡る略式図](../../../../assets/tutorial-diagrams/talker_listener.png)
+
 ここでクローンしたサンプル集は、第 5 章から第 8 章でもそのまま使います。

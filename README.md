@@ -16,6 +16,14 @@ npm run build    # ./dist に出力
 - サイドバーは `astro.config.mjs` の `sidebar` で、ディレクトリごとに自動生成しています。
 - 日本語訳がないページは、英語のページが表示されます。英語と日本語で同じパス(`/tutorial/...` と `/ja/tutorial/...`)にそろえてください。
 
+## チュートリアルの図
+
+チュートリアルの各章に載せている略式図は、[juiz_opm](https://github.com/OpenJUIZ/juiz_opm) で `diagrams/tutorial/` の設定ファイルから作っています。設定ファイルは各章の Rust の例を写したものです。章の設定ファイルを変えたら、ここも直して作り直してください(juiz_opm・Graphviz・rsvg-convert が要ります)。
+
+```sh
+sh diagrams/tutorial/make.sh   # src/assets/tutorial-diagrams/*.png と diagrams/tutorial/*.opl を書き直す
+```
+
 ## 公開
 
 `main` ブランチに push すると、GitHub Actions (`.github/workflows/deploy.yml`) がビルドして GitHub Pages に公開します。

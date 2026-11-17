@@ -413,6 +413,10 @@ The configuration file connects three Processes.
 twist0 (twist_python, outputs Twist2D) --Pull--> move0 (pose_move) --Push--> print0 (pose_print_python, prints Pose2D)
 ```
 
+Drawn as an abbreviated diagram with [juiz_opm](/guides/juiz-opm/), this system looks like this (see [Drawing a system](/guides/juiz-opm/#reading-the-abbreviated-diagram) for how to read it).
+
+![Abbreviated diagram: pull from twist0 to the argument twist of move0, push from move0 to the argument pose of print0](../../../assets/tutorial-diagrams/typed_pose.png)
+
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 

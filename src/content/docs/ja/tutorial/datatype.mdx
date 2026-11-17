@@ -411,6 +411,10 @@ juiz idl -g python -o gen types/geometry.jidl
 twist0 (twist_python, Twist2D を出す) --Pull--> move0 (pose_move) --Push--> print0 (pose_print_python, Pose2D を表示)
 ```
 
+このシステムを [juiz_opm](/ja/guides/juiz-opm/) の略式図で描くと、次のようになります(図の読み方は [システムを図にする](/ja/guides/juiz-opm/#略式図の読み方) にあります)。
+
+![twist0 から move0 の引数 twist へ pull、move0 から print0 の引数 pose へ push でつながる略式図](../../../../assets/tutorial-diagrams/typed_pose.png)
+
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 

@@ -713,6 +713,10 @@ ecs:
 </TabItem>
 </Tabs>
 
+この設定ファイルのシステム(talker 側の juiz)を [juiz_opm](/ja/guides/juiz-opm/) の略式図で描くと、次のようになります(図の読み方は [システムを図にする](/ja/guides/juiz-opm/#略式図の読み方) にあります)。
+
+![EC ec0 が stopped の状態で、talker0 を 1 秒ごとに動かす略式図](../../../../assets/tutorial-diagrams/talker_ec.png)
+
 ターミナル 2 で、この設定ファイルを使って起動し直します。`port: 8000` と書いてありますが、8000 番は listener の juiz が使っているので、やはり 8001 番で待ち受けます。
 
 ```sh

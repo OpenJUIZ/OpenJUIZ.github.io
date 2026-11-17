@@ -40,4 +40,8 @@ In every language, this chapter uses the following.
 | Process `listener` | Prints the string received in the argument `arg1` |
 | Configuration file `talker_listener.conf` | Connects the two and runs them every second from an EC |
 
+Drawn as an abbreviated diagram with [juiz_opm](/guides/juiz-opm/), this system looks like this (see [Drawing a system](/guides/juiz-opm/#reading-the-abbreviated-diagram) for how to read it).
+
+![Abbreviated diagram: the EC ec0 runs talker0 every second, and the output of talker0 goes to the argument arg1 of listener0 over the push connection con0](../../../assets/tutorial-diagrams/talker_listener.png)
+
 You keep using the example repository you clone here in chapters 5 to 8.

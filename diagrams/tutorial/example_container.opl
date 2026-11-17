@@ -1,0 +1,20 @@
+Model "example_container".
+
+"container0" is an object [role: container, name: container0, type: example_container].
+
+"example_container" is an object [role: system, name: example_container].
+"example_container" consists of "container0".
+"example_container" exhibits "get0".
+"example_container" exhibits "increment0".
+
+"get0" is a process [role: container_process, name: get0, type: example_container_get].
+"get0" affects "container0".
+"get0" yields "get0 out".
+
+"get0 out" is an object [role: value, value_kind: output].
+
+"increment0" is a process [role: container_process, name: increment0, type: example_container_increment].
+"increment0" affects "container0".
+"increment0" yields "increment0 out".
+
+"increment0 out" is an object [role: value, value_kind: output].
