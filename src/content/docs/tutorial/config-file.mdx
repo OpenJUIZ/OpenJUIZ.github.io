@@ -1,11 +1,14 @@
 ---
-title: 3. Starting everything from a configuration file
+title: "3. Starting everything from a configuration file (all languages)"
 description: Read app/app.conf from the skeleton of chapters 1 and 2, and edit it to add instances and pass initial values, learning the difference between loading and instantiating.
 sidebar:
   order: 3
 prev:
   link: /tutorial/container/
   label: "2. Keeping state: Container and ContainerProcess"
+next:
+  link: /tutorial/connect/
+  label: "4. Connecting Processes: connect and Execution Context"
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
@@ -19,6 +22,7 @@ In this chapter you read `app/app.conf` and edit it yourself to add instances an
 - One type can produce several instances with different names
 - Per-instance settings, such as a Container's initial value, can be passed in the configuration file
 - `p_apply` gives initial values to a Process's arguments
+- call, call_partial and execute fill in the arguments you leave out differently
 </Aside>
 
 ## Prepare the project
@@ -360,7 +364,7 @@ Set `a` of `my_juiz_add0` to 10 and `step` of `counter_increment0` to 5.
 
 A `p_apply` value goes into that argument right after the instance is created, and becomes its initial value.
 It is used when the Process is **executed** without arguments. The Execution Context in the next chapter runs Processes this way.
-The call you have used so far does not use `p_apply` values. Arguments left out of a call take the defaults written in the type (0 for `a` of `my_juiz_add`).
+The call you have used so far does not use `p_apply` values. Arguments left out of a call take the defaults written in the type (0 for `a` of `my_juiz_add`). To use the `p_apply` values in a call as well, use **call_partial**, described below.
 
 Restart `juiz` and execute them without arguments through the `execute` HTTP API. The command is the same in every language.
 
@@ -424,6 +428,31 @@ Drawn as an abbreviated diagram, the system after adding `initial_value` and `p_
 
 ![Abbreviated diagram: initial_value 3 in the band of counter0, and p_apply values on the argument a of my_juiz_add0 and the argument step of counter_increment0](../../../assets/tutorial-diagrams/tutorial_p_apply.png)
 
+### Calling with the p_apply values: call_partial
+
+To use the `p_apply` values in a call too, call the Process with **call_partial**.
+Arguments you pass are used as given; arguments you leave out are filled in from the `p_apply` values (or from the defaults when there is no `p_apply` value), and the result is returned.
+The values you pass do not overwrite the `p_apply` values.
+In the `juiz` command it is `call-partial`. The command is the same for every language.
+
+```sh
+juiz process call-partial "http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add" '{"b": 5}' -p
+# => CapsulePtr((value:Value(15), option: []))
+juiz process call "http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add" '{"b": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+```
+
+With the same `{"b": 5}`, call_partial used the `p_apply` value 10 for `a` and returned `15`, while call used the default 0 and returned `5`.
+For a ContainerProcess, use `juiz container-process call-partial` (in the HTTP API, `api/process/call_partial` and `api/container_process/call_partial`).
+
+Here is what goes into the arguments you leave out, for the three ways of running a Process.
+
+| How it runs | Arguments you pass | Arguments you leave out |
+| --- | --- | --- |
+| call | used | the type's defaults |
+| call_partial | used | the `p_apply` values (or the defaults) |
+| execute | (none passed) | the `p_apply` values (or the defaults) |
+
 ## Try it yourself
 
 - Start with a configuration file that keeps only `plugins`, removing `processes` and `containers`, and look at `juiz process list`. It returns an empty list `[]`. Loading alone does not create instances (put it back afterwards).
@@ -436,7 +465,7 @@ Drawn as an abbreviated diagram, the system after adding `initial_value` and `p_
 - `components` in `plugins` lists Component libraries that bundle several types. One-type files go under `process_factories` / `container_factories`.
 - One type can produce several instances with different names. The instance name becomes part of the ID.
 - Per-instance settings, such as a Container's initial value, can be passed in the configuration file.
-- `p_apply` gives initial values to a Process's arguments. They are used when the Process runs without arguments (for example, when an Execution Context runs it).
+- `p_apply` gives initial values to a Process's arguments. They are used when the Process runs without arguments (for example, when an Execution Context runs it). To use them in a call, use call_partial.
 - The configuration file items are summarized in the [Configuration file guide](/guides/config/).
 
 In the next chapter you add connections between Processes, and when to run them, to the configuration file. Move on to [Connecting Processes: connect and Execution Context](/tutorial/connect/).

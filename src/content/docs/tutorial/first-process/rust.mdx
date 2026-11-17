@@ -15,7 +15,7 @@ next:
 import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 In this chapter you create a Rust project skeleton with `juiz pkg create`, then build and run the Process in it, which adds two numbers and returns the sum.
-Once it runs, you read the files in the skeleton one by one.
+You first read the Process code, which is the heart of the project, then run it and call it from a browser and from a terminal. Finally you read the other files in the skeleton.
 
 <Aside type="tip" title="What you will learn">
 - How to create a Cargo project skeleton for writing Processes with `juiz pkg create`
@@ -90,7 +90,51 @@ The skeleton contains the following files.
 
 In juiz, a Process is built as a shared library (`.so`, `.dylib` or `.dll`), and the `juiz` command loads it as a plugin.
 In the skeleton, the types written in `src/lib.rs` are built together into one shared library, which is loaded and started as written in `app/app.conf`.
-Run it first, then read what is inside.
+Start with the Process code, the heart of what you develop.
+
+## The Process code: src/lib.rs
+
+```rust title="src/lib.rs"
+use juiz_sdk::prelude::*;
+
+#[juiz_component_process(
+    description = "Returns a + b."
+    arguments = { default = { a = 0 b = 0 } }
+)]
+fn my_juiz_add(a: i64, b: i64) -> JuizResult<i64> {
+    Ok(a + b)
+}
+
+juiz_component_manifest!(
+    component_name = "my_juiz"
+    processes = [ my_juiz_add ]
+);
+```
+
+The comment at the top of the file and the test at the end (the `#[cfg(test)]` part) are left out.
+
+| Part | Meaning |
+| --- | --- |
+| `use juiz_sdk::prelude::*;` | Brings in the macros and types used to write Processes (`juiz_component_process`, `JuizResult` and so on) |
+| `#[juiz_component_process(...)]` | Makes this function a Process |
+| `description` | The description of the Process, shown in the web UI and elsewhere |
+| `arguments = { default = { a = 0 b = 0 } }` | The default values of the arguments, used for arguments left out of a call |
+| `fn my_juiz_add(a: i64, b: i64)` | The function name `my_juiz_add` becomes the **type name** of the Process, and the parameter names `a` and `b` become the argument names |
+| `-> JuizResult<i64>` | The return value. Return `Ok(value)` on success and `Err(...)` on failure |
+| `juiz_component_manifest!(...)` | The list of types in this library. `component_name` is the library name, and `processes` lists the Process functions |
+
+The Process itself is a short function that returns `a + b`. The macros generate the code that passes values to and from juiz.
+
+The skeleton is written in the form of a **Component**, which bundles several types into one library (hence the names `juiz_component_*`).
+In this chapter there is only one Process, but in chapter 2 you add a Container to the same file. Chapter 5 covers Components in detail.
+
+`cargo test` runs the test at the end (it checks that `my_juiz_add` returns 3 for 1 and 2).
+
+## A Process is an idempotent function
+
+`my_juiz_add` only takes arguments and returns a result.
+It does not read or write any outside state, so the same arguments always give the same result (it is idempotent).
+Thanks to this, Processes are easy to test, and they behave the same when you later connect them or move them to another machine.
 
 ## Build
 
@@ -153,9 +197,36 @@ juiz -f app/app.conf -d
 
 On start-up it prints `juiz 管理画面: http://localhost:8000/ui/` (the address of the web UI). The HTTP broker is listening on port 8000.
 
-## Call it from outside
+## Call it from a browser
 
-Leave `juiz` running, open another terminal, go to `my_juiz` and call the Process.
+Leave `juiz` running and open the web UI at `http://localhost:8000/ui/` in a browser. You see a screen like this.
+
+![The web UI. my_juiz_add0 under "処理 Process" on the left, and an ellipse for my_juiz_add0 in the diagram in the middle](../../../../assets/tutorial-web-ui/first-process-top.png)
+
+The UI labels are in Japanese, with the English names used on this site shown in small type next to them. The screen has three parts.
+
+- **The list on the left**: what is running. Under "処理 Process" (Process) you see the instance `my_juiz_add0` next to its type name `my_juiz_add`.
+- **The diagram in the middle**: a diagram of the system. A Process is drawn as an ellipse; the large text is the instance name and the small text is the type name.
+- **The panel on the right**: the properties (details) of what you select. It is empty because nothing is selected yet.
+
+Click `my_juiz_add0` in the list or in the diagram, and its details appear in the right panel.
+Scroll the right panel down to the heading "呼び出す" (Call), where you find input fields for the arguments `a` and `b`.
+Enter `1` for `a` and `2` for `b`, then press the "呼び出す" (Call) button. If `3` appears under "結果" (Result), it worked.
+
+![Close-up of the right panel: the argument table (a and b, type Int, default 0), the call form with a=1 and b=2, and the result 3](../../../../assets/tutorial-web-ui/first-process-call.png)
+
+Look at the rest of the panel as well.
+
+- The "引数" (Arguments) table lists each argument's name, type and default value (既定値). The default is what is used for an argument you leave out when calling, and it is the `default` you wrote in the code. ("拘束値", the bound value, is covered in chapter 3.)
+- "既定値に戻す" (Reset to defaults) puts the default values (`0`) back in the fields. "JSON で編集" (Edit as JSON) lets you write all the arguments as JSON.
+- "基本" (Basics) near the top shows the type name and the identifier (ID) of this Process.
+
+Change the values and call it a few times. With the same arguments, you always get the same result.
+See the [Web UI guide](/guides/web-ui/) for more on the web UI.
+
+## Call it from a terminal
+
+Whatever you did in the browser, you can also do from a terminal. Leave `juiz` running, open another terminal, go to `my_juiz` and call the Process.
 First, list the running Processes.
 
 ```sh
@@ -184,56 +255,13 @@ Write a `\` before each `"`, as in `'{\"a\": 1, \"b\": 2}'`. In PowerShell 7.3 o
 
 Check that calling it again with the same arguments always gives the same result.
 
-### Call it from a browser
-
-Open the web UI shown on start-up (`http://localhost:8000/ui/`) in a browser to see the running Processes.
-Select `my_juiz_add0` and a call form with input fields for the arguments `a` and `b` appears; enter values and call it to see the result (see the [Web UI guide](/guides/web-ui/) for how to use it).
-
 Both the `juiz` command and the web UI just call the same API over HTTP.
 That means any program that speaks HTTP, in any language, can call a Process and get the result back.
 This is **call**, the way of using juiz like a server and client.
 
-## Read the skeleton
+## Read the other files in the skeleton
 
-Now that it runs, read the files in the skeleton.
-
-### The Process code: src/lib.rs
-
-```rust title="src/lib.rs"
-use juiz_sdk::prelude::*;
-
-#[juiz_component_process(
-    description = "Returns a + b."
-    arguments = { default = { a = 0 b = 0 } }
-)]
-fn my_juiz_add(a: i64, b: i64) -> JuizResult<i64> {
-    Ok(a + b)
-}
-
-juiz_component_manifest!(
-    component_name = "my_juiz"
-    processes = [ my_juiz_add ]
-);
-```
-
-The comment at the top of the file and the test at the end (the `#[cfg(test)]` part) are left out.
-
-| Part | Meaning |
-| --- | --- |
-| `use juiz_sdk::prelude::*;` | Brings in the macros and types used to write Processes (`juiz_component_process`, `JuizResult` and so on) |
-| `#[juiz_component_process(...)]` | Makes this function a Process |
-| `description` | The description of the Process, shown in the web UI and elsewhere |
-| `arguments = { default = { a = 0 b = 0 } }` | The default values of the arguments, used for arguments left out of a call |
-| `fn my_juiz_add(a: i64, b: i64)` | The function name `my_juiz_add` becomes the **type name** of the Process, and the parameter names `a` and `b` become the argument names |
-| `-> JuizResult<i64>` | The return value. Return `Ok(value)` on success and `Err(...)` on failure |
-| `juiz_component_manifest!(...)` | The list of types in this library. `component_name` is the library name, and `processes` lists the Process functions |
-
-The Process itself is a short function that returns `a + b`. The macros generate the code that passes values to and from juiz.
-
-The skeleton is written in the form of a **Component**, which bundles several types into one library (hence the names `juiz_component_*`).
-In this chapter there is only one Process, but in chapter 2 you add a Container to the same file. Chapter 5 covers Components in detail.
-
-`cargo test` runs the test at the end (it checks that `my_juiz_add` returns 3 for 1 and 2).
+Besides the Process code, the skeleton contains files for building and starting it.
 
 ### The crate settings: Cargo.toml
 
@@ -298,12 +326,6 @@ You can also create several instances with different names from the same type (c
 
 `scripts/dev.sh` (`scripts\dev.ps1` on Windows) is the build script you used above.
 `scripts/pack.sh` and `app/juizapp.yaml` are for bundling the finished building block into a single `.juizapp` file to hand out (it runs with just `juiz run`). The tutorial does not use them; see [Distributing apps (.juizapp)](/guides/app-package/).
-
-## A Process is an idempotent function
-
-`my_juiz_add` only takes arguments and returns a result.
-It does not read or write any outside state, so the same arguments always give the same result (it is idempotent).
-Thanks to this, Processes are easy to test, and they behave the same when you later connect them or move them to another machine.
 
 ## Try it yourself
 

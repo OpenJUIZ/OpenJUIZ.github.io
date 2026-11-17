@@ -1,11 +1,14 @@
 ---
-title: 3. 設定ファイルでまとめて起動する
+title: "3. 設定ファイルでまとめて起動する(全言語共通)"
 description: 第 1・2 章の雛形の app/app.conf を読み、書き換えてインスタンスを増やしたり初期値を渡したりしながら、読み込みと実体化の違いを学びます。
 sidebar:
   order: 3
 prev:
   link: /ja/tutorial/container/
   label: "2. 状態を持つ: Container と ContainerProcess"
+next:
+  link: /ja/tutorial/connect/
+  label: "4. Process をつなぐ: connect と Execution Context"
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
@@ -19,6 +22,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 - 1 つの型から、名前の違うインスタンスをいくつも作れること
 - Container の初期値のような、インスタンスごとの設定を設定ファイルで渡せること
 - `p_apply` で Process の引数に初期値を与えられること
+- call・call_partial・execute で、渡さなかった引数に入る値が違うこと
 </Aside>
 
 ## プロジェクトを用意する
@@ -360,7 +364,7 @@ Container だけでなく、Process の引数にも設定ファイルで値を�
 
 `p_apply` の値は、インスタンスを作った直後にその引数へ入り、初期値になります。
 この値が使われるのは、引数を渡さずに Process を**実行(execute)**したときです。次の章で使う Execution Context は、この方法で Process を動かします。
-これまで使ってきた call では、`p_apply` の値は使われません。call で省いた引数には、型に書かれた既定値(`my_juiz_add` の `a` なら 0)が入ります。
+これまで使ってきた call では、`p_apply` の値は使われません。call で省いた引数には、型に書かれた既定値(`my_juiz_add` の `a` なら 0)が入ります。call でも `p_apply` の値を使いたいときは、あとで説明する **call_partial** を使います。
 
 `juiz` を起動し直し、HTTP API の `execute` で引数を渡さずに実行してみましょう。どの言語でも同じコマンドです。
 
@@ -424,6 +428,31 @@ Caused by:
 
 ![counter0 の帯に initial_value 3、my_juiz_add0 の引数 a と counter_increment0 の引数 step に p_apply の値が付いた略式図](../../../../assets/tutorial-diagrams/tutorial_p_apply.png)
 
+### p_apply の値を使って呼び出す: call_partial
+
+call でも `p_apply` の値を使いたいときは、**call_partial** で呼び出します。
+渡した引数はその値を使い、渡さなかった引数は `p_apply` の値で補って(`p_apply` がなければ既定値で補って)実行し、結果を返します。
+渡した値で `p_apply` の値が書き換わることはありません。
+`juiz` コマンドでは `call-partial` です。どの言語でも同じコマンドです。
+
+```sh
+juiz process call-partial "http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add" '{"b": 5}' -p
+# => CapsulePtr((value:Value(15), option: []))
+juiz process call "http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add" '{"b": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+```
+
+同じ `{"b": 5}` を渡しても、call_partial は `a` に `p_apply` の 10 を使って `15` を、call は既定値の 0 を使って `5` を返しました。
+ContainerProcess では `juiz container-process call-partial` です(HTTP API では `api/process/call_partial`・`api/container_process/call_partial`)。
+
+渡さなかった引数に何が入るかを、3 つの動かし方で比べると次のとおりです。
+
+| 動かし方 | 渡した引数 | 渡さなかった引数 |
+| --- | --- | --- |
+| call | 使う | 型の既定値 |
+| call_partial | 使う | `p_apply` の値(なければ既定値) |
+| execute | (渡さない) | `p_apply` の値(なければ既定値) |
+
 ## やってみよう
 
 - `processes` と `containers` を消して `plugins` だけ残した設定ファイルで起動し、`juiz process list` を見てみましょう。空のリスト `[]` が返ります。読み込んだだけでは、インスタンスは作られないことがわかります(試したら元に戻しておきましょう)。
@@ -436,7 +465,7 @@ Caused by:
 - `plugins` の `components` には、複数の型をまとめた Component のライブラリを書きます。型ごとのファイルは `process_factories` / `container_factories` に書きます。
 - 1 つの型から、名前の違うインスタンスをいくつも作れます。インスタンスの名前は ID の一部になります。
 - Container の初期値のような、インスタンスごとの設定も設定ファイルで渡せます。
-- `p_apply` で Process の引数に初期値を与えられます。この値は、引数を渡さずに実行したとき(Execution Context から動かしたときなど)に使われます。
+- `p_apply` で Process の引数に初期値を与えられます。この値は、引数を渡さずに実行したとき(Execution Context から動かしたときなど)に使われます。call で使いたいときは call_partial を使います。
 - 設定ファイルの項目は、[ガイドの「設定ファイル」](/ja/guides/config/) にまとめてあります。
 
 次の章では、設定ファイルに Process どうしのつながりと、Process を動かすタイミングを書き足します。[Process をつなぐ: connect と Execution Context](/ja/tutorial/connect/) に進みましょう。

@@ -15,7 +15,7 @@ next:
 import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 In this chapter you create a Haskell (cabal) project skeleton with `juiz pkg create`, then build and run the Process in it, which adds two numbers and returns the sum.
-Once it runs, you read the files in the skeleton one by one.
+You first read the Process code, which is the heart of the project, then run it and call it from a browser and from a terminal. Finally you read the other files in the skeleton.
 
 <Aside type="tip" title="What you will learn">
 - How to create a cabal project skeleton for writing Processes with `juiz pkg create`
@@ -141,7 +141,60 @@ The skeleton contains the following files.
 
 In juiz, a Process is built as a shared library (`.so` or `.dylib`), and the `juiz` command loads it as a plugin.
 In the skeleton, the types written in `src/MyJuiz.hs` are built together into one shared library, which is loaded and started as written in `app/app.conf`.
-Run it first, then read what is inside.
+Start with the Process code, the heart of what you develop.
+
+## The Process code: src/MyJuiz.hs
+
+```haskell title="src/MyJuiz.hs"
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+module MyJuiz () where
+
+import Juiz
+
+-- | The manifest of the whole Component (the types in this plugin)
+my_juiz_component :: ComponentManifest
+my_juiz_component = componentManifest "my_juiz"
+  & description "my_juiz: a juiz component"
+
+-- | Process my_juiz_add
+my_juiz_add_manifest :: ProcessManifest
+my_juiz_add_manifest = processManifest "my_juiz_add"
+  & description "Returns a + b."
+  & addIntArg "a" "the first value" 0
+  & addIntArg "b" "the second value" 0
+
+my_juiz_add :: Int64 -> Int64 -> Int64
+my_juiz_add a b = a + b
+
+juizComponent 'my_juiz_component
+  [ componentProcess 'my_juiz_add 'my_juiz_add_manifest
+  ]
+```
+
+The descriptive comment at the top of the file is left out.
+
+| Part | Meaning |
+| --- | --- |
+| The two `LANGUAGE` lines | Turn on `OverloadedStrings`, so string literals can be `Text`, and `TemplateHaskell`, used by `juizComponent` at the end |
+| `import Juiz` | Imports hsjuiz |
+| `my_juiz_component` | The name and description of this library (Component) |
+| `my_juiz_add_manifest` | The manifest (description) of the Process. The string in `processManifest "my_juiz_add"` becomes the **type name** of the Process |
+| `addIntArg "a" "the first value" 0` | Declares an integer argument `a`, with its description and default value (0). Arguments left out of a call take the default values |
+| `my_juiz_add :: Int64 -> Int64 -> Int64` | The body of the Process. The arguments are passed in the order they are declared in the manifest. It is an ordinary pure function |
+| `juizComponent 'my_juiz_component [...]` | Pairs the functions with their manifests and exposes them so that `juiz` can load them. `componentProcess` lists a Process |
+
+As in C++, in Haskell you write the type name and the arguments (name, description, default value) in the manifest yourself.
+
+The skeleton is written in the form of a **Component**, which bundles several types into one library.
+In this chapter there is only one Process, but in chapter 2 you add a Container to the same file. Chapter 5 covers Components in detail.
+
+## A Process is an idempotent function
+
+`my_juiz_add` only takes arguments and returns a result.
+It does not read or write any outside state, so the same arguments always give the same result (it is idempotent).
+In Haskell, the type `Int64 -> Int64 -> Int64` says so (there is no `IO`).
+Thanks to this, Processes are easy to test, and they behave the same when you later connect them or move them to another machine.
 
 ## Build
 
@@ -201,9 +254,36 @@ juiz -f app/app.conf -d
 
 On start-up it prints `juiz 管理画面: http://localhost:8000/ui/` (the address of the web UI). The HTTP broker is listening on port 8000.
 
-## Call it from outside
+## Call it from a browser
 
-Leave `juiz` running, open another terminal, go to `my_juiz` and call the Process.
+Leave `juiz` running and open the web UI at `http://localhost:8000/ui/` in a browser. You see a screen like this.
+
+![The web UI. my_juiz_add0 under "処理 Process" on the left, and an ellipse for my_juiz_add0 in the diagram in the middle](../../../../assets/tutorial-web-ui/first-process-top.png)
+
+The UI labels are in Japanese, with the English names used on this site shown in small type next to them. The screen has three parts.
+
+- **The list on the left**: what is running. Under "処理 Process" (Process) you see the instance `my_juiz_add0` next to its type name `my_juiz_add`.
+- **The diagram in the middle**: a diagram of the system. A Process is drawn as an ellipse; the large text is the instance name and the small text is the type name.
+- **The panel on the right**: the properties (details) of what you select. It is empty because nothing is selected yet.
+
+Click `my_juiz_add0` in the list or in the diagram, and its details appear in the right panel.
+Scroll the right panel down to the heading "呼び出す" (Call), where you find input fields for the arguments `a` and `b`.
+Enter `1` for `a` and `2` for `b`, then press the "呼び出す" (Call) button. If `3` appears under "結果" (Result), it worked.
+
+![Close-up of the right panel: the argument table (a and b, type Int, default 0), the call form with a=1 and b=2, and the result 3](../../../../assets/tutorial-web-ui/first-process-call.png)
+
+Look at the rest of the panel as well.
+
+- The "引数" (Arguments) table lists each argument's name, type and default value (既定値). The default is what is used for an argument you leave out when calling, and it is the `default` you wrote in the code. ("拘束値", the bound value, is covered in chapter 3.)
+- "既定値に戻す" (Reset to defaults) puts the default values (`0`) back in the fields. "JSON で編集" (Edit as JSON) lets you write all the arguments as JSON.
+- "基本" (Basics) near the top shows the type name and the identifier (ID) of this Process.
+
+Change the values and call it a few times. With the same arguments, you always get the same result.
+See the [Web UI guide](/guides/web-ui/) for more on the web UI.
+
+## Call it from a terminal
+
+Whatever you did in the browser, you can also do from a terminal. Leave `juiz` running, open another terminal, go to `my_juiz` and call the Process.
 First, list the running Processes.
 
 ```sh
@@ -226,64 +306,13 @@ You passed `1` and `2` and got `3` back. `-p` prints the result.
 Arguments you leave out take their default values (`0` for both `a` and `b`). Passing `'{"a": 5}'` returns `5`.
 Check that calling it again with the same arguments always gives the same result.
 
-### Call it from a browser
-
-Open the web UI shown on start-up (`http://localhost:8000/ui/`) in a browser to see the running Processes.
-Select `my_juiz_add0` and a call form with input fields for the arguments `a` and `b` appears; enter values and call it to see the result (see the [Web UI guide](/guides/web-ui/) for how to use it).
-
 Both the `juiz` command and the web UI just call the same API over HTTP.
 That means any program that speaks HTTP, in any language, can call a Process and get the result back.
 This is **call**, the way of using juiz like a server and client.
 
-## Read the skeleton
+## Read the other files in the skeleton
 
-Now that it runs, read the files in the skeleton.
-
-### The Process code: src/MyJuiz.hs
-
-```haskell title="src/MyJuiz.hs"
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
-module MyJuiz () where
-
-import Juiz
-
--- | The manifest of the whole Component (the types in this plugin)
-my_juiz_component :: ComponentManifest
-my_juiz_component = componentManifest "my_juiz"
-  & description "my_juiz: a juiz component"
-
--- | Process my_juiz_add
-my_juiz_add_manifest :: ProcessManifest
-my_juiz_add_manifest = processManifest "my_juiz_add"
-  & description "Returns a + b."
-  & addIntArg "a" "the first value" 0
-  & addIntArg "b" "the second value" 0
-
-my_juiz_add :: Int64 -> Int64 -> Int64
-my_juiz_add a b = a + b
-
-juizComponent 'my_juiz_component
-  [ componentProcess 'my_juiz_add 'my_juiz_add_manifest
-  ]
-```
-
-The descriptive comment at the top of the file is left out.
-
-| Part | Meaning |
-| --- | --- |
-| The two `LANGUAGE` lines | Turn on `OverloadedStrings`, so string literals can be `Text`, and `TemplateHaskell`, used by `juizComponent` at the end |
-| `import Juiz` | Imports hsjuiz |
-| `my_juiz_component` | The name and description of this library (Component) |
-| `my_juiz_add_manifest` | The manifest (description) of the Process. The string in `processManifest "my_juiz_add"` becomes the **type name** of the Process |
-| `addIntArg "a" "the first value" 0` | Declares an integer argument `a`, with its description and default value (0). Arguments left out of a call take the default values |
-| `my_juiz_add :: Int64 -> Int64 -> Int64` | The body of the Process. The arguments are passed in the order they are declared in the manifest. It is an ordinary pure function |
-| `juizComponent 'my_juiz_component [...]` | Pairs the functions with their manifests and exposes them so that `juiz` can load them. `componentProcess` lists a Process |
-
-As in C++, in Haskell you write the type name and the arguments (name, description, default value) in the manifest yourself.
-
-The skeleton is written in the form of a **Component**, which bundles several types into one library.
-In this chapter there is only one Process, but in chapter 2 you add a Container to the same file. Chapter 5 covers Components in detail.
+Besides the Process code, the skeleton contains files for building and starting it.
 
 ### The build settings: cabal.project and my-juiz.cabal
 
@@ -378,13 +407,6 @@ You can also create several instances with different names from the same type (c
 
 `scripts/dev.sh` is the build script you used above.
 `scripts/pack.sh`, `scripts/bundle-plugin-deps.sh` and `app/juizapp.yaml` are for bundling the finished building block into a single `.juizapp` file to hand out (it runs with just `juiz run`). The tutorial does not use them; see [Distributing apps (.juizapp)](/guides/app-package/).
-
-## A Process is an idempotent function
-
-`my_juiz_add` only takes arguments and returns a result.
-It does not read or write any outside state, so the same arguments always give the same result (it is idempotent).
-In Haskell, the type `Int64 -> Int64 -> Int64` says so (there is no `IO`).
-Thanks to this, Processes are easy to test, and they behave the same when you later connect them or move them to another machine.
 
 ## Try it yourself
 
