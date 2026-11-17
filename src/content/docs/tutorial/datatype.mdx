@@ -785,19 +785,20 @@ print(moved.position.x)   # 3.0 (the return value is a Pose2D too)
 
 ```sh
 juiz type list --long
-# NAME                                KIND    SHORT_ID                   USED_BY
-# examples.geometry.Point2D           record  Point2D@5649ab39           pose_move,pose_print_python
-# examples.geometry.Pose2D            record  Pose2D@123b8c15            pose_move,pose_print_python
-# examples.geometry.Twist2D           record  Twist2D@115b9e0f           pose_move,twist_python
-# juiz_std.common.Header              record  Header@d3c08526            transformations
-# juiz_std.common.Time                record  Time@60b9738d              transformations
-# juiz_std.geometry.Point3D           record  Point3D@9dd48fe5           transformations
-# juiz_std.geometry.Pose              record  Pose@fbbba3a9              transformations
-# juiz_std.geometry.PoseStamped       record  PoseStamped@baf65970       transformations
-# juiz_std.geometry.Quaternion        record  Quaternion@19ea5929        transformations
-# juiz_std.geometry.Transform         record  Transform@a866b61b         transformations
-# juiz_std.geometry.TransformStamped  record  TransformStamped@6e78b3aa  transformations
-# juiz_std.geometry.Vector3           record  Vector3@4abcfbbd           transformations
+# NAME                                KIND    SHORT_ID                     USED_BY
+# examples.geometry.Point2D           record  Point2D@5649ab39             pose_move,pose_print_python
+# examples.geometry.Pose2D            record  Pose2D@123b8c15              pose_move,pose_print_python
+# examples.geometry.Twist2D           record  Twist2D@115b9e0f             pose_move,twist_python
+# juiz_std.common.Header              record  Header@d3c08526              transformations
+# juiz_std.common.Time                record  Time@60b9738d                transformations
+# juiz_std.geometry.Point3D           record  Point3D@9dd48fe5             transformations
+# juiz_std.geometry.Pose              record  Pose@fbbba3a9                transformations
+# juiz_std.geometry.PoseStamped       record  PoseStamped@baf65970         transformations
+# juiz_std.geometry.Quaternion        record  Quaternion@19ea5929          container_model,transformations
+# juiz_std.geometry.Transform         record  Transform@a866b61b           container_model,transformations
+# juiz_std.geometry.TransformStamped  record  TransformStamped@6e78b3aa    transformations
+# juiz_std.geometry.Vector3           record  Vector3@4abcfbbd             container_model,transformations
+# juiz_std.model.ContainerModelInfo   record  ContainerModelInfo@500282a8  container_model
 ```
 
 </TabItem>
@@ -805,19 +806,20 @@ juiz type list --long
 
 ```sh
 juiz type list --long
-# NAME                                KIND    SHORT_ID                   USED_BY
-# examples.geometry.Point2D           record  Point2D@5649ab39           pose_move_python,pose_print_python
-# examples.geometry.Pose2D            record  Pose2D@123b8c15            pose_move_python,pose_print_python
-# examples.geometry.Twist2D           record  Twist2D@115b9e0f           pose_move_python,twist_python
-# juiz_std.common.Header              record  Header@d3c08526            transformations
-# juiz_std.common.Time                record  Time@60b9738d              transformations
-# juiz_std.geometry.Point3D           record  Point3D@9dd48fe5           transformations
-# juiz_std.geometry.Pose              record  Pose@fbbba3a9              transformations
-# juiz_std.geometry.PoseStamped       record  PoseStamped@baf65970       transformations
-# juiz_std.geometry.Quaternion        record  Quaternion@19ea5929        transformations
-# juiz_std.geometry.Transform         record  Transform@a866b61b         transformations
-# juiz_std.geometry.TransformStamped  record  TransformStamped@6e78b3aa  transformations
-# juiz_std.geometry.Vector3           record  Vector3@4abcfbbd           transformations
+# NAME                                KIND    SHORT_ID                     USED_BY
+# examples.geometry.Point2D           record  Point2D@5649ab39             pose_move_python,pose_print_python
+# examples.geometry.Pose2D            record  Pose2D@123b8c15              pose_move_python,pose_print_python
+# examples.geometry.Twist2D           record  Twist2D@115b9e0f             pose_move_python,twist_python
+# juiz_std.common.Header              record  Header@d3c08526              transformations
+# juiz_std.common.Time                record  Time@60b9738d                transformations
+# juiz_std.geometry.Point3D           record  Point3D@9dd48fe5             transformations
+# juiz_std.geometry.Pose              record  Pose@fbbba3a9                transformations
+# juiz_std.geometry.PoseStamped       record  PoseStamped@baf65970         transformations
+# juiz_std.geometry.Quaternion        record  Quaternion@19ea5929          container_model,transformations
+# juiz_std.geometry.Transform         record  Transform@a866b61b           container_model,transformations
+# juiz_std.geometry.TransformStamped  record  TransformStamped@6e78b3aa    transformations
+# juiz_std.geometry.Vector3           record  Vector3@4abcfbbd             container_model,transformations
+# juiz_std.model.ContainerModelInfo   record  ContainerModelInfo@500282a8  container_model
 ```
 
 </TabItem>
@@ -825,19 +827,20 @@ juiz type list --long
 
 ```sh
 juiz type list --long
-# NAME                                KIND    SHORT_ID                   USED_BY
-# examples.geometry.Point2D           record  Point2D@5649ab39           pose_move_cpp,pose_print_python
-# examples.geometry.Pose2D            record  Pose2D@123b8c15            pose_move_cpp,pose_print_python
-# examples.geometry.Twist2D           record  Twist2D@115b9e0f           pose_move_cpp,twist_python
-# juiz_std.common.Header              record  Header@d3c08526            transformations
-# juiz_std.common.Time                record  Time@60b9738d              transformations
-# juiz_std.geometry.Point3D           record  Point3D@9dd48fe5           transformations
-# juiz_std.geometry.Pose              record  Pose@fbbba3a9              transformations
-# juiz_std.geometry.PoseStamped       record  PoseStamped@baf65970       transformations
-# juiz_std.geometry.Quaternion        record  Quaternion@19ea5929        transformations
-# juiz_std.geometry.Transform         record  Transform@a866b61b         transformations
-# juiz_std.geometry.TransformStamped  record  TransformStamped@6e78b3aa  transformations
-# juiz_std.geometry.Vector3           record  Vector3@4abcfbbd           transformations
+# NAME                                KIND    SHORT_ID                     USED_BY
+# examples.geometry.Point2D           record  Point2D@5649ab39             pose_move_cpp,pose_print_python
+# examples.geometry.Pose2D            record  Pose2D@123b8c15              pose_move_cpp,pose_print_python
+# examples.geometry.Twist2D           record  Twist2D@115b9e0f             pose_move_cpp,twist_python
+# juiz_std.common.Header              record  Header@d3c08526              transformations
+# juiz_std.common.Time                record  Time@60b9738d                transformations
+# juiz_std.geometry.Point3D           record  Point3D@9dd48fe5             transformations
+# juiz_std.geometry.Pose              record  Pose@fbbba3a9                transformations
+# juiz_std.geometry.PoseStamped       record  PoseStamped@baf65970         transformations
+# juiz_std.geometry.Quaternion        record  Quaternion@19ea5929          container_model,transformations
+# juiz_std.geometry.Transform         record  Transform@a866b61b           container_model,transformations
+# juiz_std.geometry.TransformStamped  record  TransformStamped@6e78b3aa    transformations
+# juiz_std.geometry.Vector3           record  Vector3@4abcfbbd             container_model,transformations
+# juiz_std.model.ContainerModelInfo   record  ContainerModelInfo@500282a8  container_model
 ```
 
 </TabItem>
@@ -845,25 +848,26 @@ juiz type list --long
 
 ```sh
 juiz type list --long
-# NAME                                KIND    SHORT_ID                   USED_BY
-# examples.geometry.Point2D           record  Point2D@5649ab39           pose_move_hs,pose_print_python
-# examples.geometry.Pose2D            record  Pose2D@123b8c15            pose_move_hs,pose_print_python
-# examples.geometry.Twist2D           record  Twist2D@115b9e0f           pose_move_hs,twist_python
-# juiz_std.common.Header              record  Header@d3c08526            transformations
-# juiz_std.common.Time                record  Time@60b9738d              transformations
-# juiz_std.geometry.Point3D           record  Point3D@9dd48fe5           transformations
-# juiz_std.geometry.Pose              record  Pose@fbbba3a9              transformations
-# juiz_std.geometry.PoseStamped       record  PoseStamped@baf65970       transformations
-# juiz_std.geometry.Quaternion        record  Quaternion@19ea5929        transformations
-# juiz_std.geometry.Transform         record  Transform@a866b61b         transformations
-# juiz_std.geometry.TransformStamped  record  TransformStamped@6e78b3aa  transformations
-# juiz_std.geometry.Vector3           record  Vector3@4abcfbbd           transformations
+# NAME                                KIND    SHORT_ID                     USED_BY
+# examples.geometry.Point2D           record  Point2D@5649ab39             pose_move_hs,pose_print_python
+# examples.geometry.Pose2D            record  Pose2D@123b8c15              pose_move_hs,pose_print_python
+# examples.geometry.Twist2D           record  Twist2D@115b9e0f             pose_move_hs,twist_python
+# juiz_std.common.Header              record  Header@d3c08526              transformations
+# juiz_std.common.Time                record  Time@60b9738d                transformations
+# juiz_std.geometry.Point3D           record  Point3D@9dd48fe5             transformations
+# juiz_std.geometry.Pose              record  Pose@fbbba3a9                transformations
+# juiz_std.geometry.PoseStamped       record  PoseStamped@baf65970         transformations
+# juiz_std.geometry.Quaternion        record  Quaternion@19ea5929          container_model,transformations
+# juiz_std.geometry.Transform         record  Transform@a866b61b           container_model,transformations
+# juiz_std.geometry.TransformStamped  record  TransformStamped@6e78b3aa    transformations
+# juiz_std.geometry.Vector3           record  Vector3@4abcfbbd             container_model,transformations
+# juiz_std.model.ContainerModelInfo   record  ContainerModelInfo@500282a8  container_model
 ```
 
 </TabItem>
 </Tabs>
 
-After the three `examples.geometry` types from the examples, the list also shows the nine `juiz_std` types built into juiz. They are the types [Transformations](/guides/transformations/) uses, and juiz always loads them (USED_BY is `transformations`).
+After the three `examples.geometry` types from the examples, the list also shows the ten `juiz_std` types built into juiz. They are the types [Transformations](/guides/transformations/) and [3D models](/guides/container-model/) use, and juiz always loads them (USED_BY is `transformations` and `container_model`).
 
 The part after `@` is the first 8 digits of the type's **fingerprint**, a SHA-256 computed from the type's content (the names, types, and order of its fields, and its full name).
 Types generated from the same JIDL get the same fingerprint in every language. You can see that Processes in different languages use one and the same type.
