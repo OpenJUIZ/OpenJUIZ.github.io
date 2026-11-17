@@ -8,17 +8,17 @@ prev:
   link: /ja/tutorial/connect/python/
   label: "5. 1 つの juiz で複数のライブラリをつなぐ(Python)"
 next:
-  link: /ja/tutorial/quic-broker/
-  label: "7. 通信方式を選ぶ: QUIC ブローカー"
+  link: /ja/tutorial/ipc-broker/
+  label: "7. 通信方式を選ぶ: IPC ブローカー"
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-第 1〜3 章の雛形では、Process・Container・ContainerProcess を 1 つのソースに書いて 1 つのライブラリにし、`app/app.conf` の `plugins` の `components` に 1 行書いて読み込みました。
-一方、サンプル集の talker と listener は、1 つの型ごとに別々のファイル(ライブラリ)にして、`process_factories` に型を 1 つずつ並べて読み込みました。
+第 1〜3 章の雛形では、Process・Container・ContainerProcess を 1 つのソースに書いて 1 つのライブラリにし、`app/app.conf` の `plugins` の `components` に 1 行書いて読み込みました。第 4・5 章の talker と listener も、Process を 1 つだけ入れた同じ形のライブラリでした。
+一方、juiz には、1 つの型ごとに別々のファイル(ライブラリ)にして、`process_factories` に型を 1 つずつ並べて読み込む書き方もあります。サンプル集の talker と listener は、この形で書かれています。
 
 実際に「このカメラを動かす部品一式」を誰かに渡すときに、ファイルがばらばらだと不便です。
-この章では、雛形がとっていた形、つまり Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を、サンプル集の例で改めて読み、型ごとのファイルと比べます。
+この章では、雛形がとっていた形、つまり Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を、サンプル集の例で改めて読み、型ごとのファイルの書き方と比べます。
 
 <Aside type="tip" title="この章で学ぶこと">
 - Component は、複数の Process・Container・ContainerProcess を 1 つにまとめた**配布の単位**であること
@@ -169,7 +169,7 @@ plugins:
       path: "./component"
 ```
 
-`talker_listener.conf` では、`process_factories` に型を 1 つずつ書いていました(Container なら `container_factories` に書き、ContainerProcess も Container の下に 1 つずつ書きます)。
+`talker_listener.conf` では、`process_factories` に型を 1 つずつ書いています(Container なら `container_factories` に書き、ContainerProcess も Container の下に 1 つずつ書きます)。
 Component では、第 3 章の `app/app.conf` と同じく、`components` に **Component の名前を 1 つ**書くだけです。キーの名前から読み込むファイルが決まるのは、型ごとのときと同じです。
 
 Component 名 `example_component_python` なら、`./component` の中の `example_component_python.py` が読み込まれます。
@@ -252,4 +252,4 @@ juiz --component ./component/example_component_python.py -l python -1 -d
 - 設定ファイルでは、`plugins` の `components` に Component の名前を 1 つ書くだけで、中の型がすべて読み込まれます。
 - インスタンスの作り方、ID、呼び出し方、つなぎ方は、別々のファイルから読み込んだときと同じです。Component は動かし方を変えるものではなく、**配布の単位**です。
 
-次の章では、juiz どうしをつなぐ通信方式を選びます。[通信方式を選ぶ: QUIC ブローカー](/ja/tutorial/quic-broker/) に進みましょう。
+次の章では、juiz どうしをつなぐ通信方式を選びます。[通信方式を選ぶ: IPC ブローカー](/ja/tutorial/ipc-broker/) に進みましょう。

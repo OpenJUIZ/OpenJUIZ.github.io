@@ -29,7 +29,7 @@ The QUIC broker in 0.0.26 cannot talk to QUIC brokers of earlier versions (the w
 As a rule of thumb:
 
 - **For small values, or to work from a browser or the web UI**, use HTTP. It starts with `-d` as before.
-- **To send images to another machine**, use QUIC. It does not turn images into PNG, so it is faster than HTTP; on a slow network the network speed decides. See [Tutorial chapter 7](/tutorial/quic-broker/) for how to use it.
+- **To send images to another machine**, use QUIC. It does not turn images into PNG, so it is faster than HTTP; on a slow network the network speed decides. Write `type_name: qmp` in `brokers` of the configuration file to use it ([Tutorial chapter 7](/tutorial/ipc-broker/#other-options)).
 - **To send images to another machine fast**, use Zenoh. It is several times as fast as QUIC and uses shared memory for peers on the same machine. It does not encrypt, so use it inside a network you trust. Available from juiz 0.2.9. See [Zenoh broker](/guides/zenoh-broker/).
 - **To send images to another process on the same machine**, use IPC. It opens no port and is more than ten times as fast as HTTP.
 

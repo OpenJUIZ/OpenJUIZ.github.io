@@ -12,11 +12,11 @@ next: false
 
 import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-第 1〜3 章の雛形では、Process・Container・ContainerProcess を 1 つのソースに書いて 1 つのライブラリにし、`app/app.conf` の `plugins` の `components` に 1 行書いて読み込みました。
-一方、サンプル集の talker と listener は、1 つの型ごとに別々のファイル(ライブラリ)にして、`process_factories` に型を 1 つずつ並べて読み込みました。
+第 1〜3 章の雛形では、Process・Container・ContainerProcess を 1 つのソースに書いて 1 つのライブラリにし、`app/app.conf` の `plugins` の `components` に 1 行書いて読み込みました。第 4・5 章の talker と listener も、Process を 1 つだけ入れた同じ形のライブラリでした。
+一方、juiz には、1 つの型ごとに別々のファイル(ライブラリ)にして、`process_factories` に型を 1 つずつ並べて読み込む書き方もあります。サンプル集の talker と listener は、この形で書かれています。
 
 実際に「このカメラを動かす部品一式」を誰かに渡すときに、ファイルがばらばらだと不便です。
-この章では、雛形がとっていた形、つまり Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を、サンプル集の例で改めて読み、型ごとのファイルと比べます。
+この章では、雛形がとっていた形、つまり Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を、サンプル集の例で改めて読み、型ごとのファイルの書き方と比べます。
 
 <Aside type="tip" title="この章で学ぶこと">
 - Component は、複数の Process・Container・ContainerProcess を 1 つにまとめた**配布の単位**であること

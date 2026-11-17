@@ -39,9 +39,9 @@ import { Steps } from '@astrojs/starlight/components';
 
    雛形がとっていた Component の形を、サンプル集の型ごとのファイルと比べます。Component が配布の単位であることを学びます。
 
-7. **[通信方式を選ぶ: QUIC ブローカー](/ja/tutorial/quic-broker/)**
+7. **[通信方式を選ぶ: IPC ブローカー](/ja/tutorial/ipc-broker/)**
 
-   第 4 章のような別プロセスの接続を、HTTP の代わりに QUIC ブローカーで行います。通信方式はブローカーとして差し替えられ、ID の先頭がそれを表すことを学びます。
+   第 4 章の talker と listener を、HTTP の代わりに IPC ブローカーでつなぎ直します。通信方式はブローカーとして差し替えられ、ID の先頭がそれを表すことを学びます。別のマシンとつなぐ Zenoh ブローカーと、QUIC などほかの選択肢にも触れます。
 
 8. **[データ型: 型を決めて言語をまたいでつなぐ](/ja/tutorial/datatype/)**
 

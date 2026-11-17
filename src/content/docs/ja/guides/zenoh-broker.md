@@ -87,7 +87,7 @@ juiz -s zenoh://127.0.0.1:7448 process list
 # => ["zenoh://127.0.0.1:7448/process/listener0::listener", ...]
 ```
 
-[第7章](/ja/tutorial/quic-broker/) の talker と listener も、設定ファイルの `qmp` を `zenoh` に、ID の `qmp://` を `zenoh://` に置き換えれば、そのまま Zenoh でつなげます。talker 側の juiz にも別のポートで Zenoh ブローカーを置き、`zenoh://` の ID どうしでつなぎます。
+talker と listener を別々の juiz で起動してつなぐときは、talker 側の juiz にも別のポートで Zenoh ブローカーを置き、`zenoh://` の ID どうしでつなぎます。Topic と `mastersystem` で起動するだけでつなぐ例は、[チュートリアル第7章](/ja/tutorial/ipc-broker/#別のマシンとつなぐ-zenoh-ブローカー) にあります。
 
 ```yaml title="talker_zenoh.conf"
 name: talker_zenoh

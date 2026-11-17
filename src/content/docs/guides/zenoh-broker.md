@@ -87,7 +87,7 @@ juiz -s zenoh://127.0.0.1:7448 process list
 # => ["zenoh://127.0.0.1:7448/process/listener0::listener", ...]
 ```
 
-The talker and listener from [chapter 7](/tutorial/quic-broker/) also work over Zenoh: replace `qmp` with `zenoh` in the configuration files and `qmp://` with `zenoh://` in the IDs. Give the talker's juiz its own Zenoh broker on another port and connect the two `zenoh://` IDs.
+To connect a talker and a listener started in separate juiz instances, give the talker's juiz its own Zenoh broker on another port and connect the two `zenoh://` IDs. [Tutorial chapter 7](/tutorial/ipc-broker/#connecting-to-other-machines-the-zenoh-broker) shows how to connect them at start-up with a Topic and `mastersystem`.
 
 ```yaml title="talker_zenoh.conf"
 name: talker_zenoh
