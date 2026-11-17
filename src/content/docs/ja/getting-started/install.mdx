@@ -138,6 +138,17 @@ cargo で入れた場合は、`juiz-cli` を入れないでください。`juiz`
 </TabItem>
 </Tabs>
 
+## .juizapp をダブルクリックで開けるようにする
+
+[.juizapp](/ja/guides/app-package/) のアプリを受け取って動かすだけなら、`juiz` を入れた後に次を 1 回実行しておくと、`.juizapp` ファイルをダブルクリックで起動できます(juiz 0.3.0 から。管理者の権限は要りません)。
+venv に入れた場合は、その venv を有効にしたターミナルで実行してください。
+
+```sh
+juiz associate
+```
+
+外すときは `juiz associate --remove` です。OS ごとの違いは「[ダブルクリックで起動する](/ja/guides/app-package/#ダブルクリックで起動する)」にあります。
+
 ## 次に読むもの
 
 `juiz` コマンドを入れたら、機能要素を書く言語のパッケージを [言語ごとのパッケージ](/ja/getting-started/packages/) で用意してください(Python を pip で入れた場合は、追加で入れるものはありません)。

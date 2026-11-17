@@ -138,6 +138,17 @@ When you install with cargo, do not install `juiz-cli`. You would end up with tw
 </TabItem>
 </Tabs>
 
+## Opening .juizapp files with a double-click
+
+If you only receive and run [.juizapp](/guides/app-package/) apps, run the following once after installing `juiz`, and `.juizapp` files start with a double-click (from juiz 0.3.0; no administrator rights needed).
+If you installed into a venv, run it in a terminal where that venv is active.
+
+```sh
+juiz associate
+```
+
+To undo it, run `juiz associate --remove`. See [Starting by double-click](/guides/app-package/#starting-by-double-click) for differences between OSes.
+
 ## What to read next
 
 Once `juiz` is installed, prepare the package for the language you write components in, in [Language packages](/getting-started/packages/) (if you installed with pip and use Python, there is nothing more to install).
