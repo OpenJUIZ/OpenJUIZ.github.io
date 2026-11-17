@@ -107,7 +107,7 @@ For example, start listener on port 8000 and talker on port 8001, connect talker
 - In the diagram, each System gets a dashed frame, but only when there are subsystems. Connections between Systems are arrows that cross the frames. Click a frame's title to select that System.
 - A connection is listed under the System of the Process that sends the value. A connection seen from both Systems is shown only once.
 
-Subsystems registered through brokers other than HTTP, such as the QUIC broker ([Chapter 7](/tutorial/ipc-broker/)), are shown the same way.
+Subsystems registered through brokers other than HTTP, such as the IPC broker ([Chapter 7](/tutorial/ipc-broker/)) and the QUIC broker, are shown the same way.
 
 ## Settings
 
