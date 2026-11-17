@@ -51,7 +51,7 @@ processes:
 |---|---|
 | `name` | Name of the system |
 | `namespace` | Default namespace for the whole System. It can also be set on each element (see [Namespaces](/guides/namespace/), juiz 0.0.21 or later) |
-| `option` | Settings for modules that run by default. Setting `start` of `http_broker` to `true` starts the HTTP broker on the port given by `port`. `pythonpath` adds places that Python Processes `import` from (relative to the plugin's directory), and `type_check.on_call` turns on type checks on calls (→ [Data types](/guides/datatype/#type-checks), juiz 0.0.23 or later). `http_broker` also takes `cors_allow_origins`, `static_filepaths` and `webui: false` (→ [Web UI](/guides/web-ui/)) |
+| `option` | Settings for modules that run by default. Setting `start` of `http_broker` to `true` starts the HTTP broker on the port given by `port`. `pythonpath` adds places that Python Processes `import` from (relative to the plugin's directory), and `type_check.on_call` turns on type checks on calls (→ [Data types](/guides/datatype/#type-checks), juiz 0.0.23 or later). `http_broker` also takes `cors_allow_origins`, `static_filepaths` and `webui: false` (→ [Web UI](/guides/web-ui/)). What happens when the port is in use is set with `port_fallback` and `adopt_master` (→ [When a port is in use](#when-a-port-is-in-use), from juiz 0.3.0) |
 | `brokers` | Extra brokers to start. Give `type_name`, either `qmp` (QUIC) or `ipc` (same machine), and `name`. The body size limit of the HTTP broker is `option.http_broker.max_body_bytes` (→ [Choosing a broker and large data](/guides/large-data/), IPC needs juiz 0.0.26 or later) |
 | `subsystems` / `mastersystem` | Other juiz instances to connect to as subsystems (or as the master). Give `type_name` (`http`, `qmp` or `ipc`) and where it listens, as in `brokers` (→ [Choosing a broker and large data](/guides/large-data/#connecting-as-a-subsystem), [Transforms across Systems](/guides/transformations/#transforms-across-systems)) |
 | `topics` | Per-Topic settings. `shared_memory` streams the Topic to other processes on the same machine through shared memory (→ [Streaming a Topic through shared memory](/guides/large-data/#streaming-a-topic-through-shared-memory), juiz 0.0.26 or later) |
@@ -81,3 +81,50 @@ processes:
 
 The values are used when the Process is executed without arguments, for example from an Execution Context. A call that passes arguments uses the passed values. Values pushed through `connections` overwrite them.
 If `p_apply` names an argument the Process does not have, `juiz` fails at startup.
+
+## When a port is in use
+
+:::note[Available from juiz 0.3.0]
+:::
+
+If the port a broker listens on is already taken, juiz takes the next free number instead. If the program on that port is a juiz, it also joins that juiz as its subsystem (makes it the `mastersystem`). This is the default, and each part can be turned off per broker.
+
+```yaml
+option:
+  http_broker:
+    start: true
+    port: 8000
+    port_fallback: next     # next (default) or error
+    adopt_master: true      # true (default) or false
+brokers:
+  - type_name: qmp
+    port: 3000
+    port_fallback: error    # qmp takes the same two settings
+    adopt_master: false
+```
+
+| Setting | Value | Meaning |
+| --- | --- | --- |
+| `port_fallback` | `next` (default) | If in use, count up and try again (up to the original number + 100) |
+| | `error` | If in use, stop |
+| `adopt_master` | `true` (default) | If a juiz is on the port, become its subsystem |
+| | `false` | Even if a juiz is there, do not make it the master (only move to another port) |
+
+- Whether the program on the port is a juiz is checked by asking `/api/system/profile`, waiting up to 1 second. A program that is not a juiz is never made the master.
+- If the configuration file has `mastersystem`, that is the master regardless of `adopt_master`.
+- On the command line, `--no-port-fallback` sets `port_fallback: error` for every broker, and `--no-adopt-master` sets `adopt_master: false` for every broker. Both work with `juiz -f` and `juiz run`, and win over the configuration file.
+- When started with `juiz run`, `adopt_master` defaults to `false` for base packages and for apps that connect to a base in `depends` (the base connects back and becomes the master, so this avoids having two). `juiz run` also checks the ports and asks before starting ([Distributing apps](/guides/app-package/#when-a-port-is-in-use)).
+
+Moving to another port and joining a master are printed to standard error, whatever the log settings.
+
+```text
+warning: port 8000 is in use; the HTTP broker uses 8001
+joined the juiz at 127.0.0.1:8000 as its subsystem
+```
+
+If it stops because of `port_fallback: error`, or cannot listen for a reason other than the port being in use (such as permissions), it stops with an error that says why.
+
+```text
+port 8000 for the HTTP broker is in use (by a juiz). Use another port, or remove port_fallback: error / --no-port-fallback.
+cannot start the HTTP broker on 0.0.0.0:80: Permission denied (os error 13)
+```
