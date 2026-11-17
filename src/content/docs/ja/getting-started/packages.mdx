@@ -22,7 +22,7 @@ crate-type = ["cdylib"]
 juiz_sdk = "0.2.11"
 ```
 
-`Cargo.toml` の書き方は、[チュートリアル第 1 章(Rust)](/ja/tutorial/first-process/rust/) で 1 行ずつ説明しています。
+`Cargo.toml` の書き方は、[チュートリアル第 1 章(Rust)](/ja/tutorial/first-process/rust/) で、`juiz pkg create` で作った雛形を読みながら説明しています。
 
 ## Python
 
@@ -173,7 +173,7 @@ juiz_sdk_copy_runtime(my_process)   # Windows では juiz_sdk.dll をプラグ�
 ```
 
 `juiz_sdk::juiz_sdk` にはヘッダの場所と C++17 の指定も入っています。Windows では、juiz はプラグインの DLL が使う `juiz_sdk.dll` をプラグインと同じ場所(と `PATH`)から探すので、`juiz_sdk_copy_runtime` で隣に写しておきます。
-CMake の書き方は、[チュートリアル第 1 章(C++)](/ja/tutorial/first-process/cpp/) で 1 行ずつ説明しています。
+CMake の書き方は、[チュートリアル第 1 章(C++)](/ja/tutorial/first-process/cpp/) で、`juiz pkg create` で作った雛形を読みながら説明しています。
 
 CMake を使わない場合は、インクルードパスに `cjuiz/include` と `cppjuiz/include` を足し、`lib` の libjuiz_sdk(Windows は `lib/juiz_sdk.dll.lib`)にリンクします。
 サンプル集 [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) の [cmake/Juiz.cmake](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/cmake/Juiz.cmake) のように、libjuiz_sdk の取得まで CMake に任せることもできます。

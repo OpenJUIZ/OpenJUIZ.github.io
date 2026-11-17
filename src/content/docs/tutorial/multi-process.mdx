@@ -32,7 +32,7 @@ This chapter uses three terminals. Open each of them at the root of the example 
 
 ## Start the listener
 
-In terminal 1, start `juiz` with the listener loaded. As in chapter 1, `-1` creates one instance and `-d` keeps it running as a server.
+In terminal 1, start `juiz` with the listener loaded. `--process` loads the Process file, `-1` creates one instance of that type (named "type name + `0`"), and `-d` keeps it running as a server. This is how you start without a configuration file.
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">

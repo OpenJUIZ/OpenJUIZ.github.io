@@ -8,7 +8,7 @@ sidebar:
 
 import { Steps } from '@astrojs/starlight/components';
 
-このチュートリアルでは、引数に 1 を足すだけの小さな Process から始めて、少しずつ題材を育てながら juiz の考え方を学びます。
+このチュートリアルでは、`juiz pkg create` で作る雛形の、2 つの数を足すだけの小さな Process から始めて、少しずつ題材を育てながら juiz の考え方を学びます。
 各章は「動かしてみる」ことを中心にしていて、手を動かしながら読み進められるようにしてあります。
 
 ## 章の構成
@@ -17,15 +17,15 @@ import { Steps } from '@astrojs/starlight/components';
 
 1. **[はじめての Process](/ja/tutorial/first-process/)**([Rust](/ja/tutorial/first-process/rust/)・[Python](/ja/tutorial/first-process/python/)・[C++](/ja/tutorial/first-process/cpp/)・[Haskell](/ja/tutorial/first-process/haskell/))
 
-   引数に 1 を足す Process を、空のディレクトリから作って動かし、外から呼び出して結果を受け取ります。Process が冪等な関数であることと、call という使い方を学びます。
+   `juiz pkg create` で雛形のプロジェクトを作り、2 つの数を足す Process を動かして、外から呼び出して結果を受け取ります。雛形の中身の読み方と、Process が冪等な関数であること、call という使い方を学びます。
 
 2. **[状態を持つ: Container と ContainerProcess](/ja/tutorial/container/)**([Rust](/ja/tutorial/container/rust/)・[Python](/ja/tutorial/container/python/)・[C++](/ja/tutorial/container/cpp/)・[Haskell](/ja/tutorial/container/haskell/))
 
-   カウンタを題材に、状態を Container に置き、ContainerProcess だけがそれに触れる設計を学びます。
+   `juiz pkg add container` でカウンタを足し、状態を Container に置き、ContainerProcess だけがそれに触れる設計を学びます。
 
 3. **[設定ファイルでまとめて起動する](/ja/tutorial/config-file/)**
 
-   これまでの Process と Container を 1 つの設定ファイルで起動します。読み込み(plugins)と実体化(processes / containers)の違いを学びます。
+   雛形の設定ファイル `app/app.conf` を読んで書き換え、インスタンスを増やしたり初期値を渡したりします。読み込み(plugins)と実体化(processes / containers)の違いを学びます。
 
 4. **[Process をつなぐ: connect と Execution Context](/ja/tutorial/connect/)**
 
@@ -33,7 +33,7 @@ import { Steps } from '@astrojs/starlight/components';
 
 5. **[Component にまとめて配布する](/ja/tutorial/component/)**
 
-   複数の機能要素を 1 つのプロジェクトにまとめます。Component が配布の単位であることを学びます。
+   雛形がとっていた Component の形を、型ごとのファイルと比べます。Component が配布の単位であることを学びます。
 
 6. **[別々のプロセスをつなぐ](/ja/tutorial/multi-process/)**
 
@@ -52,7 +52,7 @@ import { Steps } from '@astrojs/starlight/components';
 ## 各章の読み方
 
 - 章の最初に「この章で学ぶこと」、最後に「まとめ」があります。
-- **第 1 章と第 2 章は、言語ごとのページに分かれています。** 空のディレクトリから自分のプロジェクトを作り、`Cargo.toml`(Rust)・`pyproject.toml`(Python)・`CMakeLists.txt`(C++)・`cabal.project` と `.cabal`(Haskell)の書き方から順に説明します。
+- **第 1 章と第 2 章は、言語ごとのページに分かれています。** `juiz pkg create` で自分のプロジェクトの雛形を作り、`Cargo.toml`(Rust)・`pyproject.toml`(Python)・`CMakeLists.txt`(C++)・`cabal.project` と `.cabal`(Haskell)や、型を書いたソースの読み方を説明します。
 - 第 3 章は、第 1・2 章で作ったプロジェクトをそのまま使います。
 - 第 4 章からは、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp)・[Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell))をクローンして使います。各章に対応するファイルへのリンクを置いています。
 - 第 3 章以降のコード例は Rust・Python・C++・Haskell のタブで切り替えられます。一度選んだ言語は、ほかのページでもそのまま保たれます。
@@ -62,9 +62,10 @@ import { Steps } from '@astrojs/starlight/components';
 ## 準備
 
 [インストール](/ja/getting-started/install/) の手順で `juiz` コマンドを、[言語ごとのパッケージ](/ja/getting-started/packages/) の手順で使う言語のパッケージを入れておいてください。
+第 1 章で使う `juiz pkg` は juiz 0.2.6 から入っています。
 
 - Rust で進める場合は `cargo install juiz_app` で `juiz` コマンドを入れます。
-- Python だけで進める場合は、第 1 章でプロジェクトの venv に `juiz-cli` を入れるので、先に入れておく必要はありません。Rust のツールチェーンも要りません。
+- Python だけで進める場合は、第 1 章で作業用の venv に `juiz-cli` を入れるので、先に入れておく必要はありません。Rust のツールチェーンも要りません。
 - C++ で進める場合は、`juiz` コマンド(pip と cargo のどちらで入れてもかまいません)のほかに、CMake と C++17 対応のコンパイラが必要です。libjuiz_sdk は第 1 章で用意します。
 - Haskell で進める場合は、`juiz` コマンドのほかに、GHC 9.6 以降と cabal が必要です(Linux・macOS)。libjuiz_sdk と hsjuiz は第 1 章で用意します。第 4 章からのサンプル集のビルドには Rust も使います。
 

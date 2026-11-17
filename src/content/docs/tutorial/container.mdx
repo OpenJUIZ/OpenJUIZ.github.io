@@ -20,26 +20,26 @@ In this chapter you learn how juiz handles state, using a counter that remembers
 - State lives in a **Container**, never in a Process
 - Only the **ContainerProcesses** bound to a Container touch its state
 - One Container can have several ContainerProcesses with different roles
-- How to add a Container and ContainerProcesses to the project from chapter 1
+- How to add a Container and ContainerProcesses to the project from chapter 1 with `juiz pkg add container`
 </Aside>
 
-You add a Container and ContainerProcesses to the project you created in chapter 1. Pick your language.
+You add a Container and ContainerProcesses to the project `my_juiz` from chapter 1 with `juiz pkg add container counter`, and read the code that was added. Pick your language.
 
 <CardGrid>
-	<LinkCard title="Rust" href="/tutorial/container/rust/" description="Add a Container crate and ContainerProcess crates to the workspace." />
-	<LinkCard title="Python" href="/tutorial/container/python/" description="Add .py files under container/." />
-	<LinkCard title="C++" href="/tutorial/container/cpp/" description="Write the Container class in a header and add the plugins to CMakeLists.txt." />
-	<LinkCard title="Haskell" href="/tutorial/container/haskell/" description="Write the state type in a module and add foreign-library stanzas to the .cabal file." />
+	<LinkCard title="Rust" href="/tutorial/container/rust/" description="A state struct and functions with #[juiz_component_container] and friends are added to src/lib.rs." />
+	<LinkCard title="Python" href="/tutorial/container/python/" description="A state class and decorated functions are added to the .py file." />
+	<LinkCard title="C++" href="/tutorial/container/cpp/" description="A state class and functions paired with manifests are added to the .cpp file." />
+	<LinkCard title="Haskell" href="/tutorial/container/haskell/" description="A state type wrapping an IORef and functions paired with manifests are added to the module." />
 </CardGrid>
 
-In every language, this chapter builds these three things.
+In every language, you add these three:
 
-| Role | What it does |
-| --- | --- |
-| Container | Holds one counter value |
-| ContainerProcess `increment` | Adds `arg1` to the Container's value and returns the new value |
-| ContainerProcess `get` | Returns the Container's value as is |
+| Role | Type name | What it does |
+| --- | --- | --- |
+| Container | `counter` | Holds one counter value. Takes the initial value `initial_value` when created |
+| ContainerProcess | `counter_increment` | Adds `step` to the Container's value and returns the new value |
+| ContainerProcess | `counter_get` | Returns the Container's value as is (readonly: it only reads) |
 
-Drawn as an abbreviated diagram with [juiz_opm](/guides/juiz-opm/), the system in `example_container.conf`, used later in this chapter, looks like this (see [Drawing a system](/guides/juiz-opm/#reading-the-abbreviated-diagram) for how to read it).
+Drawn as an abbreviated diagram with [juiz_opm](/guides/juiz-opm/), the system in `app/app.conf` after the addition looks like this (see [Drawing a system](/guides/juiz-opm/#reading-the-abbreviated-diagram) for how to read it).
 
-![Abbreviated diagram: ContainerProcesses increment0 and get0 inside the box of Container container0](../../../assets/tutorial-diagrams/example_container.png)
+![Abbreviated diagram: ContainerProcesses counter_increment0 and counter_get0 inside the box of Container counter0, and the Process my_juiz_add0 outside](../../../assets/tutorial-diagrams/example_container.png)

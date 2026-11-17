@@ -1,6 +1,6 @@
 ---
 title: "2. 状態を持つ(Haskell)"
-description: 第 1 章の cabal のプロジェクトにカウンタの Container と ContainerProcess を足し、状態の扱い方を学びます。
+description: 第 1 章の雛形に juiz pkg add container でカウンタの Container と ContainerProcess を足し、状態の扱い方を学びます。
 sidebar:
   order: 4
   label: Haskell
@@ -12,372 +12,218 @@ next:
   label: "3. 設定ファイルでまとめて起動する"
 ---
 
-import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
 
 第 1 章の Process は、同じ引数を渡せばいつも同じ結果を返す冪等な関数でした。
 しかし、ロボットや IoT の部品を作っていると、カウンタの値やモータの現在位置、カメラの接続のように「覚えておきたいもの」が必ず出てきます。
-この章では、整数を 1 つ覚えておくカウンタを、第 1 章で作ったプロジェクト `my_juiz_hs` に足していきます。
-できあがるものは、サンプル集 [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) の `container/` と同じです。
+この章では、整数を 1 つ覚えておくカウンタを、第 1 章で作ったプロジェクト `my_juiz` に足していきます。
 
 <Aside type="tip" title="この章で学ぶこと">
 - 状態は **Container** に置き、Process には持たせないこと
 - 状態に触れるのは、Container に結びついた **ContainerProcess** だけであること
 - 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられること
-- 状態の型を ContainerProcess と共有する `.cabal` の書き方
+- `juiz pkg add container` で、プロジェクトに Container と ContainerProcess を足す方法
 </Aside>
 
-## プロジェクトの形
+## Container を足す
 
-この章では、第 1 章のプロジェクトに `container/` を足して、次の形にします。
-
-<FileTree>
-- my_juiz_hs/
-  - cabal.project 第 1 章のまま
-  - my-juiz-hs.cabal foreign-library を 3 つ足す
-  - build.sh 第 1 章のまま
-  - example_container.conf 起動用の設定ファイル(新しく作る)
-  - process/
-    - IncrementProcess.hs 第 1 章で作った Process
-  - container/
-    - ExampleContainerState.hs 状態の型(3 つのライブラリで共有する)
-    - ExampleContainer.hs Container(カウンタの値)
-    - ExampleContainerIncrement.hs ContainerProcess(値を足す)
-    - ExampleContainerGet.hs ContainerProcess(値を読む)
-</FileTree>
-
-ディレクトリを作ります。以降のコマンドは、すべて `my_juiz_hs` で実行します。
+第 1 章のプロジェクト `my_juiz` で、次のコマンドを打ちます。`juiz` を起動したままなら、Ctrl+C で止めておいてください。
 
 ```sh
-cd my_juiz_hs
-mkdir container
+juiz pkg add container counter
 ```
 
-## Container を書く
+```text
+Added container counter to my_juiz (haskell): counter, counter_increment, counter_get
+Edited src/MyJuiz.hs, app/app.conf
 
-Container は、状態そのものです。値を入れておく入れ物と、それを作る関数だけを書きます。
-
-まず、状態の型を別のモジュールに書きます。
-Container と ContainerProcess は別々の共有ライブラリになるので、どちらからも同じモジュールの同じ型を使って、型をそろえます。
-
-```haskell title="container/ExampleContainerState.hs"
--- | example_container_hs の状態の型。
--- Container と ContainerProcess の両方のライブラリに入れて、型をそろえる。
-module ExampleContainerState
-  ( ExampleContainer (..)
-  ) where
-
-import Data.IORef (IORef)
-import Data.Int (Int64)
-
--- | 保持している値。ContainerProcess が書き換えるので IORef に入れる
-newtype ExampleContainer = ExampleContainer (IORef Int64)
+Next steps:
+  scripts/dev.sh                  # rebuild the plugin
+  juiz -f app/app.conf -d         # restart juiz
+  ...
 ```
 
-Haskell の値は書き換えられないので、書き換えたい値は `IORef` に入れておきます。
+`juiz pkg add container <名前>` は、次の 3 つの型を足します。
 
-```haskell title="container/ExampleContainer.hs"
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
--- | 整数値を 1 つ保持する Container (example_container_hs)。
--- 初期値は設定ファイルの containers に書いた value (無ければ 0)。
-module ExampleContainer () where
+| 役割 | 型名 | 内容 |
+| --- | --- | --- |
+| Container | `counter` | カウンタの値を 1 つ持つ。作るときに初期値 `initial_value` を受け取る |
+| ContainerProcess | `counter_increment` | Container の値に `step` を足して、足した後の値を返す |
+| ContainerProcess | `counter_get` | Container の値をそのまま返す |
 
-import Juiz
+書き換わるのは `src/MyJuiz.hs` と `app/app.conf` の 2 つだけで、新しいファイルは増えません。
+足された型も、第 1 章の Process と同じ 1 つのライブラリ(Component)に入ります。`.cabal` を直す必要もありません。
 
-import ExampleContainerState
+足されたところを順に読んでいきます。
 
-manifest :: ContainerManifest
-manifest = containerManifest "example_container_hs"
+## Container: 状態を入れておく
+
+Container は、状態そのものです。値を入れておく入れ物と、それを作る関数だけが書かれています。
+
+```haskell title="src/MyJuiz.hs(足された部分)"
+-- | State of the container counter: one integer value
+newtype CounterState = CounterState (IORef Int64)
+
+-- | Container counter. initial_value is taken from the container entry of app/app.conf
+counter_manifest :: ContainerManifest
+counter_manifest = containerManifest "counter"
   & description "Holds an integer value."
-  & addIntArg "value" "initial value" 0
+  & addIntArg "initial_value" "the initial value" 0
 
-create :: Int64 -> IO ExampleContainer
-create value = ExampleContainer <$> newIORef value
-
-juizContainer 'create 'manifest
+counter_create :: Int64 -> IO CounterState
+counter_create initialValue = CounterState <$> newIORef initialValue
 ```
 
 | 部分 | 意味 |
 | --- | --- |
-| `containerManifest "example_container_hs"` | Container の説明書です。文字列が Container の**型名**になります |
-| `addIntArg "value" "initial value" 0` | Container を作る関数の引数です。設定ファイルの `containers` に `value` を書くと、その値を受け取ります(第 3 章)。書いていなければ既定値の 0 になります |
-| `create :: Int64 -> IO ExampleContainer` | Container を作る関数です。結果が Container の状態になります |
-| `juizContainer 'create 'manifest` | `juiz` から読み込めるように公開します |
+| `newtype CounterState = CounterState (IORef Int64)` | 状態の型です。書き換えられる整数を 1 つ(`IORef Int64`)持ちます |
+| `containerManifest "counter"` | Container の説明書(マニフェスト)です。文字列 `counter` が Container の**型名**になります |
+| `addIntArg "initial_value" ... 0` | Container を作るときに受け取る値です。既定値は 0 で、設定ファイルから渡せます(第 3 章) |
+| `counter_create :: Int64 -> IO CounterState` | Container を作る関数です。初期値を入れた `IORef` を作って返します |
 
 Container には、値を変えたり読んだりする処理は書いていません。Container は「何を覚えておくか」だけを表します。
 
-## ContainerProcess を書く
+## ContainerProcess: 状態を変える・読む
 
 状態を変えたり読んだりする処理は、ContainerProcess に書きます。
-ContainerProcess は、**最初の引数に Container の状態を受け取る** Process です。どの Container と組になるかは、Container の型名で指定します。
+ContainerProcess は、**最初の引数に Container を受け取る** Process です。どの Container と組になるかは、Container の型名で指定します。
 
-### increment: 値を足す
+### counter_increment: 値を足す
 
-```haskell title="container/ExampleContainerIncrement.hs"
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
--- | example_container_hs の値に arg1 を足し、足した後の値を返す ContainerProcess
--- (example_container_hs_increment)。
-module ExampleContainerIncrement () where
+```haskell title="src/MyJuiz.hs(足された部分)"
+-- | ContainerProcess counter_increment
+counter_increment_manifest :: ProcessManifest
+counter_increment_manifest = containerProcessManifest "counter_increment" "counter"
+  & description "Adds step to the value and returns it."
+  & addIntArg "step" "the value to add" 1
 
-import Juiz
-
-import ExampleContainerState
-
-manifest :: ProcessManifest
-manifest = containerProcessManifest "example_container_hs_increment" "example_container_hs"
-  & description "Adds arg1 to the value of the container."
-  & addIntArg "arg1" "value to be added" 1
-
--- | 最初の引数で Container の状態を受け取る
-increment :: ExampleContainer -> Int64 -> IO Int64
-increment (ExampleContainer ref) arg1 = atomicModifyIORef' ref (\v -> (v + arg1, v + arg1))
-
-juizContainerProcess 'increment 'manifest
+counter_increment :: CounterState -> Int64 -> IO Int64
+counter_increment (CounterState ref) step = atomicModifyIORef' ref (\v -> (v + step, v + step))
 ```
 
 | 部分 | 意味 |
 | --- | --- |
-| `import ExampleContainerState` | Container と同じ状態の型を使います |
-| `containerProcessManifest "example_container_hs_increment" "example_container_hs"` | ContainerProcess の説明書です。1 つ目が ContainerProcess の型名、2 つ目が結びつける Container の型名です |
-| `ExampleContainer -> Int64 -> IO Int64` | 最初の引数で Container の状態を受け取ります。続けて `manifest` で宣言した引数を受け取ります |
-| `atomicModifyIORef'` | `IORef` の値を書き換えて、書き換えた後の値を返します |
-| `juizContainerProcess 'increment 'manifest` | 公開には `juizProcess` ではなく `juizContainerProcess` を使います |
+| `containerProcessManifest "counter_increment" "counter"` | ContainerProcess のマニフェストです。1 つめが型名、2 つめが結びつける Container の型名です |
+| `addIntArg "step" "the value to add" 1` | 引数 `step` を宣言します。既定値は 1 です |
+| `CounterState -> Int64 -> IO Int64` | 最初の引数で Container の状態を受け取り、2 番目以降の引数は第 1 章の Process と同じように呼び出すときに渡します。状態を書き換えるので、戻り値は `IO` です |
+| `atomicModifyIORef' ref ...` | 値に `step` を足し、足した後の値を返します |
 
-### get: 値を読む
+### counter_get: 値を読む
 
-```haskell title="container/ExampleContainerGet.hs"
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
--- | example_container_hs の値を返す ContainerProcess (example_container_hs_get)。引数は無い。
-module ExampleContainerGet () where
+```haskell title="src/MyJuiz.hs(足された部分)"
+-- | ContainerProcess counter_get. readonly: it only reads the state
+-- (juiz may run readonly container processes of the same container in parallel)
+counter_get_manifest :: ProcessManifest
+counter_get_manifest = containerProcessManifest "counter_get" "counter"
+  & description "Returns the value."
+  & readonly True
 
-import Juiz
-
-import ExampleContainerState
-
-manifest :: ProcessManifest
-manifest = containerProcessManifest "example_container_hs_get" "example_container_hs"
-  & description "Returns the value of the container."
-
-get :: ExampleContainer -> IO Int64
-get (ExampleContainer ref) = readIORef ref
-
-juizContainerProcess 'get 'manifest
+counter_get :: CounterState -> IO Int64
+counter_get (CounterState ref) = readIORef ref
 ```
 
-`get` は Container 以外の引数を持たず、値を返すだけです。
+`counter_get` は Container 以外の引数を持たず、値を返すだけです。
+`readonly True` は、この ContainerProcess が値を読むだけで書き換えないことを表します。こうした「読むだけ」の ContainerProcess を **readonly** と呼びます。
+juiz は、同じ Container の readonly の ContainerProcess どうしを、並行に動かすことがあります。
 
 こうして、状態(Container)と振る舞い(ContainerProcess)を別々に書きます。
 状態を変えたり読んだりできるのは、その Container に結びついた ContainerProcess だけです。
 「この値はどこで書き換わるのか」を知りたいときは、ContainerProcess を見ればよいことになります。
 
-<Aside type="note">
-juiz は、同じ Container の ContainerProcess を同時には呼びません。ここでは `atomicModifyIORef'` を使っていますが、`modifyIORef'` と `readIORef` を続けて書いてもかまいません。
-</Aside>
+### 型の一覧
 
-## my-juiz-hs.cabal に足す
+ファイルの末尾の `juizComponent` にも、足した型が書き足されています。
 
-`my-juiz-hs.cabal` の最後に、次の内容を足します。第 1 章で作った `common plugin` を使うので、1 つの `foreign-library` は数行で済みます。
-
-```txt title="my-juiz-hs.cabal(末尾に追加)"
--- 第 2 章: カウンタの Container と ContainerProcess
--- 状態の型 (ExampleContainerState) は 3 つのライブラリのどれにも入れる
-foreign-library example_container_hs
-    import:           plugin
-    type:             native-shared
-    hs-source-dirs:   container
-    other-modules:    ExampleContainer
-                      ExampleContainerState
-
-foreign-library example_container_hs_increment
-    import:           plugin
-    type:             native-shared
-    hs-source-dirs:   container
-    other-modules:    ExampleContainerIncrement
-                      ExampleContainerState
-
-foreign-library example_container_hs_get
-    import:           plugin
-    type:             native-shared
-    hs-source-dirs:   container
-    other-modules:    ExampleContainerGet
-                      ExampleContainerState
+```haskell title="src/MyJuiz.hs" ins={3-5}
+juizComponent 'my_juiz_component
+  [ componentProcess 'my_juiz_add 'my_juiz_add_manifest
+  , componentContainer 'counter_create 'counter_manifest
+  , componentContainerProcess 'counter_increment 'counter_increment_manifest
+  , componentContainerProcess 'counter_get 'counter_get_manifest
+  ]
 ```
 
-3 つのライブラリの `other-modules` に、どれも `ExampleContainerState` を入れています。
-juiz は Container の状態の型と ContainerProcess が受け取る型を、モジュール名つきの型名(`ExampleContainerState.ExampleContainer`)で比べます。違う型の Container に結びつけると、呼び出しがエラーになります。
+`componentContainer` で Container を、`componentContainerProcess` で ContainerProcess を、関数とマニフェストの組で並べます。
 
-## ビルドする
+## 設定ファイルに足されたもの
 
-第 1 章の `build.sh` は、`my-juiz-hs.cabal` の `foreign-library` を全部集めるので、そのまま使えます。
+`app/app.conf` の末尾には、`containers` が足されています。
 
-<Tabs syncKey="platform">
-<TabItem label="Linux">
+```yaml title="app/app.conf" ins={4-12}
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 0
+    "processes":
+      - "type_name": "counter_increment"
+        "name": "counter_increment0"
+      - "type_name": "counter_get"
+        "name": "counter_get0"
+```
+
+- 型 `counter` から、Container のインスタンス `counter0` を 1 つ作る。`initial_value` に 0 を渡す
+- `counter0` に結びつけて、`counter_increment` のインスタンス `counter_increment0` と、`counter_get` のインスタンス `counter_get0` を作る
+
+「1 つの Container に、2 つの ContainerProcess がぶら下がっている」という形です。設定ファイルの書き方は、次の第 3 章で詳しく扱います。
+
+## ビルドして動かす
+
+第 1 章と同じように、ビルドして起動します。
 
 ```sh
-./build.sh
-# => libexample_container_hs.so
-#    libexample_container_hs_get.so
-#    libexample_container_hs_increment.so
-#    libincrement_process_hs.so
+scripts/dev.sh
+juiz -f app/app.conf -d
 ```
-
-</TabItem>
-<TabItem label="macOS">
-
-```sh
-./build.sh
-# => libexample_container_hs.dylib
-#    libexample_container_hs_get.dylib
-#    libexample_container_hs_increment.dylib
-#    libincrement_process_hs.dylib
-```
-
-</TabItem>
-</Tabs>
-
-第 1 章の Process も含めて、すべて `build/plugins` にそろいます。
-
-## 動かす
-
-まずは第 1 章と同じように、ファイルを指定して `juiz` を起動します。
-Container は `--container`、ContainerProcess は `--container_process` で読み込みます。
-
-<Tabs syncKey="platform">
-<TabItem label="Linux">
-
-```sh
-juiz --container ./build/plugins/libexample_container_hs.so \
-     --container_process ./build/plugins/libexample_container_hs_increment.so -l haskell -1 -d
-```
-
-</TabItem>
-<TabItem label="macOS">
-
-```sh
-juiz --container ./build/plugins/libexample_container_hs.dylib \
-     --container_process ./build/plugins/libexample_container_hs_increment.dylib -l haskell -1 -d
-```
-
-</TabItem>
-</Tabs>
-
-`-1` を付けると、読み込んだ Container の型からインスタンスを 1 つ作り、そこに ContainerProcess のインスタンスを 1 つ結びつけます。
-インスタンス名は第 1 章と同じく型名の後ろに `0` を付けた名前で、Container は `example_container_hs0`、ContainerProcess は `example_container_hs_increment0` になります。
-Container は値 0(`value` の既定値)から始まります。
 
 ## 外から呼び出す
 
-`juiz` を起動したまま、別のターミナルを開きます。まず、動いている ContainerProcess の一覧を見ます。
+`juiz` を起動したまま、別のターミナルを開きます。まず、動いている Container と ContainerProcess の一覧を見ます(表示される順番は実行ごとに変わることがあります)。
 
 ```sh
+juiz container list
+# => ["http://127.0.0.1:8000/container/counter0::counter"]
 juiz container-process list
-# => ["http://127.0.0.1:8000/container_process/example_container_hs_increment0::example_container_hs_increment:example_container_hs0"]
+# => ["http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0", "http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0"]
 ```
 
 ContainerProcess の ID は「インスタンス名`::`型名`:`Container のインスタンス名」の形をしていて、どの Container に結びついているかが ID からわかります。
 
-`increment` を、同じ引数で 2 回呼び出してみましょう。
+`counter_get` で今の値を見てから、`counter_increment` を同じ引数で 2 回呼び出し、もう一度 `counter_get` で値を見てみましょう。
 
 ```sh
-juiz container-process call "http://127.0.0.1:8000/container_process/example_container_hs_increment0::example_container_hs_increment:example_container_hs0" '{"arg1": 5}' -p
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0" '{"step": 5}' -p
 # => CapsulePtr((value:Value(5), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/example_container_hs_increment0::example_container_hs_increment:example_container_hs0" '{"arg1": 5}' -p
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0" '{"step": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0" '{}' -p
 # => CapsulePtr((value:Value(10), option: []))
 ```
 
-同じ `{"arg1": 5}` を渡しているのに、1 回目と 2 回目で結果が違います。
+同じ `{"step": 5}` を渡しているのに、1 回目と 2 回目で結果が違います。
 第 1 章の Process と違って、ContainerProcess の結果は引数だけでなく Container の状態にも左右されるからです。
 
-## 2 つの ContainerProcess で Container を共有する
+そして、`counter_increment` が変えた値を、別の ContainerProcess である `counter_get` が読めています。2 つの ContainerProcess は、同じ Container を共有しています。
 
-次は、`increment` が変えた値を `get` で読んでみます。
-コマンドラインからは ContainerProcess を 1 つしか読み込めないので、「どの Container に、どの ContainerProcess を結びつけるか」を設定ファイルに書きます。
-`my_juiz_hs/example_container.conf` を、次の内容で作ってください。
-
-```yaml title="example_container.conf"
-name: example_container
-option:
-  http_broker:
-    start: true
-    port: 8000
-plugins:
-  container_factories:
-    example_container_hs:
-      language: "haskell"
-      path: "./build/plugins"
-      processes:
-        example_container_hs_increment:
-          path: "./build/plugins"
-        example_container_hs_get:
-          path: "./build/plugins"
-containers:
-  - type_name: example_container_hs
-    name: container0
-    processes:
-      - type_name: example_container_hs_increment
-        name: increment0
-      - type_name: example_container_hs_get
-        name: get0
-```
-
-設定ファイルには、次のことが書かれています。
-
-- Container の型と ContainerProcess の型を、どこから読み込むか(`plugins`)。型名から `libexample_container_hs.so`(macOS では `libexample_container_hs.dylib`)のようなファイル名を作って、`path` のディレクトリから探します。言語は `language: "haskell"` と書きます
-- Container のインスタンス `container0` を 1 つ作ること(`containers`)
-- `container0` に結びつけて、`increment` のインスタンス `increment0` と、`get` のインスタンス `get0` を作ること
-
-設定ファイルの書き方は、次の第 3 章で詳しく扱います。ここでは「1 つの Container に、2 つの ContainerProcess がぶら下がっている」という形だけ押さえておいてください。
-
-起動中の `juiz` を Ctrl+C で止めてから、設定ファイルを指定して起動し直します。
-
-```sh
-juiz -f example_container.conf -d
-```
-
-一覧を見ると、今度は ContainerProcess が 2 つあります(表示される順番は実行ごとに変わることがあります)。
-
-```sh
-juiz container-process list
-# => ["http://127.0.0.1:8000/container_process/increment0::example_container_hs_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:container0"]
-```
-
-`get` で今の値を見てから、`increment` を 2 回呼び出し、もう一度 `get` で値を見てみましょう。
-
-```sh
-juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:container0" '{}' -p
-# => CapsulePtr((value:Value(0), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_hs_increment:container0" '{"arg1": 5}' -p
-# => CapsulePtr((value:Value(5), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_hs_increment:container0" '{"arg1": 5}' -p
-# => CapsulePtr((value:Value(10), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:container0" '{}' -p
-# => CapsulePtr((value:Value(10), option: []))
-```
-
-`increment` が変えた値を、別の ContainerProcess である `get` が読めています。2 つの ContainerProcess は、同じ Container を共有しています。
-
-### ブラウザから呼び出す
-
-第 1 章と同じく、Swagger UI(`http://127.0.0.1:8000/docs/`)からも呼び出せます。
-`PATCH /api/container_process/call` を開いて、identifier には、`juiz container-process list` で表示された ID の先頭 `http://127.0.0.1:8000` を `core://core` に置き換えた ID を入力します。
-
-- identifier: `core://core/container_process/get0::example_container_hs_get:container0`
-- Request body: `{}`
+`'{}'` のように `step` を省くと、既定値の 1 が足されます。
+管理画面(`http://localhost:8000/ui/`)からも、第 1 章と同じように ContainerProcess を呼び出せます。
 
 ## やってみよう
 
-- `increment` に負の数(`{"arg1": -3}` など)を渡して、値が減ることを確かめてみましょう。
-- `juiz` を Ctrl+C で止めてから起動し直し、`get` を呼び出してみましょう。値は最初に戻っています。状態は、動いている Container の中にだけあることがわかります。
-- 値を 0 に戻す ContainerProcess(`example_container_hs_reset`)を足してみましょう。`get` と同じ形のファイルを作り、`writeIORef ref 0` で値を書き換えてから返します。`my-juiz-hs.cabal` と `example_container.conf` の両方に書き足すのを忘れないでください。
+- `counter_increment` に負の数(`{"step": -3}` など)を渡して、値が減ることを確かめてみましょう。
+- `juiz` を Ctrl+C で止めてから起動し直し、`counter_get` を呼び出してみましょう。値は最初に戻っています。状態は、動いている Container の中にだけあることがわかります。
+- 値を 0 に戻す ContainerProcess `counter_reset` を、自分で書き足してみましょう。`counter_increment` をまねてマニフェストと関数を書き(引数は Container だけにして、`atomicModifyIORef' ref (\_ -> (0, 0))` で 0 にして返す)、`juizComponent` のリストに `componentContainerProcess` を足し、`app/app.conf` の `counter0` の `processes` に `counter_reset0` のインスタンスを足します。
 
 ## まとめ
 
+- `juiz pkg add container <名前>` で、Container と、それを読み書きする ContainerProcess をプロジェクトに足せます。書き換わるのはソースと `app/app.conf` だけです。
 - 状態は Container に置きます。Container には「何を覚えておくか」だけを書き、処理は書きません。
-- 状態を読み書きするのは、Container に結びついた ContainerProcess だけです。ContainerProcess は最初の引数で Container の状態を受け取ります。
-- Haskell では、状態の型を別のモジュールに書き、Container と ContainerProcess のライブラリのどちらの `other-modules` にも入れます。書き換える値は `IORef` に入れます。
+- 状態を読み書きするのは、Container に結びついた ContainerProcess だけです。ContainerProcess は最初の引数で Container を受け取ります。読むだけのものは、マニフェストに `readonly True` を付けます。
 - 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられます。それらは同じ状態を共有します。
 - ContainerProcess の結果は、引数だけでなく Container の状態にも左右されます。冪等な Process と、状態を扱う ContainerProcess を分けておくことで、状態がどこで変わるのかがはっきりします。
 
-次の章では、この章で使った設定ファイルの書き方を学び、第 1 章の Process とこの章の Container を 1 つの設定ファイルでまとめて起動します。[設定ファイルでまとめて起動する](/ja/tutorial/config-file/) に進みましょう。
+次の章では、`app/app.conf` の書き方を学び、書き換えてインスタンスを増やしたり、初期値を渡したりします。[設定ファイルでまとめて起動する](/ja/tutorial/config-file/) に進みましょう。

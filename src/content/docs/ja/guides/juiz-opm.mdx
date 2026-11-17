@@ -144,23 +144,23 @@ OPM の規則(C1〜C12)と juiz の規則(J1〜J13)に合っているかを確�
 
 ## チュートリアルのシステムの図
 
-チュートリアルの各章で使う設定ファイル(Rust のもの)を、そのまま描いたものです。ほかの言語では型名(灰色の文字)だけが違います。
+チュートリアルの各章で使う設定ファイル(Rust のもの)を、そのまま描いたものです。第 2・3 章はどの言語でも同じ図になり、第 4・5 章はほかの言語では型名(灰色の文字)だけが違います。
 
-### 第 2 章: example_container.conf
+### 第 2 章: Container を足した app/app.conf
 
-1 つの Container `container0` に、ContainerProcess `increment0` と `get0` が結びついています。→ [2. 状態を持つ](/ja/tutorial/container/)
+1 つの Container `counter0` に、ContainerProcess `counter_increment0` と `counter_get0` が結びついています。外には第 1 章の Process `my_juiz_add0` があります。→ [2. 状態を持つ](/ja/tutorial/container/)
 
-![example_container の略式図。Container container0 の箱の中に increment0 と get0](../../../../assets/tutorial-diagrams/example_container.png)
+![第 2 章の略式図。Container counter0 の箱の中に counter_increment0 と counter_get0、外に Process my_juiz_add0](../../../../assets/tutorial-diagrams/example_container.png)
 
-### 第 3 章: tutorial.conf
+### 第 3 章: インスタンスを増やした app/app.conf
 
-同じ型の Process `inc0`・`inc1` と、Container `counter0`。→ [3. 設定ファイルでまとめて起動する](/ja/tutorial/config-file/)
+同じ型の Process `my_juiz_add0`・`my_juiz_add1` と、Container `counter0`。→ [3. 設定ファイルでまとめて起動する](/ja/tutorial/config-file/)
 
-![tutorial の略式図。Container counter0 と、その中の increment0・get0、Process inc0・inc1](../../../../assets/tutorial-diagrams/tutorial.png)
+![第 3 章の略式図。Container counter0 と、その中の counter_increment0・counter_get0、Process my_juiz_add0・my_juiz_add1](../../../../assets/tutorial-diagrams/tutorial.png)
 
 同じ章の後半で `initial_value` と `p_apply` を足したあとの形です。
 
-![initial_value と p_apply を足した tutorial の略式図。counter0 の帯に initial_value 3、inc0 と increment0 の引数 arg1 に p_apply の値](../../../../assets/tutorial-diagrams/tutorial_p_apply.png)
+![initial_value と p_apply を足した第 3 章の略式図。counter0 の帯に initial_value 3、my_juiz_add0 の引数 a と counter_increment0 の引数 step に p_apply の値](../../../../assets/tutorial-diagrams/tutorial_p_apply.png)
 
 ### 第 4 章: talker_listener.conf
 

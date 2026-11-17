@@ -14,11 +14,11 @@ next:
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-So far you have built every Process, Container and ContainerProcess as a separate file (library), one per type.
-In the configuration file in chapter 3, you also listed the types in `plugins` one by one so each file was loaded.
+In the skeleton of chapters 1 to 3, you wrote the Process, Container and ContainerProcesses in one source, built them into one library, and loaded it with one line under `components` in `plugins` of `app/app.conf`.
+The talker and listener examples in chapter 4, on the other hand, are separate files (libraries), one per type, loaded by listing the types one by one under `process_factories`.
 
 When you want to hand someone "the full set of parts for this camera", scattered files are inconvenient.
-In this chapter you build a **Component** that bundles Processes, Containers and ContainerProcesses into one library, and load it from a configuration file.
+In this chapter you take another look at the form the skeleton used, the **Component**, which bundles Processes, Containers and ContainerProcesses into one library, using the example repository, and compare it with one file per type.
 
 <Aside type="tip" title="What you will learn">
 - A Component is the **unit of distribution** that bundles several Processes, Containers and ContainerProcesses
@@ -35,7 +35,7 @@ The Component used in this chapter contains the following. Each works the same a
 
 | Kind | What it does |
 | --- | --- |
-| Process | Adds 1 to its argument and returns it (same as `increment_process` in chapter 1) |
+| Process | Adds 1 to its argument and returns it (an ordinary Process, like `my_juiz_add` in chapter 1) |
 | Container | Holds one integer (same as the counter in chapter 2) |
 | ContainerProcess | Reads or changes the Container's value |
 
@@ -107,7 +107,7 @@ auto component_manifest() {
 DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(component_manifest)
 ```
 
-Because one library holds several types, the code looks a little different from before.
+It is written the same way as `src/my_juiz.cpp` in the skeleton of chapters 1 and 2. Compared with one library per type, like the talker and listener in chapter 4, the following differ.
 
 - Each type's manifest goes in a variable named per type, such as `example_component_cpp_increment_manif`, instead of a function always called `manifest()`.
 - To export, use `COMPONENT_PROCESS_FACTORY`, `COMPONENT_CONTAINER_FACTORY` and `COMPONENT_CONTAINER_PROCESS_FACTORY` instead of `PROCESS_FACTORY` and friends. Besides the function itself, these also generate a function named `<function name>_manifest()`.
@@ -121,7 +121,7 @@ add_juiz_component(example_component_cpp SOURCES example_component_cpp/example_c
 
 This produces a single shared library: `build/plugins/libexample_component_cpp.so` on Linux, `build/plugins/libexample_component_cpp.dylib` on macOS, and `build/plugins/example_component_cpp.dll` on Windows.
 
-What used to be split per type now lives in one library.
+What the chapter 4 examples split per type now lives in one library.
 The bodies of the Processes and ContainerProcesses are unchanged. Processes are still idempotent functions, and only ContainerProcesses touch state.
 
 ## Read the configuration file
@@ -153,7 +153,7 @@ containers:
         name: get0
 ```
 
-Compare it with the configuration file from chapter 3.
+Compare it with `talker_listener.conf`, the configuration file from chapter 4.
 
 ### plugins: one Component entry
 
@@ -165,8 +165,8 @@ plugins:
       path: "./build/plugins"
 ```
 
-In chapter 3 you listed types one by one in `process_factories` and `container_factories`, and each ContainerProcess under its Container.
-With a Component, you write **just one Component name** in `components`. As in chapter 3, the key determines which file is loaded.
+In chapter 4 you listed types one by one in `process_factories` (Containers go in `container_factories`, with each ContainerProcess under its Container).
+With a Component, as in `app/app.conf` from chapter 3, you write **just one Component name** in `components`. As with one file per type, the key determines which file is loaded.
 
 For the Component name `example_component_cpp`, juiz loads `libexample_component_cpp.so` (`libexample_component_cpp.dylib` on macOS, `example_component_cpp.dll` on Windows) from `./build/plugins`. The configuration file has no file extension in it, so the same file works on every OS.
 
@@ -216,7 +216,7 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 ```
 
 The Process adds 1 to its argument and returns it, and the ContainerProcesses change or read the Container's value.
-From the caller's point of view, they are indistinguishable from what you built from separate files in chapters 1 to 3.
+From the caller's point of view, they are indistinguishable from types loaded from one file per type, as in chapter 4.
 
 ## A Component is the unit of distribution
 
@@ -225,14 +225,18 @@ As you have seen, bundling into a Component changes nothing about how Processes 
 - **Authors** can write related Processes, Containers and ContainerProcesses in one project and distribute them as one library. For a camera, for example, a Container that opens and holds the camera, a ContainerProcess that reads images, and a Process that converts images can all be one Component.
 - **Users** write one line in `components` under `plugins` to get every type inside. Which types to instantiate, and how many, is still decided freely with `processes` and `containers`.
 
+<Aside type="tip" title="Distributing your skeleton">
+The `my_juiz` you made in chapters 1 to 3 is also one Component. Run the skeleton's `scripts/pack.sh` (`scripts\pack.ps1` on Windows) to bundle the Component library and `app/app.conf` into a single `.juizapp` file; whoever receives it can run it with just `juiz run`. See "Distribute" in [Starting from a skeleton (juiz pkg)](/guides/pkg/#distribute) and [Distributing apps (.juizapp)](/guides/app-package/).
+</Aside>
+
 In other words, Processes, Containers and ContainerProcesses are "units for running", while a Component is the "unit for distributing".
 
 ## Try it yourself
 
 - Add another instance of `example_component_cpp_increment` to `processes`. As in chapter 3, you can create any number of instances from types loaded from a Component.
 - Add another Container (for example `container1`) and its ContainerProcesses to `containers`. `container0` and `container1` hold separate values.
-- Add `connections` and `ecs` from chapter 4 and connect the first Process's output to `arg1` of the second Process you added. Types from a Component connect the same way as any other. `plugins` can list `components` and `process_factories` side by side, so you can also connect to a Process from a separate file, such as `increment_process` from chapter 3.
-- You can also load a Component from the command line without a configuration file. With `-1`, juiz creates one instance of every type in the Component (named "type name + `0`" as in chapter 1).
+- Add `connections` and `ecs` from chapter 4 and connect the first Process's output to `arg1` of the second Process you added. Types from a Component connect the same way as any other. `plugins` can list `components` and `process_factories` side by side, so you can also connect to a Process from a separate file, such as the talker from chapter 4.
+- You can also load a Component from the command line without a configuration file. With `-1`, juiz creates one instance of every type in the Component (named "type name + `0`", as in the skeleton's `app/app.conf`).
 
 <Tabs syncKey="platform">
 <TabItem label="Linux">

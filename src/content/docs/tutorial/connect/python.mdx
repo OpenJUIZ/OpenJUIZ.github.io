@@ -26,7 +26,7 @@ In this chapter you connect a `talker` that outputs a string to a `listener` tha
 
 ## Prepare the samples
 
-Up to chapter 3 you built your own project from scratch. From here on there are more building blocks, so clone and build the example repository and read its files as you go.
+Up to chapter 3 you used your own project made from the skeleton. From here on there are more building blocks, so clone and build the example repository and read its files as you go.
 Run all commands in the following chapters from the root of the cloned repository.
 
 <Tabs syncKey="platform">
@@ -155,7 +155,7 @@ ecs:
     auto_start: true
 ```
 
-`plugins` and `processes` are the same as in chapter 3 and create `talker0` and `listener0`. What is new is `connections` and `ecs`.
+`plugins` loads the talker and listener files one by one with `process_factories`, the "one file per type" way from chapter 3. `processes` is the same as in chapter 3 and creates `talker0` and `listener0`. What is new is `connections` and `ecs`.
 
 ### connections: connecting
 
@@ -296,7 +296,7 @@ The same Process works either way. The Process's code does not need to know whic
 
 - Change `rate` to `2.0`, restart, and confirm that the interval between outputs is halved.
 - Change the Process in `bind` from `talker0` to `listener0`. The listener keeps printing its default `Hello, Juiz!`, and the talker never runs. An EC runs only the Processes listed in `bind`, and a connection works only when its `source` runs.
-- Create two instances of `increment_process` from chapter 3 and connect the output of `inc0` to `arg1` of `inc1`. When `inc0` runs from the EC, `inc1` receives `inc0`'s result (its default value plus 1). You can confirm it from the printed output.
+- To `app/app.conf` of `my_juiz` from chapter 3 (the one where `p_apply` of `my_juiz_add0` is `a: 10` and `my_juiz_add1` exists), add `connections` that connect the output of `my_juiz_add0` to `a` of `my_juiz_add1`, and `ecs` that runs `my_juiz_add0`. In the web UI, `my_juiz_add1` shows `10`, the result of `my_juiz_add0`, in its argument `a` (`juiz process info` shows it too).
 
 ## Summary
 

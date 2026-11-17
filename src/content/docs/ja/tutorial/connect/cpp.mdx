@@ -26,7 +26,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 ## サンプルを用意する
 
-第 3 章までは自分で 1 からプロジェクトを作りました。ここからは題材が増えるので、サンプル集をクローンしてビルドし、そのファイルを読みながら進めます。
+第 3 章までは、雛形から作った自分のプロジェクトを使いました。ここからは題材が増えるので、サンプル集をクローンしてビルドし、そのファイルを読みながら進めます。
 以降の章のコマンドは、すべてクローンしたリポジトリのルートで実行します。
 
 ```sh
@@ -170,7 +170,7 @@ ecs:
     auto_start: true
 ```
 
-`plugins` と `processes` は第 3 章と同じで、`talker0` と `listener0` を作っています。新しく出てきたのは `connections` と `ecs` です。
+`plugins` では、第 3 章の「型ごとに別のファイルにする書き方」の `process_factories` で、talker と listener のファイルを 1 つずつ読み込んでいます。`processes` は第 3 章と同じで、`talker0` と `listener0` を作っています。新しく出てきたのは `connections` と `ecs` です。
 
 ### connections: つなぐ
 
@@ -311,7 +311,7 @@ listener も、引数を渡して直接 call すれば、ふつうの Process �
 
 - `rate` を `2.0` に変えて起動し直し、表示の間隔が半分になることを確かめてみましょう。
 - `bind` の Process を `talker0` から `listener0` に変えてみましょう。listener は既定値の `Hello, Juiz!` を表示し続け、talker は一度も実行されません。EC が実行するのは `bind` に書いた Process だけで、つながりは `source` が実行されたときにしか働かないことがわかります。
-- 第 3 章の `increment_process` のインスタンスを 2 つ作り、`inc0` の出力を `inc1` の `arg1` につないでみましょう。`inc0` を EC で動かすと、`inc1` は `inc0` の結果(既定値に 1 を足した値)を受け取ります。
+- 第 3 章の `my_juiz` の `app/app.conf`(`my_juiz_add0` の `p_apply` が `a: 10`、`my_juiz_add1` もあるもの)に、`my_juiz_add0` の出力を `my_juiz_add1` の `a` につなぐ `connections` と、`my_juiz_add0` を動かす `ecs` を書き足してみましょう。管理画面で `my_juiz_add1` を見ると、引数 `a` に `my_juiz_add0` の結果の `10` が入っています(`juiz process info` でも確かめられます)。
 
 ## まとめ
 

@@ -1,6 +1,6 @@
 ---
 title: "1. Your first Process (Python)"
-description: Create a Python project from scratch with pyproject.toml and a venv, write a Process that adds 1 to its argument, and run it.
+description: Create a Python skeleton with juiz pkg create, run its Process that adds two numbers, and call it from outside.
 sidebar:
   order: 2
   label: Python
@@ -14,11 +14,12 @@ next:
 
 import { Aside, FileTree, Tabs, TabItem } from '@astrojs/starlight/components';
 
-In this chapter you create a Python project from an empty directory, write a Process that adds 1 to its argument and returns it, and run it.
-What you build is the same as `process/increment_process_python.py` in the [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) examples.
+In this chapter you create a Python project skeleton with `juiz pkg create` and run the Process in it, which adds two numbers and returns the sum.
+Once it runs, you read the files in the skeleton one by one.
 
 <Aside type="tip" title="What you will learn">
-- How to set up a Python project for writing Processes (how to write `pyproject.toml`)
+- How to create a Python project skeleton for writing Processes with `juiz pkg create`
+- How to read the skeleton (`app/python/my_juiz.py`, `pyproject.toml` and `app/app.conf`)
 - A Process is an idempotent function that takes arguments and returns a result
 - A Process has a "type name" and an "instance name"
 - How to call a Process from outside and get the result back (call)
@@ -26,209 +27,142 @@ What you build is the same as `process/increment_process_python.py` in the [juiz
 
 ## Before you start
 
-You need Python 3.10 or later. No Rust toolchain is needed.
-You install the `juiz` command into the project's venv later in this chapter, so you do not have to follow [Installation](/getting-started/install/) first.
+You need Python 3.10 or later. You do not need the Rust toolchain.
+You install the `juiz` command into a working venv below, so you do not have to follow [Installation](/getting-started/install/) first.
 
-## Project layout
-
-In this chapter you create a project laid out like this.
-
-<FileTree>
-- my_juiz_python/
-  - pyproject.toml project settings (the packages you use)
-  - process/
-    - increment_process_python.py the Process code
-</FileTree>
-
-Python Processes are not built. The `juiz` command loads the `.py` files directly.
-So all the project needs is "the `.py` files with your Processes" and "settings that install the `juiz` command and pyjuiz".
-Chapter 2 adds `container/` to this project.
-
-First, create the directories.
-
-```sh
-mkdir my_juiz_python
-cd my_juiz_python
-mkdir process
-```
-
-Run all the following commands in `my_juiz_python`.
-
-## Write pyproject.toml
-
-`pyproject.toml` is the file where you write the name of a Python project and the packages it uses.
-Create `my_juiz_python/pyproject.toml` with the following content.
-
-<Tabs syncKey="install">
-<TabItem label="Install with pip">
-
-```toml title="pyproject.toml"
-[project]
-name = "my-juiz-python"
-version = "0.1.0"
-description = "Python Processes written in the juiz tutorial"
-requires-python = ">=3.10"
-dependencies = [
-    "juiz-cli==0.2.11",
-]
-
-[build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-py-modules = []
-```
-
-</TabItem>
-<TabItem label="Install with cargo">
-
-If you use the `juiz` command installed with `cargo install juiz_app`, write `pyjuiz` instead of `juiz-cli`.
-
-```toml title="pyproject.toml"
-[project]
-name = "my-juiz-python"
-version = "0.1.0"
-description = "Python Processes written in the juiz tutorial"
-requires-python = ">=3.10"
-dependencies = [
-    "pyjuiz==0.2.11",
-]
-
-[build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-py-modules = []
-```
-
-If you also install `juiz-cli`, you end up with two `juiz` commands, and which one runs depends on the order of your PATH.
-
-</TabItem>
-</Tabs>
-
-| Item | Meaning |
-| --- | --- |
-| `name`, `version`, `description` under `[project]` | The project's name, version and description. Choose whatever you like |
-| `requires-python` | The Python versions the project supports. pyjuiz runs on Python 3.10 or later |
-| `dependencies` | The packages this project uses. `juiz-cli` installs both the `juiz` command and pyjuiz (`import juiz`), the package you write Processes with |
-| `[build-system]` | The tool (setuptools) that `pip install` uses to handle this project |
-| `py-modules = []` under `[tool.setuptools]` | `juiz` loads this project's `.py` files directly, so they are not installed as a Python package |
-
-**Pinning the version of `juiz-cli` (or `pyjuiz`) with `==` is recommended.** The project then runs with the same `juiz` version on any machine.
-
-## Create a venv and install the packages
-
-Create a venv (virtual environment) just for this project and install the packages listed in `pyproject.toml`.
+Make a working directory, create a venv (virtual environment) in it, and install `juiz-cli`.
+`juiz-cli` installs both the `juiz` command and pyjuiz (`import juiz`), the package for writing Processes.
 
 <Tabs syncKey="platform">
 <TabItem label="Linux">
 
 ```sh
+mkdir juiz_tutorial
+cd juiz_tutorial
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e .
+pip install juiz-cli==0.2.11
 ```
 
 </TabItem>
 <TabItem label="macOS">
 
 ```sh
+mkdir juiz_tutorial
+cd juiz_tutorial
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e .
+pip install juiz-cli==0.2.11
 ```
 
 </TabItem>
 <TabItem label="Windows">
 
 ```powershell
+mkdir juiz_tutorial
+cd juiz_tutorial
 python -m venv .venv
 .venv\Scripts\activate
-pip install -e .
+pip install juiz-cli==0.2.11
 ```
 
 </TabItem>
 </Tabs>
-
-`pip install -e .` reads `pyproject.toml` in the current directory and installs the packages in `dependencies` into the venv.
-It also creates a `my_juiz_python.egg-info` directory. pip uses it, and you can ignore it (add it to `.gitignore` if you use Git).
 
 ```sh
 juiz --version
 # => juiz 0.2.11
 ```
 
-Run the following steps in a terminal where this venv is activated. When you open a new terminal, run `source .venv/bin/activate` (on Windows, `.venv\Scripts\activate`) in `my_juiz_python`.
+Run the following steps in a terminal where this venv is active. When you open a new terminal, run `source .venv/bin/activate` (`.venv\Scripts\activate` on Windows) in `juiz_tutorial`.
 
-## Write the Process code
+<Aside type="note" title="If you use juiz installed with cargo">
+If you use the `juiz` command installed with `cargo install juiz_app`, skip `pip install juiz-cli==0.2.11`. The `pip install -e .` below installs only pyjuiz, the package for writing Processes, into the venv.
+Installing `juiz-cli` as well gives you two `juiz` commands, and which one runs depends on the order in PATH.
+</Aside>
 
-Create `process/increment_process_python.py` with the following content. It is a Process that adds 1 to the argument `arg1` and returns it.
+## Create the skeleton
 
-```python title="process/increment_process_python.py"
-from juiz import juiz_process
+In `juiz_tutorial`, run the following command.
 
-
-@juiz_process
-def increment_process_python(arg1: int = 0) -> int:
-    """Adds 1 to the argument and returns it"""
-    print(f"increment_process_python: {arg1} -> {arg1 + 1}")
-    return arg1 + 1
+```sh
+juiz pkg create my_juiz -b python -t process
 ```
 
-| Line | Meaning |
+| Part | Meaning |
 | --- | --- |
-| `from juiz import juiz_process` | Imports the decorator that makes a Process from pyjuiz |
-| `@juiz_process` | Turns this function into a Process |
-| `def increment_process_python(arg1: int = 0)` | The function name `increment_process_python` is the Process **type name**. juiz reads the argument names, types and defaults from the type hints and default values |
-| `-> int` | The output type. The return type hint cannot be left out |
-| `"""..."""` | The docstring is used as the description of the Process |
+| `my_juiz` | The project name. A directory with this name is created, and it also starts the type names. It must start with a lowercase letter and contain only lowercase letters, digits and `_` |
+| `-b python` | The language (`rust` / `python` / `cpp` / `haskell`) |
+| `-t process` | The kind of types to put in. `process` puts in just one Process. Without it a Container is added too, but this chapter starts with a Process only |
 
-The `print` line is there to show that the Process was called and is optional.
+When it is created, the next commands to run are shown (you already made the venv above, so you can skip the `python3 -m venv .venv` shown here).
 
-<Aside type="tip">
-**Use the same name for the file and the function (the type name).** juiz looks for the function `increment_process_python` in the file `increment_process_python.py`.
-The configuration file you use in chapter 3 also builds the file name from the type name.
-</Aside>
+```text
+Created my_juiz (python, process) in ./my_juiz  [pyjuiz ==0.2.11]
+
+Next steps:
+  cd my_juiz
+  python3 -m venv .venv
+  . .venv/bin/activate
+  pip install -e .                # installs pyjuiz
+  juiz -f app/app.conf -d         # start (keep it running)
+  ...
+```
+
+Go into the new directory and install the packages listed in `pyproject.toml` into the venv.
+
+```sh
+cd my_juiz
+pip install -e .
+```
+
+Run all the following commands in `my_juiz`.
+
+## The shape of the project
+
+The skeleton contains the following files.
+
+<FileTree>
+- my_juiz/
+  - pyproject.toml project settings (packages used)
+  - app/
+    - app.conf the start-up configuration file
+    - juizapp.yaml information for the distribution package (.juizapp)
+    - python/
+      - my_juiz.py the Process code
+  - scripts/
+    - pack.sh make the distribution package (pack.ps1 on Windows)
+  - README.md how to use this skeleton
+  - .gitignore
+</FileTree>
+
+Python Processes are not built. The `juiz` command loads the `.py` file directly.
+In the skeleton, the types written in `app/python/my_juiz.py` are loaded and started as written in `app/app.conf`.
+Run it first, then read what is inside.
 
 ## Run it
 
-Start `juiz`, passing the file with `--process`.
+Start `juiz`, passing the configuration file `app/app.conf` with `-f`.
 
 ```sh
-juiz --process ./process/increment_process_python.py -l python -e -1 -d
+juiz -f app/app.conf -d
 ```
-
-`-e` runs it once, so you can see it was called with the default `arg1 = 0`.
-
-```
-increment_process_python: 0 -> 1
-```
-
-The options mean the following.
 
 | Option | Meaning |
 | --- | --- |
-| `--process <path>` | Load a Process file |
-| `-l <language>` | The language of the file (`rust` / `python` / `cpp` / `haskell`; the default is `rust`). Use `-l python` for Python |
-| `-1` | Create one instance from the loaded Process |
-| `-e` | Run the created instance once with the default arguments |
-| `-d` | Start the HTTP broker on port 8000 and keep running (stop with Ctrl+C) |
+| `-f <file>` | Read the configuration file, load the plugins and create the instances written in it |
+| `-d` | Keep running (stop with Ctrl+C) |
 
-Notice that "loading" and "creating an instance" are separate steps.
-When juiz loads a file, it learns the Process **type** (how to make one). With `-1`, it creates one **instance** from that type.
-The instance name is the type name followed by `0` (`increment_process_python0`).
-You can also create several instances with different names from the same type (covered in chapter 3).
+On start-up it prints `juiz 管理画面: http://localhost:8000/ui/` (the address of the web UI). The HTTP broker is listening on port 8000.
 
 ## Call it from outside
 
-Leave `juiz` running, open another terminal, activate the venv and call the Process.
+Leave `juiz` running, open another terminal, activate the venv, go to `my_juiz` and call the Process.
 First, list the running Processes.
 
 ```sh
 juiz process list
-# => ["http://127.0.0.1:8000/process/increment_process_python0::increment_process_python"]
+# => ["http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add"]
 ```
 
 The URL shown is the **ID** of this Process.
@@ -238,57 +172,147 @@ With [namespaces](/guides/namespace/), a namespace such as `robot1/` comes befor
 Call the Process with this ID and arguments (call). Arguments are passed as JSON.
 
 ```sh
-juiz process call "http://127.0.0.1:8000/process/increment_process_python0::increment_process_python" '{"arg1": 3}' -p
-# => CapsulePtr((value:Value(4), option: []))
+juiz process call "http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add" '{"a": 1, "b": 2}' -p
+# => CapsulePtr((value:Value(3), option: []))
 ```
 
+You passed `1` and `2` and got `3` back. `-p` prints the result.
+Arguments you leave out take their default values (`0` for both `a` and `b`). Passing `'{"a": 5}'` returns `5`.
+
 <Aside type="caution" title="Passing JSON in Windows PowerShell 5.1">
-Windows PowerShell 5.1, which comes with Windows, drops the `"` in `'{"arg1": 3}'` before passing it to `juiz`.
-Write a `\` before each `"`, as in `'{\"arg1\": 3}'`. In PowerShell 7.3 or later, the command above works as written.
+Windows PowerShell 5.1, which comes with Windows, drops the `"` in `'{"a": 1, "b": 2}'` before passing it to `juiz`.
+Write a `\` before each `"`, as in `'{\"a\": 1, \"b\": 2}'`. In PowerShell 7.3 or later, the command above works as written.
 </Aside>
 
-You passed `3` and got `4` back. `-p` prints the result.
-The terminal running `juiz` shows `increment_process_python: 3 -> 4`.
-Check that calling it again with the same argument always gives the same result.
+Check that calling it again with the same arguments always gives the same result.
 
 ### Call it from a browser
 
-The HTTP broker started with `-d` also serves Swagger UI. Open the following URL in a browser.
+Open the web UI shown on start-up (`http://localhost:8000/ui/`) in a browser to see the running Processes.
+Select `my_juiz_add0` and a call form with input fields for the arguments `a` and `b` appears; enter values and call it to see the result (see the [Web UI guide](/guides/web-ui/) for how to use it).
 
-```
-http://127.0.0.1:8000/docs/
-```
-
-Open `PATCH /api/process/call`, press "Try it out", enter the following, and press "Execute" to get the result.
-
-- identifier: `core://core/process/increment_process_python0::increment_process_python`
-- Request body: `{"arg1": 3}`
-
-<Aside>
-In Swagger UI, use an ID of the form `core://core/...`, which points to a Process inside the broker itself.
-</Aside>
-
-Both the `juiz` command and Swagger UI just call the same API over HTTP.
+Both the `juiz` command and the web UI just call the same API over HTTP.
 That means any program that speaks HTTP, in any language, can call a Process and get the result back.
 This is **call**, the way of using juiz like a server and client.
 
+## Read the skeleton
+
+Now that it runs, read the files in the skeleton.
+
+### The Process code: app/python/my_juiz.py
+
+```python title="app/python/my_juiz.py"
+from juiz import juiz_process
+
+
+@juiz_process
+def my_juiz_add(a: int = 0, b: int = 0) -> int:
+    """Returns a + b."""
+    return a + b
+```
+
+The docstring at the top of the file is left out.
+
+| Line | Meaning |
+| --- | --- |
+| `from juiz import juiz_process` | Imports the decorator that makes a Process from pyjuiz |
+| `@juiz_process` | Makes this function a Process |
+| `def my_juiz_add(a: int = 0, b: int = 0)` | The function name `my_juiz_add` becomes the **type name** of the Process. juiz reads the argument names, types and default values from the type hints and defaults. Arguments left out of a call take the default values |
+| `-> int` | The output type. Type hints for the arguments and the return value are required |
+| `"""Returns a + b."""` | The docstring is used as the description of the Process, shown in the web UI and elsewhere |
+
+The Process itself is a short function that returns `a + b`.
+
+You can put many decorated functions in this file. They are loaded together as one **Component** (a bundle of several types).
+In this chapter there is only one Process, but in chapter 2 you add a Container to the same file. Chapter 5 covers Components in detail.
+
+### The project settings: pyproject.toml
+
+```toml title="pyproject.toml"
+[project]
+name = "my-juiz"
+version = "0.1.0"
+description = "my_juiz: a juiz component"
+requires-python = ">=3.10"
+dependencies = [
+    # Same version as the juiz that made this skeleton (juiz --version)
+    "pyjuiz==0.2.11",
+]
+
+[build-system]
+requires = ["setuptools>=77"]  # 77 or later reads license = "<SPDX expression>"
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# juiz loads app/python/my_juiz.py directly, so nothing is installed as a Python package
+py-modules = []
+```
+
+| Item | Meaning |
+| --- | --- |
+| `name`, `version`, `description` in `[project]` | The project's name, version and description |
+| `requires-python` | The Python versions it works with. pyjuiz runs on Python 3.10 or later |
+| `dependencies` | The packages this project uses: pyjuiz, for writing Processes |
+| `[build-system]` | The tool (setuptools) `pip install` uses to handle this project |
+| `py-modules = []` in `[tool.setuptools]` | `juiz` loads the `.py` files of this project directly, so they are not installed as a Python package |
+
+**Keep the pyjuiz version the same as the one `juiz --version` shows.** The skeleton pins it with `==` to the version of the `juiz` that created it.
+When you update `juiz`, change this line to the same version too, and run `pip install -e .` again.
+
+`pip install -e .` creates a `my_juiz.egg-info` directory; pip uses it, so you can ignore it.
+
+### The start-up configuration file: app/app.conf
+
+This is the configuration file you passed to `juiz -f` (the comment at the top is left out).
+
+```yaml title="app/app.conf"
+"name": "my_juiz"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"plugins":
+  "components":
+    "my_juiz":
+      "language": "python"
+      "path": "python"
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+```
+
+Configuration files are written in YAML. Roughly, this one says:
+
+- `option`: start the HTTP broker on port 8000
+- `plugins`: **load** the file of the Component `my_juiz` (`my_juiz.py`) from the `python` directory as Python (the path is relative to `app/`, the directory of the configuration file)
+- `processes`: **create an instance** named `my_juiz_add0` from the loaded type `my_juiz_add`
+
+Notice that "loading" and "creating an instance" are separate steps.
+When juiz loads a file, it learns the Process **type** (how to make one). What you write in `processes` creates named **instances** from that type.
+In the ID you called, `my_juiz_add0` is the instance name and `my_juiz_add` is the type name.
+You can also create several instances with different names from the same type (covered in chapter 3).
+
+### scripts and app/juizapp.yaml
+
+`scripts/pack.sh` and `app/juizapp.yaml` are for bundling the finished building block into a single `.juizapp` file to hand out (it runs with just `juiz run`). The tutorial does not use them; see [Distributing apps (.juizapp)](/guides/app-package/).
+
 ## A Process is an idempotent function
 
-`increment_process_python` only takes an argument and returns a result.
-It does not read or write any outside state, so the same argument always gives the same result (it is idempotent).
+`my_juiz_add` only takes arguments and returns a result.
+It does not read or write any outside state, so the same arguments always give the same result (it is idempotent).
 Thanks to this, Processes are easy to test, and they behave the same when you later connect them or move them to another machine.
 
 ## Try it yourself
 
-- Change the function to return twice the argument instead of adding 1. Python needs no build, so just restart `juiz`; `{"arg1": 3}` should now give `6`.
-- Write `decrement_process_python`, a Process that subtracts 1, in `process/decrement_process_python.py`. The answer is in [`process/decrement_process_python.py`](https://github.com/OpenJUIZ/juiz_examples_python/blob/main/process/decrement_process_python.py) of the examples.
+- Change `app/python/my_juiz.py` to return the product (`a * b`) instead of the sum. Python needs no build, so just restart `juiz`; `{"a": 3, "b": 4}` should now give `12`.
+- Run `juiz pkg add process my_juiz_sub`. It adds a Process `my_juiz_sub` to `app/python/my_juiz.py` and `app/app.conf` (its body is `a + b`, the same as `my_juiz_add`). Change the added function to `a - b`, restart `juiz`, and call it. `juiz process list` shows two Processes.
 
 ## Summary
 
-- Python Processes are not built. List `juiz-cli` (or `pyjuiz` if you installed with cargo) in `pyproject.toml`, install it into a venv, and let `juiz` load the `.py` files.
-- Use the same name for the file and the function (the type name).
+- `juiz pkg create <name> -b python` creates a project skeleton that starts and answers calls as is. The pyjuiz version is written to match `juiz`.
+- Python Processes are not built. `juiz` loads the `.py` file directly.
 - A Process is an idempotent function that only takes arguments and returns a result. The name of the function with `@juiz_process` becomes the type name, and the argument and output types are read from the type hints.
-- juiz loads a file to learn a Process **type**, and creates named **instances** from it.
+- juiz loads a file to learn a Process **type**, and creates named **instances** from it as written in the configuration file.
 - A running Process has an ID shaped like a URL, and you can call it from outside with that ID and arguments (call).
 
 In the next chapter you add a counter Container to this project and learn how to write building blocks that keep state. Move on to [Keeping state: Container and ContainerProcess (Python)](/tutorial/container/python/).

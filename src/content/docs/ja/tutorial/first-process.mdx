@@ -1,6 +1,6 @@
 ---
 title: 1. はじめての Process
-description: 引数に 1 を足す Process を 1 から作って動かし、外から呼び出して結果を受け取ります。使う言語を選んでください。
+description: juiz pkg create で雛形のプロジェクトを作り、2 つの数を足す Process を動かして、外から呼び出して結果を受け取ります。使う言語を選んでください。
 sidebar:
   order: 1
   label: 概要
@@ -12,30 +12,30 @@ next: false
 
 import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-最初の章では、引数に 1 を足して返すだけの Process を、空のディレクトリから作って動かします。
-書くコードは短い関数ひとつですが、juiz はそれを読み込んで、ネットワーク越しに呼び出せる部品にしてくれます。
+最初の章では、`juiz pkg create` で雛形のプロジェクトを作り、その中の「2 つの数を足して返す」Process を動かします。
+雛形は、ビルドの設定・Process のコード・起動の設定ファイルがそろった状態で作られるので、コマンドを数行打つだけで、ネットワーク越しに呼び出せる部品ができあがります。
+この章では、それを動かしながら、雛形の中の 1 つ 1 つのファイルが何をしているのかを読んでいきます。
 
 <Aside type="tip" title="この章で学ぶこと">
-- Process を書くプロジェクトの作り方(`Cargo.toml`・`pyproject.toml`・`CMakeLists.txt`・`.cabal` の書き方)
+- `juiz pkg create` で、Process を書くプロジェクトの雛形を作る方法
+- 雛形の中身(ビルドの設定・Process のコード・起動の設定ファイル `app/app.conf`)の読み方
 - Process は、引数を受け取って結果を返す冪等な関数であること
 - Process には「型名」と「インスタンス名」があること
 - 外から Process を呼び出して結果を受け取る使い方(call)
 </Aside>
 
-<Aside type="note" title="雛形から始めることもできます">
-juiz 0.2.6 からは、`juiz pkg create my_robot -b rust` のように打つだけで、この章から第 5 章までで作るものと同じ形のプロジェクトを作れます([雛形から始める(juiz pkg)](/ja/guides/pkg/))。
-チュートリアルでは仕組みがわかるように手で 1 から作りますが、自分の部品を作り始めるときは雛形を使うと早くて確実です。
+<Aside type="caution" title="juiz 0.2.6 以降が必要です">
+`juiz pkg` は juiz 0.2.6 から使えます。`juiz --version` で確かめてください。
 </Aside>
 
-この章と次の第 2 章は、プロジェクトの作り方が言語ごとに大きく違うので、言語ごとのページに分けています。使う言語を選んでください。
+ビルドの道具と、雛形の中のファイルは言語ごとに違うので、この章と次の第 2 章は言語ごとのページに分けています。使う言語を選んでください。
 
 <CardGrid>
-	<LinkCard title="Rust" href="/ja/tutorial/first-process/rust/" description="Cargo のワークスペースを作り、共有ライブラリとしてビルドします。" />
-	<LinkCard title="Python" href="/ja/tutorial/first-process/python/" description="pyproject.toml と venv を用意し、.py ファイルをそのまま読み込ませます。" />
-	<LinkCard title="C++" href="/ja/tutorial/first-process/cpp/" description="CMakeLists.txt を書き、libjuiz_sdk にリンクしてビルドします。" />
-	<LinkCard title="Haskell" href="/ja/tutorial/first-process/haskell/" description="cabal のプロジェクトを作り、foreign-library として共有ライブラリにビルドします。" />
+	<LinkCard title="Rust" href="/ja/tutorial/first-process/rust/" description="Cargo のクレートの雛形を作り、scripts/dev.sh で共有ライブラリにビルドします。" />
+	<LinkCard title="Python" href="/ja/tutorial/first-process/python/" description="pyproject.toml の雛形を作り、venv に pyjuiz を入れて .py ファイルをそのまま読み込ませます。" />
+	<LinkCard title="C++" href="/ja/tutorial/first-process/cpp/" description="CMake のプロジェクトの雛形を作り、libjuiz_sdk にリンクしてビルドします。" />
+	<LinkCard title="Haskell" href="/ja/tutorial/first-process/haskell/" description="cabal のプロジェクトの雛形を作り、foreign-library として共有ライブラリにビルドします。" />
 </CardGrid>
 
-ここで作るプロジェクトは、第 2 章で Container を足し、第 3 章で設定ファイルを足して育てていきます。
-ファイルの名前と置き場所は、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp)・[Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell))とそろえてあるので、途中で迷ったらサンプル集の同じ場所のファイルと見比べてください。
-
+ここで作るプロジェクト `my_juiz` は、第 2 章で `juiz pkg add` を使ってカウンタの Container を足し、第 3 章で起動の設定ファイル `app/app.conf` を書き換えて育てていきます。
+雛形のオプションや、`.juizapp` での配布までの流れは、ガイドの [雛形から始める(juiz pkg)](/ja/guides/pkg/) にまとめてあります。

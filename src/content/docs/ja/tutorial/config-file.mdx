@@ -1,6 +1,6 @@
 ---
 title: 3. 設定ファイルでまとめて起動する
-description: 第 1 章の Process と第 2 章の Container を 1 つの設定ファイルで起動し、読み込みと実体化の違いを学びます。
+description: 第 1・2 章の雛形の app/app.conf を読み、書き換えてインスタンスを増やしたり初期値を渡したりしながら、読み込みと実体化の違いを学びます。
 sidebar:
   order: 3
 prev:
@@ -10,9 +10,9 @@ prev:
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-第 1 章では Process を、第 2 章では Container を、それぞれ別々に起動しました。
-実際のロボットでは、カメラやモータ、それを処理する Process など、たくさんの部品を一度に動かします。
-この章では、これまでの Process と Container を 1 つの設定ファイルに書いて、まとめて起動します。
+第 1 章と第 2 章では、雛形の設定ファイル `app/app.conf` を `juiz -f` に渡して、Process と Container をまとめて起動しました。
+実際のロボットでは、カメラやモータ、それを処理する Process など、たくさんの部品を一度に動かします。その組み立てを書くのが設定ファイルです。
+この章では、`app/app.conf` を読み、自分で書き換えて、インスタンスを増やしたり初期値を渡したりします。
 
 <Aside type="tip" title="この章で学ぶこと">
 - 設定ファイルには「何を読み込むか」(`plugins`)と「何を作るか」(`processes` / `containers`)を分けて書くこと
@@ -23,454 +23,310 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 ## プロジェクトを用意する
 
-第 1 章・第 2 章で作ったプロジェクト(Rust は `my_juiz_rust`、Python は `my_juiz_python`、C++ は `my_juiz_cpp`、Haskell は `my_juiz_hs`)をそのまま使います。
-ファイルの名前と置き場所はサンプル集とそろえてあるので、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp)・[Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell))をクローンしてビルドしたものでも、同じ手順で進められます。
+第 2 章まで進めたプロジェクト `my_juiz` をそのまま使います。どの言語で進めていても、型名(`my_juiz_add`・`counter`・`counter_increment`・`counter_get`)は同じです。
+この章ではソースは書き換えないので、ビルドし直す必要はありません。
 
-この章では、プロジェクトのルートに `tutorial.conf` という設定ファイルを新しく作ります。
+## 設定ファイルを読む
 
-## 設定ファイルを書く
-
-次の内容で `tutorial.conf` を作ってください。
+第 2 章で Container を足したあとの `app/app.conf` は、次のようになっています(先頭のコメントは省いています)。
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
-```yaml title="tutorial.conf"
-name: tutorial
-option:
-  http_broker:
-    start: true
-    port: 8000
-plugins:
-  process_factories:
-    increment_process:
-      path: "./target/debug"
-  container_factories:
-    example_container:
-      path: "./target/debug"
-      processes:
-        example_container_increment:
-          path: "./target/debug"
-        example_container_get:
-          path: "./target/debug"
-processes:
-  - type_name: increment_process
-    name: inc0
-  - type_name: increment_process
-    name: inc1
-containers:
-  - type_name: example_container
-    name: counter0
-    processes:
-      - type_name: example_container_increment
-        name: increment0
-      - type_name: example_container_get
-        name: get0
+```yaml title="app/app.conf"
+"name": "my_juiz"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"plugins":
+  "components":
+    "my_juiz":
+      "language": "rust"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 0
+    "processes":
+      - "type_name": "counter_increment"
+        "name": "counter_increment0"
+      - "type_name": "counter_get"
+        "name": "counter_get0"
 ```
 
 </TabItem>
 <TabItem label="Python">
 
-```yaml title="tutorial.conf"
-name: tutorial
-option:
-  http_broker:
-    start: true
-    port: 8000
-plugins:
-  process_factories:
-    increment_process_python:
-      language: python
-      path: "./process"
-  container_factories:
-    example_container_python:
-      language: python
-      path: "./container"
-      processes:
-        example_container_python_increment:
-          path: "./container"
-        example_container_python_get:
-          path: "./container"
-processes:
-  - type_name: increment_process_python
-    name: inc0
-  - type_name: increment_process_python
-    name: inc1
-containers:
-  - type_name: example_container_python
-    name: counter0
-    processes:
-      - type_name: example_container_python_increment
-        name: increment0
-      - type_name: example_container_python_get
-        name: get0
+```yaml title="app/app.conf"
+"name": "my_juiz"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"plugins":
+  "components":
+    "my_juiz":
+      "language": "python"
+      "path": "python"
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 0
+    "processes":
+      - "type_name": "counter_increment"
+        "name": "counter_increment0"
+      - "type_name": "counter_get"
+        "name": "counter_get0"
 ```
 
 </TabItem>
 <TabItem label="C++">
 
-```yaml title="tutorial.conf"
-name: tutorial
-option:
-  http_broker:
-    start: true
-    port: 8000
-plugins:
-  process_factories:
-    increment_process_cpp:
-      language: "c++"
-      path: "./build/plugins"
-  container_factories:
-    example_container_cpp:
-      language: "c++"
-      path: "./build/plugins"
-      processes:
-        example_container_cpp_increment:
-          path: "./build/plugins"
-        example_container_cpp_get:
-          path: "./build/plugins"
-processes:
-  - type_name: increment_process_cpp
-    name: inc0
-  - type_name: increment_process_cpp
-    name: inc1
-containers:
-  - type_name: example_container_cpp
-    name: counter0
-    processes:
-      - type_name: example_container_cpp_increment
-        name: increment0
-      - type_name: example_container_cpp_get
-        name: get0
+```yaml title="app/app.conf"
+"name": "my_juiz"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"plugins":
+  "components":
+    "my_juiz":
+      "language": "c++"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 0
+    "processes":
+      - "type_name": "counter_increment"
+        "name": "counter_increment0"
+      - "type_name": "counter_get"
+        "name": "counter_get0"
 ```
 
 </TabItem>
 <TabItem label="Haskell">
 
-```yaml title="tutorial.conf"
-name: tutorial
-option:
-  http_broker:
-    start: true
-    port: 8000
-plugins:
-  process_factories:
-    increment_process_hs:
-      language: "haskell"
-      path: "./build/plugins"
-  container_factories:
-    example_container_hs:
-      language: "haskell"
-      path: "./build/plugins"
-      processes:
-        example_container_hs_increment:
-          path: "./build/plugins"
-        example_container_hs_get:
-          path: "./build/plugins"
-processes:
-  - type_name: increment_process_hs
-    name: inc0
-  - type_name: increment_process_hs
-    name: inc1
-containers:
-  - type_name: example_container_hs
-    name: counter0
-    processes:
-      - type_name: example_container_hs_increment
-        name: increment0
-      - type_name: example_container_hs_get
-        name: get0
+```yaml title="app/app.conf"
+"name": "my_juiz"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"plugins":
+  "components":
+    "my_juiz":
+      "language": "haskell"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 0
+    "processes":
+      - "type_name": "counter_increment"
+        "name": "counter_increment0"
+      - "type_name": "counter_get"
+        "name": "counter_get0"
 ```
 
 </TabItem>
 </Tabs>
 
-設定ファイルは YAML で書きます。上から順に見ていきましょう。
+言語によって違うのは、`plugins` の `language` と `path` の 2 行だけです。
+
+設定ファイルは YAML で書きます。雛形ではキーも値も `"` で囲んでありますが、YAML なので、囲まずに `name: my_juiz` と書いてもかまいません(この章でも、書き足す所は雛形に合わせて `"` で囲みます)。
+上から順に見ていきましょう。
 
 ### name と option
 
 ```yaml
-name: tutorial
-option:
-  http_broker:
-    start: true
-    port: 8000
+"name": "my_juiz"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
 ```
 
 `name` はこのシステムの名前です。
-`option` の `http_broker` は、これまで `-d` で立ち上げていた HTTP ブローカーの設定です。`port` で待ち受けるポートを変えられます。
+`option` の `http_broker` は、HTTP ブローカーの設定です。`start: true` で立ち上げ、`port` で待ち受けるポートを決めます。ポートを変えたいときは、ここを書き換えます。
 
 ### plugins: 読み込む
 
-`plugins` には、どのファイルから型を**読み込む**かを書きます。第 1 章の `--process`、第 2 章の `--container` / `--container_process` に当たる部分です。
+`plugins` には、どのファイルから型を**読み込む**かを書きます。
 
-- `process_factories` には Process の型を書きます。
-- `container_factories` には Container の型を書き、その下の `processes` に、その Container に結びつく ContainerProcess の型を書きます。
+```yaml
+"plugins":
+  "components":
+    "my_juiz":
+      "language": "rust"
+      "path": "plugins/{target}"
+```
 
-キーには**型名**を書きます。juiz は `path` に書いたディレクトリから、型名に合ったファイルを探します。
+`components` には、複数の型をまとめた **Component** のライブラリを書きます。キーが Component の名前で、`my_juiz` の中には、第 1 章の Process と第 2 章の Container・ContainerProcess の 4 つの型が入っています。
+
+| 項目 | 意味 |
+| --- | --- |
+| `language` | ライブラリの言語です。`rust`・`python`・`c++`・`haskell` のどれかを書きます |
+| `path` | ライブラリを探すディレクトリです。相対パスは、設定ファイルのあるディレクトリ(`app/`)から数えます |
+
+juiz は、`path` のディレクトリから、Component の名前に合ったファイルを探します。
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">
 
-型名 `increment_process` なら、`./target/debug` の中の `libincrement_process.so`(macOS では `libincrement_process.dylib`、Windows では `increment_process.dll`)が読み込まれます。
-`language` を省略すると `rust` として扱われます。
+`plugins/{target}` の `{target}` は、動かしているマシンのターゲット名(`juiz pkg target` で表示されるもの)に置き換わります。
+Linux なら `app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so`、macOS なら `libmy_juiz.dylib`、Windows なら `my_juiz.dll` が読み込まれます。
 
 </TabItem>
 <TabItem label="Python">
 
-型名 `increment_process_python` なら、`./process` の中の `increment_process_python.py` が読み込まれます。
-`language: python` を必ず書いてください。ContainerProcess の言語は、親の Container と同じになります。
+`app/python` の中の `my_juiz.py` が読み込まれます。
 
 </TabItem>
 <TabItem label="C++">
 
-型名 `increment_process_cpp` なら、`./build/plugins` の中の `libincrement_process_cpp.so`(macOS では `libincrement_process_cpp.dylib`、Windows では `increment_process_cpp.dll`)が読み込まれます。
-`language: "c++"` を必ず書いてください(コマンドラインの `-l cpp` とは書き方が違います)。ContainerProcess の言語は、親の Container と同じになります。
+`plugins/{target}` の `{target}` は、動かしているマシンのターゲット名(`juiz pkg target` で表示されるもの)に置き換わります。
+Linux なら `app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so`、macOS なら `libmy_juiz.dylib`、Windows なら `my_juiz.dll` が読み込まれます。
 
 </TabItem>
 <TabItem label="Haskell">
 
-型名 `increment_process_hs` なら、`./build/plugins` の中の `libincrement_process_hs.so`(macOS では `libincrement_process_hs.dylib`)が読み込まれます。
-`language: "haskell"` を必ず書いてください。ContainerProcess の言語は、親の Container と同じになります。
+`plugins/{target}` の `{target}` は、動かしているマシンのターゲット名(`juiz pkg target` で表示されるもの)に置き換わります。
+Linux なら `app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so`、macOS なら `libmy_juiz.dylib` が読み込まれます。
 
 </TabItem>
 </Tabs>
 
 `plugins` に書くだけでは、まだ何も動きません。juiz が型(作り方)を覚えるだけです。
 
+<Aside type="note" title="型ごとに別のファイルにする書き方">
+Component のほかに、1 つの型だけが入ったファイルを読み込むこともできます。Process は `process_factories`、Container は `container_factories` に、キーを**型名**にして書きます。
+
+```yaml
+plugins:
+  process_factories:
+    talker:
+      path: "./target/debug"
+```
+
+この場合は、型名 `talker` からファイル名(`libtalker.so` など)を作って探します。次の第 4 章で使うサンプル集は、この書き方をしています。
+2 つの書き方の違いは、第 5 章で扱います。
+</Aside>
+
 ### processes と containers: 作る
 
-`processes` と `containers` には、読み込んだ型から**インスタンスを作る**ことを書きます。第 1 章・第 2 章の `-1` に当たる部分です。
+`processes` と `containers` には、読み込んだ型から**インスタンスを作る**ことを書きます。
 
-- `type_name` には `plugins` に書いた型名を、`name` には作るインスタンスの名前を書きます。
-- `processes` では、同じ型 `increment_process` から `inc0` と `inc1` の 2 つのインスタンスを作っています。
-- `containers` では、Container `counter0` を作り、その下の `processes` で、`counter0` に結びつく ContainerProcess `increment0` と `get0` を作っています。
+```yaml
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 0
+    "processes":
+      - "type_name": "counter_increment"
+        "name": "counter_increment0"
+      - "type_name": "counter_get"
+        "name": "counter_get0"
+```
 
-`-1` で作ったときは「型名 + `0`」という名前に決まっていましたが、設定ファイルでは好きな名前を付けられます。
+- `type_name` には `plugins` で読み込んだ型名を、`name` には作るインスタンスの名前を書きます。
+- `processes` では、型 `my_juiz_add` から Process のインスタンス `my_juiz_add0` を作っています。
+- `containers` では、Container `counter0` を作り、その下の `processes` で、`counter0` に結びつく ContainerProcess `counter_increment0` と `counter_get0` を作っています。
+
+雛形は「型名 + `0`」という名前を付けていますが、インスタンスの名前は好きに付けられます。名前は ID の一部になります。
+
+## 同じ型からインスタンスを増やす
+
+1 つの型から、名前の違うインスタンスをいくつも作れます。
+`processes` に、同じ型 `my_juiz_add` のインスタンス `my_juiz_add1` を書き足してみましょう。
+
+```yaml title="app/app.conf" ins={4-5}
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add1"
+```
 
 このシステムを [juiz_opm](/ja/guides/juiz-opm/) の略式図で描くと、次のようになります(図の読み方は [システムを図にする](/ja/guides/juiz-opm/#略式図の読み方) にあります)。
 
-![Container counter0 とその中の increment0・get0、Process inc0・inc1 の略式図](../../../../assets/tutorial-diagrams/tutorial.png)
+![Container counter0 とその中の counter_increment0・counter_get0、Process my_juiz_add0・my_juiz_add1 の略式図](../../../../assets/tutorial-diagrams/tutorial.png)
 
 ## 動かす
 
-設定ファイルを `-f` で渡して起動します。どの言語でも同じコマンドです。
+`juiz` を起動していたら Ctrl+C で止めて、起動し直します。どの言語でも同じコマンドです。
 
 ```sh
-juiz -f tutorial.conf -d
+juiz -f app/app.conf -d
 ```
 
 Python の場合は、第 1 章で作った venv を有効にしたターミナルで実行してください。
 
 ## 外から呼び出す
 
-`juiz` を起動したまま別のターミナルを開き、Process の一覧を見てみます。
-
-<Tabs syncKey="lang">
-<TabItem label="Rust">
+`juiz` を起動したまま別のターミナルを開き、Process の一覧を見てみます(表示される順番は実行ごとに変わることがあります)。
 
 ```sh
 juiz process list
-# => ["http://127.0.0.1:8000/process/inc0::increment_process", "http://127.0.0.1:8000/process/inc1::increment_process"]
-juiz container-process list
-# => ["http://127.0.0.1:8000/container_process/increment0::example_container_increment:counter0", "http://127.0.0.1:8000/container_process/get0::example_container_get:counter0"]
+# => ["http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add", "http://127.0.0.1:8000/process/my_juiz_add1::my_juiz_add"]
 ```
 
-</TabItem>
-<TabItem label="Python">
-
-```sh
-juiz process list
-# => ["http://127.0.0.1:8000/process/inc0::increment_process_python", "http://127.0.0.1:8000/process/inc1::increment_process_python"]
-juiz container-process list
-# => ["http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:counter0", "http://127.0.0.1:8000/container_process/get0::example_container_python_get:counter0"]
-```
-
-</TabItem>
-<TabItem label="C++">
-
-```sh
-juiz process list
-# => ["http://127.0.0.1:8000/process/inc0::increment_process_cpp", "http://127.0.0.1:8000/process/inc1::increment_process_cpp"]
-juiz container-process list
-# => ["http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:counter0", "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:counter0"]
-```
-
-</TabItem>
-<TabItem label="Haskell">
-
-```sh
-juiz process list
-# => ["http://127.0.0.1:8000/process/inc0::increment_process_hs", "http://127.0.0.1:8000/process/inc1::increment_process_hs"]
-juiz container-process list
-# => ["http://127.0.0.1:8000/container_process/increment0::example_container_hs_increment:counter0", "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:counter0"]
-```
-
-</TabItem>
-</Tabs>
-
-表示される順番は実行ごとに変わることがあります。
-同じ型 `increment_process` のインスタンスが `inc0` と `inc1` の 2 つ、ID の「インスタンス名」の部分だけが違う形で並んでいます。
+同じ型 `my_juiz_add` のインスタンスが `my_juiz_add0` と `my_juiz_add1` の 2 つ、ID の「インスタンス名」の部分だけが違う形で並んでいます。
 それぞれを呼び出してみましょう。
 
-<Tabs syncKey="lang">
-<TabItem label="Rust">
-
 ```sh
-juiz process call "http://127.0.0.1:8000/process/inc0::increment_process" '{"arg1": 3}' -p
-# => CapsulePtr((value:Value(4), option: []))
-juiz process call "http://127.0.0.1:8000/process/inc1::increment_process" '{"arg1": 10}' -p
-# => CapsulePtr((value:Value(11), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_increment:counter0" '{"arg1": 5}' -p
-# => CapsulePtr((value:Value(5), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_get:counter0" '{}' -p
-# => CapsulePtr((value:Value(5), option: []))
+juiz process call "http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add" '{"a": 1, "b": 2}' -p
+# => CapsulePtr((value:Value(3), option: []))
+juiz process call "http://127.0.0.1:8000/process/my_juiz_add1::my_juiz_add" '{"a": 10, "b": 20}' -p
+# => CapsulePtr((value:Value(30), option: []))
 ```
 
-</TabItem>
-<TabItem label="Python">
+Container の ContainerProcess も、第 2 章と同じように呼び出せます。
 
 ```sh
-juiz process call "http://127.0.0.1:8000/process/inc0::increment_process_python" '{"arg1": 3}' -p
-# => CapsulePtr((value:Value(4), option: []))
-juiz process call "http://127.0.0.1:8000/process/inc1::increment_process_python" '{"arg1": 10}' -p
-# => CapsulePtr((value:Value(11), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_python_increment:counter0" '{"arg1": 5}' -p
-# => CapsulePtr((value:Value(5), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_python_get:counter0" '{}' -p
-# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0" '{"step": 2}' -p
+# => CapsulePtr((value:Value(2), option: []))
 ```
 
-</TabItem>
-<TabItem label="C++">
-
-```sh
-juiz process call "http://127.0.0.1:8000/process/inc0::increment_process_cpp" '{"arg1": 3}' -p
-# => CapsulePtr((value:Value(4), option: []))
-juiz process call "http://127.0.0.1:8000/process/inc1::increment_process_cpp" '{"arg1": 10}' -p
-# => CapsulePtr((value:Value(11), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:counter0" '{"arg1": 5}' -p
-# => CapsulePtr((value:Value(5), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:counter0" '{}' -p
-# => CapsulePtr((value:Value(5), option: []))
-```
-
-</TabItem>
-<TabItem label="Haskell">
-
-```sh
-juiz process call "http://127.0.0.1:8000/process/inc0::increment_process_hs" '{"arg1": 3}' -p
-# => CapsulePtr((value:Value(4), option: []))
-juiz process call "http://127.0.0.1:8000/process/inc1::increment_process_hs" '{"arg1": 10}' -p
-# => CapsulePtr((value:Value(11), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_hs_increment:counter0" '{"arg1": 5}' -p
-# => CapsulePtr((value:Value(5), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:counter0" '{}' -p
-# => CapsulePtr((value:Value(5), option: []))
-```
-
-</TabItem>
-</Tabs>
-
-第 1 章の Process と第 2 章の Container が、1 つの `juiz` の中で一緒に動いています。
-`inc0` と `inc1` は同じ型から作られた別々のインスタンスですが、Process は状態を持たないので、どちらを呼んでも同じ引数なら同じ結果になります。
+`my_juiz_add0` と `my_juiz_add1` は同じ型から作られた別々のインスタンスですが、Process は状態を持たないので、どちらを呼んでも同じ引数なら同じ結果になります。
 
 ## Container に初期値を渡す
 
 `containers` の項目には、`type_name` と `name` のほかに、Container を作る関数に渡す値も書けます。
-カウンタを 3 から始めるように、`counter0` の項目に 1 行足してみましょう。
+雛形には、すでに `"initial_value": 0` が書かれています。カウンタを 3 から始めるように、ここを書き換えてみましょう。
 
-<Tabs syncKey="lang">
-<TabItem label="Rust">
-
-```yaml ins={4}
-containers:
-  - type_name: example_container
-    name: counter0
-    initial_value: 3
-    processes:
+```yaml title="app/app.conf" ins={4}
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 3
+    "processes":
 ```
 
-`example_container` 関数の引数 `initial_value` に `3` が渡されます。
+この値は、第 2 章で読んだ Container を作る関数(Rust・Python では `counter` の引数 `initial_value`、C++ では `counter` が受け取る `args`、Haskell では `counter_create` の引数)に渡されます。
 
-</TabItem>
-<TabItem label="Python">
-
-```yaml ins={4}
-containers:
-  - type_name: example_container_python
-    name: counter0
-    initial_value: 3
-    processes:
-```
-
-`example_container_python` 関数の引数 `initial_value` に `3` が渡されます。
-
-</TabItem>
-<TabItem label="C++">
-
-```yaml ins={4}
-containers:
-  - type_name: example_container_cpp
-    name: counter0
-    value: 3
-    processes:
-```
-
-`create_container` が受け取る `CapsuleMap` から、`args.get_int("value")` で `3` を取り出します。
-
-</TabItem>
-<TabItem label="Haskell">
-
-```yaml ins={4}
-containers:
-  - type_name: example_container_hs
-    name: counter0
-    value: 3
-    processes:
-```
-
-`create` 関数の引数 `value`(`manifest` で `addIntArg "value" ...` と宣言したもの)に `3` が渡されます。
-
-</TabItem>
-</Tabs>
-
-`juiz` を Ctrl+C で止めて起動し直し、`get` を呼び出すと `3` が返ってきます。
-
-<Tabs syncKey="lang">
-<TabItem label="Rust">
+`juiz` を Ctrl+C で止めて起動し直し、`counter_get` を呼び出すと `3` が返ってきます。
 
 ```sh
-juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_get:counter0" '{}' -p
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0" '{}' -p
 # => CapsulePtr((value:Value(3), option: []))
 ```
-
-</TabItem>
-<TabItem label="Python">
-
-```sh
-juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_python_get:counter0" '{}' -p
-# => CapsulePtr((value:Value(3), option: []))
-```
-
-</TabItem>
-<TabItem label="C++">
-
-```sh
-juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:counter0" '{}' -p
-# => CapsulePtr((value:Value(3), option: []))
-```
-
-</TabItem>
-<TabItem label="Haskell">
-
-```sh
-juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_hs_get:counter0" '{}' -p
-# => CapsulePtr((value:Value(3), option: []))
-```
-
-</TabItem>
-</Tabs>
 
 コードを書き換えずに、設定ファイルだけで振る舞いの出発点を変えられました。
 
@@ -479,128 +335,43 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 Container だけでなく、Process の引数にも設定ファイルで値を与えられます。
 `processes` の項目と、`containers` の中の `processes` の項目に `p_apply` を書き、引数の名前と値を並べます。
 
-<Aside type="caution" title="juiz 0.0.15 以降が必要です">
-`p_apply` は juiz 0.0.15 以降で使えます。0.0.14 以前では、書いても値は渡されません。
-</Aside>
+`my_juiz_add0` の `a` を 10 に、`counter_increment0` の `step` を 5 にしてみましょう。
 
-`inc0` の `arg1` を 10 に、`increment0` の `arg1` を 5 にしてみましょう。
-
-<Tabs syncKey="lang">
-<TabItem label="Rust">
-
-```yaml ins={4-5,14-15}
-processes:
-  - type_name: increment_process
-    name: inc0
-    p_apply:
-      arg1: 10
-  - type_name: increment_process
-    name: inc1
-containers:
-  - type_name: example_container
-    name: counter0
-    initial_value: 3
-    processes:
-      - type_name: example_container_increment
-        name: increment0
-        p_apply:
-          arg1: 5
-      - type_name: example_container_get
-        name: get0
+```yaml title="app/app.conf" ins={4-5,16-17}
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+    "p_apply":
+      "a": 10
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add1"
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 3
+    "processes":
+      - "type_name": "counter_increment"
+        "name": "counter_increment0"
+        "p_apply":
+          "step": 5
+      - "type_name": "counter_get"
+        "name": "counter_get0"
 ```
-
-</TabItem>
-<TabItem label="Python">
-
-```yaml ins={4-5,14-15}
-processes:
-  - type_name: increment_process_python
-    name: inc0
-    p_apply:
-      arg1: 10
-  - type_name: increment_process_python
-    name: inc1
-containers:
-  - type_name: example_container_python
-    name: counter0
-    initial_value: 3
-    processes:
-      - type_name: example_container_python_increment
-        name: increment0
-        p_apply:
-          arg1: 5
-      - type_name: example_container_python_get
-        name: get0
-```
-
-</TabItem>
-<TabItem label="C++">
-
-```yaml ins={4-5,14-15}
-processes:
-  - type_name: increment_process_cpp
-    name: inc0
-    p_apply:
-      arg1: 10
-  - type_name: increment_process_cpp
-    name: inc1
-containers:
-  - type_name: example_container_cpp
-    name: counter0
-    value: 3
-    processes:
-      - type_name: example_container_cpp_increment
-        name: increment0
-        p_apply:
-          arg1: 5
-      - type_name: example_container_cpp_get
-        name: get0
-```
-
-</TabItem>
-<TabItem label="Haskell">
-
-```yaml ins={4-5,14-15}
-processes:
-  - type_name: increment_process_hs
-    name: inc0
-    p_apply:
-      arg1: 10
-  - type_name: increment_process_hs
-    name: inc1
-containers:
-  - type_name: example_container_hs
-    name: counter0
-    value: 3
-    processes:
-      - type_name: example_container_hs_increment
-        name: increment0
-        p_apply:
-          arg1: 5
-      - type_name: example_container_hs_get
-        name: get0
-```
-
-</TabItem>
-</Tabs>
 
 `p_apply` の値は、インスタンスを作った直後にその引数へ入り、初期値になります。
 この値が使われるのは、引数を渡さずに Process を**実行(execute)**したときです。次の章で使う Execution Context は、この方法で Process を動かします。
-これまで使ってきた call は、呼び出すたびに引数を全部渡すので、`p_apply` の値は使われません。
+これまで使ってきた call では、`p_apply` の値は使われません。call で省いた引数には、型に書かれた既定値(`my_juiz_add` の `a` なら 0)が入ります。
 
-`juiz` を起動し直し、HTTP API の `execute` で引数を渡さずに実行してみましょう。
-
-<Tabs syncKey="lang">
-<TabItem label="Rust">
+`juiz` を起動し直し、HTTP API の `execute` で引数を渡さずに実行してみましょう。どの言語でも同じコマンドです。
 
 <Tabs syncKey="platform">
 <TabItem label="Linux">
 
 ```sh
-curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process" \
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/my_juiz_add0::my_juiz_add" \
   -H "Content-Type: application/json" -d '{}'
-# => 11
-curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_increment:counter0" \
+# => 10
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/counter_increment0::counter_increment:counter0" \
   -H "Content-Type: application/json" -d '{}'
 # => 8
 ```
@@ -609,10 +380,10 @@ curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=co
 <TabItem label="macOS">
 
 ```sh
-curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process" \
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/my_juiz_add0::my_juiz_add" \
   -H "Content-Type: application/json" -d '{}'
-# => 11
-curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_increment:counter0" \
+# => 10
+curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/counter_increment0::counter_increment:counter0" \
   -H "Content-Type: application/json" -d '{}'
 # => 8
 ```
@@ -621,52 +392,10 @@ curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=co
 <TabItem label="Windows">
 
 ```powershell
-curl.exe -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process" `
+curl.exe -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/my_juiz_add0::my_juiz_add" `
   -H "Content-Type: application/json" -d '{}'
-# => 11
-curl.exe -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_increment:counter0" `
-  -H "Content-Type: application/json" -d '{}'
-# => 8
-```
-
-</TabItem>
-</Tabs>
-
-</TabItem>
-<TabItem label="Python">
-
-<Tabs syncKey="platform">
-<TabItem label="Linux">
-
-```sh
-curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_python" \
-  -H "Content-Type: application/json" -d '{}'
-# => 11
-curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_python_increment:counter0" \
-  -H "Content-Type: application/json" -d '{}'
-# => 8
-```
-
-</TabItem>
-<TabItem label="macOS">
-
-```sh
-curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_python" \
-  -H "Content-Type: application/json" -d '{}'
-# => 11
-curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_python_increment:counter0" \
-  -H "Content-Type: application/json" -d '{}'
-# => 8
-```
-
-</TabItem>
-<TabItem label="Windows">
-
-```powershell
-curl.exe -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_python" `
-  -H "Content-Type: application/json" -d '{}'
-# => 11
-curl.exe -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_python_increment:counter0" `
+# => 10
+curl.exe -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/counter_increment0::counter_increment:counter0" `
   -H "Content-Type: application/json" -d '{}'
 # => 8
 ```
@@ -674,117 +403,37 @@ curl.exe -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifie
 </TabItem>
 </Tabs>
 
-</TabItem>
-<TabItem label="C++">
-
-<Tabs syncKey="platform">
-<TabItem label="Linux">
-
-```sh
-curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_cpp" \
-  -H "Content-Type: application/json" -d '{}'
-# => 11
-curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_cpp_increment:counter0" \
-  -H "Content-Type: application/json" -d '{}'
-# => 8
-```
-
-</TabItem>
-<TabItem label="macOS">
-
-```sh
-curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_cpp" \
-  -H "Content-Type: application/json" -d '{}'
-# => 11
-curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_cpp_increment:counter0" \
-  -H "Content-Type: application/json" -d '{}'
-# => 8
-```
-
-</TabItem>
-<TabItem label="Windows">
-
-```powershell
-curl.exe -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_cpp" `
-  -H "Content-Type: application/json" -d '{}'
-# => 11
-curl.exe -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_cpp_increment:counter0" `
-  -H "Content-Type: application/json" -d '{}'
-# => 8
-```
-
-</TabItem>
-</Tabs>
-
-</TabItem>
-<TabItem label="Haskell">
-
-<Tabs syncKey="platform">
-<TabItem label="Linux">
-
-```sh
-curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_hs" \
-  -H "Content-Type: application/json" -d '{}'
-# => 11
-curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_hs_increment:counter0" \
-  -H "Content-Type: application/json" -d '{}'
-# => 8
-```
-
-</TabItem>
-<TabItem label="macOS">
-
-```sh
-curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/inc0::increment_process_hs" \
-  -H "Content-Type: application/json" -d '{}'
-# => 11
-curl -X PATCH "http://127.0.0.1:8000/api/container_process/execute?identifier=core://core/container_process/increment0::example_container_hs_increment:counter0" \
-  -H "Content-Type: application/json" -d '{}'
-# => 8
-```
-
-</TabItem>
-</Tabs>
-
-</TabItem>
-</Tabs>
-
-<Aside type="caution" title="Windows で curl を使うとき">
-Windows に最初から入っている Windows PowerShell 5.1 では、`curl` は `Invoke-WebRequest` の別名になっていて、上のオプションを受け付けません。
-`curl.exe` と書くと、Windows に入っている curl が呼び出されます(PowerShell 7 でも同じように書けます)。
-ここで渡している `'{}'` には `"` が入っていないので、Windows PowerShell 5.1 でもこのまま動きます。`"` を含む JSON を `-d` で渡すときは、`juiz process call` のときと同じく `'{\"arg1\": 3}'` のように `"` の前に `\` を書いてください。
-</Aside>
-
-`inc0` は `arg1` の 10 に 1 を足して `11` を返します。`p_apply` を書いていない `inc1` を同じように実行すると、引数の既定値が使われます。既定値は Rust と Python では 0 なので `1` が、C++ と Haskell では第 1 章の `manifest()`・`manifest` で 1 にしたので `2` が返ります。
-`increment0` は、初期値 3 のカウンタに 5 を足して `8` を返します。
+`my_juiz_add0` は `a` に入った 10 と `b` の既定値 0 を足して `10` を、`counter_increment0` は初期値 3 に `step` の 5 を足して `8` を返しました。
+`identifier` には、ブローカー自身の中にあるものを指す `core://core/...` という形の ID を使います(`juiz process list` で表示された ID の先頭 `http://127.0.0.1:8000` を `core://core` に置き換えたものです)。
 
 `p_apply` に Process が持っていない引数の名前を書くと、`juiz` は起動時にエラーで止まります。
-たとえば `arg1` を `arg10` と書き間違えると、次のようなエラーになります。
+たとえば `step` を `stepp` と書き間違えると、次のようなエラーになります(途中の長い行は省いています)。
 
 ```text
 Error:setup_objects() failed in setup in system.rs
 
 Caused by:
-    0: setup_processes(...) in setup_objects() in setup_objects.rs
-    1: p_apply(arg_name='arg10', value=10)
-    2: Can not find Process::Inlet(arg10)
+    ...
+    2: p_apply(arg_name='stepp', value=5)
+    3: Can not find Process::Inlet(stepp)
 ```
 
 書き間違いに、動かしてから気づくのではなく、起動したときに気づけます。
 
-`initial_value` と `p_apply` を足したあとのシステムを [juiz_opm](/ja/guides/juiz-opm/) の略式図で描くと、次のようになります(図の読み方は [システムを図にする](/ja/guides/juiz-opm/#略式図の読み方) にあります)。
+`initial_value` と `p_apply` を足したあとのシステムを略式図で描くと、次のようになります。
 
-![counter0 の帯に initial_value 3、inc0 と increment0 の引数 arg1 に p_apply の値が付いた略式図](../../../../assets/tutorial-diagrams/tutorial_p_apply.png)
+![counter0 の帯に initial_value 3、my_juiz_add0 の引数 a と counter_increment0 の引数 step に p_apply の値が付いた略式図](../../../../assets/tutorial-diagrams/tutorial_p_apply.png)
 
 ## やってみよう
 
-- `processes` と `containers` を消して `plugins` だけ残した設定ファイルで起動し、`juiz process list` を見てみましょう。空のリスト `[]` が返ります。読み込んだだけでは、インスタンスは作られないことがわかります。
-- `containers` にもう 1 つ Container(たとえば `counter1`)と、それに結びつく `increment` / `get` を書き足してみましょう。`counter0` と `counter1` は別々の値を持ちます。ContainerProcess の ID には Container の名前が入るので、`increment0` のような名前は Container ごとに同じでもかまいません。
-- 第 1 章の「やってみよう」で 1 を引く Process(`decrement_process`)を作っていたら、`plugins` と `processes` に書き足して、一緒に動かしてみましょう。
+- `processes` と `containers` を消して `plugins` だけ残した設定ファイルで起動し、`juiz process list` を見てみましょう。空のリスト `[]` が返ります。読み込んだだけでは、インスタンスは作られないことがわかります(試したら元に戻しておきましょう)。
+- `containers` にもう 1 つ Container `counter1`(`initial_value` は 100)と、それに結びつく `counter_increment` / `counter_get` のインスタンスを書き足してみましょう。`counter0` と `counter1` は別々の値を持ちます。ContainerProcess の ID には Container の名前が入るので、`counter_get0` のような名前は Container ごとに同じでもかまいません。
+- 第 1 章の「やってみよう」で `juiz pkg add process` を使って Process(`my_juiz_sub`)を足していたら、`app/app.conf` の `processes` にも `my_juiz_sub0` が足されているはずです。`juiz pkg add` は、型をソースに足すのと同時に、インスタンスを設定ファイルに書き足していたのです。
 
 ## まとめ
 
 - 設定ファイルには、型を**読み込む** `plugins` と、そこから**インスタンスを作る** `processes` / `containers` を分けて書きます。
+- `plugins` の `components` には、複数の型をまとめた Component のライブラリを書きます。型ごとのファイルは `process_factories` / `container_factories` に書きます。
 - 1 つの型から、名前の違うインスタンスをいくつも作れます。インスタンスの名前は ID の一部になります。
 - Container の初期値のような、インスタンスごとの設定も設定ファイルで渡せます。
 - `p_apply` で Process の引数に初期値を与えられます。この値は、引数を渡さずに実行したとき(Execution Context から動かしたときなど)に使われます。

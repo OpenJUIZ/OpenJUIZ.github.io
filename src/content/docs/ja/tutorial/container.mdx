@@ -20,26 +20,26 @@ import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 - 状態は **Container** に置き、Process には持たせないこと
 - 状態に触れるのは、Container に結びついた **ContainerProcess** だけであること
 - 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられること
-- Container と ContainerProcess を、第 1 章のプロジェクトに足す方法
+- `juiz pkg add container` で、第 1 章のプロジェクトに Container と ContainerProcess を足す方法
 </Aside>
 
-第 1 章で作ったプロジェクトに、Container と ContainerProcess を足していきます。使う言語を選んでください。
+第 1 章で作ったプロジェクト `my_juiz` に、`juiz pkg add container counter` で Container と ContainerProcess を足し、足されたコードを読んでいきます。使う言語を選んでください。
 
 <CardGrid>
-	<LinkCard title="Rust" href="/ja/tutorial/container/rust/" description="ワークスペースに Container のクレートと ContainerProcess のクレートを足します。" />
-	<LinkCard title="Python" href="/ja/tutorial/container/python/" description="container/ に .py ファイルを足します。" />
-	<LinkCard title="C++" href="/ja/tutorial/container/cpp/" description="Container のクラスをヘッダに書き、CMakeLists.txt にプラグインを足します。" />
-	<LinkCard title="Haskell" href="/ja/tutorial/container/haskell/" description="状態の型をモジュールに書き、.cabal に foreign-library を足します。" />
+	<LinkCard title="Rust" href="/ja/tutorial/container/rust/" description="状態の構造体と、#[juiz_component_container] などの付いた関数が src/lib.rs に足されます。" />
+	<LinkCard title="Python" href="/ja/tutorial/container/python/" description="状態のクラスと、デコレータを付けた関数が .py ファイルに足されます。" />
+	<LinkCard title="C++" href="/ja/tutorial/container/cpp/" description="状態のクラスと、マニフェストと組にした関数が .cpp ファイルに足されます。" />
+	<LinkCard title="Haskell" href="/ja/tutorial/container/haskell/" description="IORef を包んだ状態の型と、マニフェストと組にした関数がモジュールに足されます。" />
 </CardGrid>
 
-この章で作るものは、どの言語でも次の 3 つです。
+この章で足すものは、どの言語でも次の 3 つです。
 
-| 役割 | 内容 |
-| --- | --- |
-| Container | カウンタの値を 1 つ持つ |
-| ContainerProcess `increment` | Container の値に `arg1` を足して、足した後の値を返す |
-| ContainerProcess `get` | Container の値をそのまま返す |
+| 役割 | 型名 | 内容 |
+| --- | --- | --- |
+| Container | `counter` | カウンタの値を 1 つ持つ。作るときに初期値 `initial_value` を受け取る |
+| ContainerProcess | `counter_increment` | Container の値に `step` を足して、足した後の値を返す |
+| ContainerProcess | `counter_get` | Container の値をそのまま返す(読むだけの readonly) |
 
-この章の後半で使う設定ファイル `example_container.conf` のシステムを [juiz_opm](/ja/guides/juiz-opm/) の略式図で描くと、次のようになります(図の読み方は [システムを図にする](/ja/guides/juiz-opm/#略式図の読み方) にあります)。
+足したあとの `app/app.conf` のシステムを [juiz_opm](/ja/guides/juiz-opm/) の略式図で描くと、次のようになります(図の読み方は [システムを図にする](/ja/guides/juiz-opm/#略式図の読み方) にあります)。
 
-![Container container0 の箱の中に ContainerProcess increment0 と get0 がある略式図](../../../../assets/tutorial-diagrams/example_container.png)
+![Container counter0 の箱の中に ContainerProcess counter_increment0 と counter_get0 があり、外に Process my_juiz_add0 がある略式図](../../../../assets/tutorial-diagrams/example_container.png)

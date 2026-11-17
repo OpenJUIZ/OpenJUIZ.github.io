@@ -12,11 +12,11 @@ next: false
 
 import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-ここまでは、Process も Container も ContainerProcess も、1 つの型ごとに別々のファイル(ライブラリ)として作ってきました。
-第 3 章の設定ファイルでも、`plugins` に型を 1 つずつ並べて、それぞれのファイルを読み込ませていました。
+第 1〜3 章の雛形では、Process・Container・ContainerProcess を 1 つのソースに書いて 1 つのライブラリにし、`app/app.conf` の `plugins` の `components` に 1 行書いて読み込みました。
+一方、第 4 章のサンプルの talker と listener は、1 つの型ごとに別々のファイル(ライブラリ)にして、`process_factories` に型を 1 つずつ並べて読み込みました。
 
 実際に「このカメラを動かす部品一式」を誰かに渡すときに、ファイルがばらばらだと不便です。
-この章では、Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を作り、設定ファイルから読み込みます。
+この章では、雛形がとっていた形、つまり Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を、サンプル集の例で改めて読み、型ごとのファイルと比べます。
 
 <Aside type="tip" title="この章で学ぶこと">
 - Component は、複数の Process・Container・ContainerProcess を 1 つにまとめた**配布の単位**であること
@@ -37,7 +37,7 @@ import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 | 種類 | 働き |
 | --- | --- |
-| Process | 引数に 1 を足して返す(第 1 章の Process と同じ) |
+| Process | 引数に 1 を足して返す(第 1 章の `my_juiz_add` と同じく、ふつうの Process) |
 | Container | 整数値を 1 つ持つ(第 2 章のカウンタと同じ) |
 | ContainerProcess | Container の値を読む・変える |
 

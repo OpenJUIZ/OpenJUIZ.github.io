@@ -144,23 +144,23 @@ The model stays full OPM; the abbreviated diagram draws it by fixed rules that m
 
 ## The systems in the tutorial
 
-These are drawn from the config files (the Rust ones) used in each chapter of the tutorial, as they are. In other languages only the type names (the grey text) differ.
+These are drawn from the config files (the Rust ones) used in each chapter of the tutorial, as they are. Chapters 2 and 3 give the same diagrams in every language; for chapters 4 and 5, only the type names (the grey text) differ in other languages.
 
-### Chapter 2: example_container.conf
+### Chapter 2: app/app.conf with the Container added
 
-The ContainerProcesses `increment0` and `get0` are bound to one Container, `container0`. → [2. Keeping state](/tutorial/container/)
+The ContainerProcesses `counter_increment0` and `counter_get0` are bound to one Container, `counter0`. Outside it is the Process `my_juiz_add0` from chapter 1. → [2. Keeping state](/tutorial/container/)
 
-![Abbreviated diagram of example_container: increment0 and get0 inside the box of Container container0](../../../assets/tutorial-diagrams/example_container.png)
+![Abbreviated diagram of chapter 2: counter_increment0 and counter_get0 inside the box of Container counter0, and the Process my_juiz_add0 outside](../../../assets/tutorial-diagrams/example_container.png)
 
-### Chapter 3: tutorial.conf
+### Chapter 3: app/app.conf with more instances
 
-Two Processes of the same type, `inc0` and `inc1`, and the Container `counter0`. → [3. Starting everything from a configuration file](/tutorial/config-file/)
+Two Processes of the same type, `my_juiz_add0` and `my_juiz_add1`, and the Container `counter0`. → [3. Starting everything from a configuration file](/tutorial/config-file/)
 
-![Abbreviated diagram of tutorial: Container counter0 with increment0 and get0, and Processes inc0 and inc1](../../../assets/tutorial-diagrams/tutorial.png)
+![Abbreviated diagram of chapter 3: Container counter0 with counter_increment0 and counter_get0, and Processes my_juiz_add0 and my_juiz_add1](../../../assets/tutorial-diagrams/tutorial.png)
 
 The same system after `initial_value` and `p_apply` are added later in the chapter.
 
-![Abbreviated diagram of tutorial with initial_value and p_apply: initial_value 3 in the band of counter0, and p_apply values on the argument arg1 of inc0 and increment0](../../../assets/tutorial-diagrams/tutorial_p_apply.png)
+![Abbreviated diagram of chapter 3 with initial_value and p_apply: initial_value 3 in the band of counter0, and p_apply values on the argument a of my_juiz_add0 and the argument step of counter_increment0](../../../assets/tutorial-diagrams/tutorial_p_apply.png)
 
 ### Chapter 4: talker_listener.conf
 

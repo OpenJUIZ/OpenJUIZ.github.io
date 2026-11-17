@@ -1,6 +1,6 @@
 ---
 title: "1. はじめての Process(C++)"
-description: CMake のプロジェクトを 1 から作り、引数に 1 を足す Process を C++ で書いて動かします。
+description: juiz pkg create で C++ の雛形を作り、2 つの数を足す Process をビルドして動かし、外から呼び出します。
 sidebar:
   order: 3
   label: C++
@@ -14,11 +14,12 @@ next:
 
 import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
-この章では、空のディレクトリから CMake のプロジェクトを作り、引数に 1 を足して返す Process を C++ で書いて動かします。
-できあがるものは、サンプル集 [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) の `process/increment_process_cpp` と同じです。
+この章では、`juiz pkg create` で C++(CMake)のプロジェクトの雛形を作り、その中の「2 つの数を足して返す」Process をビルドして動かします。
+動かしたあとで、雛形の中のファイルを 1 つずつ読んでいきます。
 
 <Aside type="tip" title="この章で学ぶこと">
-- Process を書く CMake のプロジェクトの作り方(`CMakeLists.txt` の書き方)
+- `juiz pkg create` で、Process を書く CMake のプロジェクトの雛形を作る方法
+- 雛形の中身(`CMakeLists.txt`・`src/my_juiz.cpp`・`app/app.conf`・`scripts/`)の読み方
 - Process は、引数を受け取って結果を返す冪等な関数であること
 - Process には「型名」と「インスタンス名」があること
 - 外から Process を呼び出して結果を受け取る使い方(call)
@@ -75,224 +76,139 @@ Windows の libjuiz_sdk は `bin\juiz_sdk.dll` です。`lib` にはリンクに
 </TabItem>
 </Tabs>
 
-## プロジェクトの形
+`juiz pkg` は juiz 0.2.6 から使えます。`juiz --version` の版が古いときは、入れ直してください。
 
-この章では、次の形のプロジェクトを作ります。
+## 雛形を作る
 
-<FileTree>
-- my_juiz_cpp/
-  - CMakeLists.txt ビルドの設定
-  - process/
-    - increment_process_cpp/
-      - increment_process_cpp.cpp Process のコード
-</FileTree>
-
-juiz では、Process をひとつずつ共有ライブラリ(`.so`・`.dylib`・`.dll`)としてビルドし、`juiz` コマンドがそれをプラグインとして読み込みます。
-第 2 章では、このプロジェクトに Container を足します。
-
-まず、ディレクトリを作ります。
+作業用のディレクトリで、次のコマンドを打ちます。
 
 ```sh
-mkdir my_juiz_cpp
-cd my_juiz_cpp
-mkdir process
-mkdir process/increment_process_cpp
-```
-
-Windows の PowerShell でも、同じコマンドで作れます。
-
-以降のコマンドは、すべて `my_juiz_cpp` で実行します。
-
-## CMakeLists.txt を書く
-
-`my_juiz_cpp/CMakeLists.txt` を、次の内容で作ります。
-
-```cmake title="CMakeLists.txt"
-cmake_minimum_required(VERSION 3.16)
-project(my_juiz_cpp CXX)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# juiz の版と、libjuiz_sdk を展開した場所
-set(JUIZ_VERSION "0.2.11")
-if(WIN32)
-  file(TO_CMAKE_PATH "$ENV{USERPROFILE}/.juiz/sdk/${JUIZ_VERSION}" JUIZ_SDK_DEFAULT_DIR)
-else()
-  set(JUIZ_SDK_DEFAULT_DIR "$ENV{HOME}/.juiz/sdk/${JUIZ_VERSION}")
-endif()
-set(JUIZ_SDK_DIR "${JUIZ_SDK_DEFAULT_DIR}" CACHE PATH "libjuiz_sdk のディレクトリ")
-find_package(juiz_sdk ${JUIZ_VERSION} EXACT CONFIG REQUIRED PATHS "${JUIZ_SDK_DIR}" NO_DEFAULT_PATH)
-
-# プラグインはすべて build/plugins に出力する
-set(JUIZ_PLUGIN_DIR "${CMAKE_BINARY_DIR}/plugins")
-
-# juiz のプラグイン (共有ライブラリ) を 1 つ追加する
-function(add_juiz_plugin NAME)
-  add_library(${NAME} SHARED ${ARGN})
-  target_link_libraries(${NAME} PRIVATE juiz_sdk::juiz_sdk)
-  # $<1:...> で囲むと、Visual Studio でも build/plugins/Release のように構成名が足されない
-  set_target_properties(${NAME} PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "$<1:${JUIZ_PLUGIN_DIR}>"
-    RUNTIME_OUTPUT_DIRECTORY "$<1:${JUIZ_PLUGIN_DIR}>")
-  # Windows では juiz_sdk.dll をプラグインの隣に写す (Linux・macOS では何もしない)
-  juiz_sdk_copy_runtime(${NAME})
-endfunction()
-
-# 第 1 章: 引数に 1 を足す Process
-add_juiz_plugin(increment_process_cpp process/increment_process_cpp/increment_process_cpp.cpp)
-```
-
-上から順に見ていきます。
-
-| 部分 | 意味 |
-| --- | --- |
-| `cmake_minimum_required`・`project` | 使う CMake の版と、プロジェクトの名前です。言語は C++(`CXX`)だけです |
-| `CMAKE_CXX_STANDARD 17` | juiz の C++ ヘッダは C++17 を使うので、C++17 でコンパイルします |
-| `JUIZ_VERSION`・`JUIZ_SDK_DIR` | libjuiz_sdk を展開した場所です。**`juiz --version` と同じ版にしてください。** 別の場所に置いた場合は、`cmake -DJUIZ_SDK_DIR=<場所>` で変えられます |
-| `find_package(juiz_sdk ...)` | `JUIZ_SDK_DIR` から libjuiz_sdk を探します。`EXACT` を付けているので、版が違えばここで止まって教えてくれます。見つかると `juiz_sdk::juiz_sdk` というターゲットができます |
-| `JUIZ_PLUGIN_DIR` | ビルドしたプラグインを置く場所です。プラグインを 1 か所にまとめておくと、`juiz` に場所を伝えやすくなります |
-| `function(add_juiz_plugin NAME)` | プラグインを 1 つ追加する関数です。Process や Container を足すたびに同じ設定を書かずに済むよう、まとめています |
-| `add_library(${NAME} SHARED ...)` | 共有ライブラリとしてビルドします。`juiz` が読み込めるのはこの形式です。ファイル名は Linux では `lib<NAME>.so`、macOS では `lib<NAME>.dylib`、Windows では `<NAME>.dll` になります |
-| `target_link_libraries(... juiz_sdk::juiz_sdk)` | libjuiz_sdk にリンクします。juiz の C のヘッダと C++ のヘッダを使う設定も、このターゲットに入っています。Linux・macOS では、プラグインが libjuiz_sdk を `JUIZ_SDK_DIR` から探すようにもなります(rpath) |
-| `LIBRARY_OUTPUT_DIRECTORY`・`RUNTIME_OUTPUT_DIRECTORY` | できた共有ライブラリを `build/plugins` に置きます。Linux・macOS の共有ライブラリは前者、Windows の DLL は後者の設定で置き場所が決まります |
-| `juiz_sdk_copy_runtime` | Windows では、`juiz_sdk.dll` をプラグインの隣に写します。juiz はプラグインの DLL が使う DLL を、プラグインと同じ場所から探すからです。Linux・macOS では何もしません |
-| `add_juiz_plugin(increment_process_cpp ...)` | Process `increment_process_cpp` を、`process/increment_process_cpp/increment_process_cpp.cpp` からビルドします |
-
-<Aside type="tip">
-ターゲット名(`increment_process_cpp`)は、このあと `manifest()` に書く Process の型名と同じにしておきます。
-第 3 章で使う設定ファイルは、型名 `increment_process_cpp` から `libincrement_process_cpp.so`(Windows では `increment_process_cpp.dll`)というファイル名を作って探すからです。
-</Aside>
-
-## Process のコードを書く
-
-`process/increment_process_cpp/increment_process_cpp.cpp` を、次の内容で作ります。引数 `arg1` に 1 を足して返す Process です。
-
-```cpp title="process/increment_process_cpp/increment_process_cpp.cpp"
-#include "juiz/juiz.h"
-
-// 引数 arg1 に 1 を足して返す Process
-//
-// manifest() で Process の名前と引数 (名前・説明・既定値) を宣言し、
-// PROCESS_FACTORY で juiz から呼び出せる関数として公開する。
-auto manifest() {
-    return ProcessManifest{"increment_process_cpp"}
-        .description("Adds 1 to arg1.")
-        .add_int_arg("arg1", "value to be incremented", 1);
-}
-
-std::optional<int64_t> increment_process_cpp(int64_t arg1) {
-    return arg1 + 1;
-}
-
-PROCESS_FACTORY(manifest, increment_process_cpp);
+juiz pkg create my_juiz -b cpp -t process
 ```
 
 | 部分 | 意味 |
 | --- | --- |
-| `#include "juiz/juiz.h"` | juiz の C++ ヘッダです。`CMakeLists.txt` で足した `cppjuiz/include` にあります |
-| `manifest()` | Process の説明書です。`ProcessManifest{"increment_process_cpp"}` の文字列が Process の**型名**になります |
-| `.add_int_arg("arg1", "value to be incremented", 1)` | 整数の引数 `arg1` を宣言します。説明と既定値(1)も書きます |
-| `increment_process_cpp(int64_t arg1)` | Process の本体です。引数は、`manifest()` で宣言した順に渡されます |
-| `std::optional<int64_t>` | 戻り値です。値を返せないときは `std::nullopt` を返すとエラーになります |
-| `PROCESS_FACTORY(manifest, increment_process_cpp)` | `manifest()` と本体を組にして、`juiz` から読み込めるように公開します |
+| `my_juiz` | プロジェクトの名前です。同じ名前のディレクトリが作られ、型名の頭にもなります。英小文字で始まり、英小文字・数字・`_` だけが使えます |
+| `-b cpp` | 使う言語です(`rust` / `python` / `cpp` / `haskell`) |
+| `-t process` | 入れる型の種類です。`process` では Process を 1 つだけ入れます。省略すると Container も入りますが、この章では Process だけから始めます |
 
-Rust や Python と違い、C++ では型名と引数(名前・説明・既定値)を `manifest()` に自分で書きます。
+作ると、次に打つコマンドが表示されます(libjuiz_sdk は準備で入れたので、ここに表示される `curl ... install-juiz-sdk.sh` は飛ばしてかまいません)。
+
+```text
+Created my_juiz (cpp, process) in ./my_juiz  [libjuiz_sdk 0.2.11]
+
+Next steps:
+  cd my_juiz
+  # once: put libjuiz_sdk 0.2.11 in ~/.juiz/sdk/0.2.11
+  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.2.11
+  scripts/dev.sh                  # build and put the plugin and libjuiz_sdk in app/plugins/<target>/
+  juiz -f app/app.conf -d         # start (keep it running)
+  ...
+```
+
+以降のコマンドは、すべて `my_juiz` で実行します。
+
+```sh
+cd my_juiz
+```
+
+## プロジェクトの形
+
+雛形には、次のファイルが入っています。
+
+<FileTree>
+- my_juiz/
+  - CMakeLists.txt ビルドの設定
+  - src/
+    - my_juiz.cpp Process のコード
+  - app/
+    - app.conf 起動の設定ファイル
+    - juizapp.yaml 配布用のパッケージ(.juizapp)の情報
+  - scripts/
+    - dev.sh ビルドして app/plugins/ に置く(Windows は dev.ps1)
+    - pack.sh 配布用のパッケージを作る(Windows は pack.ps1)
+  - README.md この雛形の使い方(英語)
+  - .gitignore
+</FileTree>
+
+juiz では、Process を共有ライブラリ(`.so`・`.dylib`・`.dll`)としてビルドし、`juiz` コマンドがそれをプラグインとして読み込みます。
+雛形では、`src/my_juiz.cpp` に書いた型をまとめて 1 つの共有ライブラリにし、`app/app.conf` に書いたとおりに読み込んで起動します。
+まず動かしてみて、それから中身を読みましょう。
 
 ## ビルドする
 
+`scripts/dev.sh` でビルドします。
+
 <Tabs syncKey="platform">
 <TabItem label="Linux">
 
 ```sh
-cmake -S . -B build
-cmake --build build
-ls build/plugins
-# => libincrement_process_cpp.so
+scripts/dev.sh
+# => ...
+#    app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so
+#    app/plugins/x86_64-unknown-linux-gnu/libjuiz_sdk.so
 ```
 
 </TabItem>
 <TabItem label="macOS">
 
 ```sh
-cmake -S . -B build
-cmake --build build
-ls build/plugins
-# => libincrement_process_cpp.dylib
+scripts/dev.sh
+# => ...
+#    app/plugins/aarch64-apple-darwin/libmy_juiz.dylib
+#    app/plugins/aarch64-apple-darwin/libjuiz_sdk.dylib
 ```
+
+Intel の Mac では、`aarch64-apple-darwin` の所が `x86_64-apple-darwin` になります。
 
 </TabItem>
 <TabItem label="Windows">
 
 ```powershell
-cmake -S . -B build
-cmake --build build --config Release
-ls build\plugins
-# => increment_process_cpp.dll  juiz_sdk.dll  ...
+scripts\dev.ps1
+# => ...
+#    app\plugins\x86_64-pc-windows-msvc\my_juiz.dll
+#    app\plugins\x86_64-pc-windows-msvc\juiz_sdk.dll
 ```
 
-Visual Studio のジェネレータは Debug と Release を作り分けるので、`--config Release` を付けます。
-`build\plugins` には、プラグインの DLL の隣に `juiz_sdk.dll` も写されます。
+Windows では、ファイル名の先頭に `lib` が付きません。
+
+<Aside type="caution" title="スクリプトの実行が禁止されているとき">
+「このシステムではスクリプトの実行が無効になっているため…」と表示されたら、一度だけ `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` を実行してから、もう一度打ってください。
+</Aside>
 
 </TabItem>
 </Tabs>
 
-1 行目で `build` ディレクトリにビルドの準備をし、2 行目でビルドします。
-できあがった共有ライブラリは `build/plugins` に置かれます。
+`scripts/dev.sh` は、cmake で `build` ディレクトリにビルドし、できあがった共有ライブラリ(プラグイン)と libjuiz_sdk を `app/plugins/<ターゲット>/` に写します。
+`<ターゲット>` は、`x86_64-unknown-linux-gnu` のような「どの CPU・OS 向けか」を表す名前で、`juiz pkg target` で表示できます。
+プラグインは隣に置いた libjuiz_sdk を使うので、この 2 つはいつも一緒に置きます。
 
-`cmake -S . -B build` で `Could not find a configuration file for package "juiz_sdk"` や、版が合わないという表示が出たら、libjuiz_sdk を展開した場所と版を確かめてください。
+`Could not find a configuration file for package "juiz_sdk"` や、版が合わないという表示が出たら、準備で libjuiz_sdk を展開した場所と版を確かめてください。
 
 ## 動かす
 
-`--process` でファイルを指定して `juiz` を起動します。
-
-<Tabs syncKey="platform">
-<TabItem label="Linux">
+設定ファイル `app/app.conf` を `-f` で渡して、`juiz` を起動します。
 
 ```sh
-juiz --process ./build/plugins/libincrement_process_cpp.so -l cpp -e -1 -d
+juiz -f app/app.conf -d
 ```
-
-</TabItem>
-<TabItem label="macOS">
-
-```sh
-juiz --process ./build/plugins/libincrement_process_cpp.dylib -l cpp -e -1 -d
-```
-
-</TabItem>
-<TabItem label="Windows">
-
-```powershell
-juiz --process ./build/plugins/increment_process_cpp.dll -l cpp -e -1 -d
-```
-
-</TabItem>
-</Tabs>
-
-オプションの意味は次のとおりです。
 
 | オプション | 意味 |
 | --- | --- |
-| `--process <パス>` | Process のファイルを読み込む |
-| `-l <言語>` | ファイルの言語(`rust` / `python` / `cpp` / `haskell`、既定は `rust`)。C++ では `-l cpp` を付ける |
-| `-1` | 読み込んだ Process から、インスタンスを 1 つ作る |
-| `-e` | 作ったインスタンスを、既定の引数で 1 回実行する |
-| `-d` | HTTP ブローカーを 8000 番ポートで立ち上げて待機する(Ctrl+C で終了) |
+| `-f <ファイル>` | 設定ファイルを読み込み、そこに書かれたとおりにプラグインを読み込んで、インスタンスを作る |
+| `-d` | 起動したまま待機する(Ctrl+C で終了) |
 
-ここで「読み込む」と「インスタンスを作る」が分かれていることに注目してください。
-ファイルを読み込むと、juiz は Process の**型**(作り方)を覚えます。`-1` を付けると、その型から**インスタンス**を 1 つ作ります。
-インスタンス名は、型名の後ろに `0` を付けた名前(`increment_process_cpp0`)になります。
-同じ型から、名前の違うインスタンスをいくつも作ることもできます(第 3 章で扱います)。
+起動すると、`juiz 管理画面: http://localhost:8000/ui/` と表示されます。HTTP ブローカーが 8000 番ポートで待ち受けています。
 
 ## 外から呼び出す
 
-`juiz` を起動したまま、別のターミナルを開いて Process を呼び出してみます。
+`juiz` を起動したまま、別のターミナルを開いて `my_juiz` に移り、Process を呼び出してみます。
 まず、動いている Process の一覧を見ます。
 
 ```sh
 juiz process list
-# => ["http://127.0.0.1:8000/process/increment_process_cpp0::increment_process_cpp"]
+# => ["http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add"]
 ```
 
 表示された URL が、この Process の **ID** です。
@@ -302,56 +218,179 @@ juiz process list
 この ID と引数を指定して、Process を呼び出します(call)。引数は JSON で渡します。
 
 ```sh
-juiz process call "http://127.0.0.1:8000/process/increment_process_cpp0::increment_process_cpp" '{"arg1": 3}' -p
-# => CapsulePtr((value:Value(4), option: []))
+juiz process call "http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add" '{"a": 1, "b": 2}' -p
+# => CapsulePtr((value:Value(3), option: []))
 ```
 
-`3` を渡して `4` が返ってきました。`-p` は結果を表示するオプションです。
+`1` と `2` を渡して `3` が返ってきました。`-p` は結果を表示するオプションです。
+引数を省くと、既定値(`a` も `b` も `0`)が使われます。`'{"a": 5}'` を渡すと `5` が返ります。
 
 <Aside type="caution" title="Windows PowerShell 5.1 で JSON を渡すとき">
-Windows に最初から入っている Windows PowerShell 5.1 は、`'{"arg1": 3}'` の `"` を消して `juiz` に渡してしまいます。
-`'{\"arg1\": 3}'` のように `"` の前に `\` を書いてください。PowerShell 7.3 以降では、上のとおりに書けば動きます。
+Windows に最初から入っている Windows PowerShell 5.1 は、`'{"a": 1, "b": 2}'` の `"` を消して `juiz` に渡してしまいます。
+`'{\"a\": 1, \"b\": 2}'` のように `"` の前に `\` を書いてください。PowerShell 7.3 以降では、上のとおりに書けば動きます。
 </Aside>
+
 何度呼び出しても、同じ引数なら同じ結果が返ることも確かめてみてください。
 
 ### ブラウザから呼び出す
 
-`-d` で立ち上げた HTTP ブローカーは、Swagger UI も提供しています。ブラウザで次の URL を開きます。
+起動したときに表示された管理画面(`http://localhost:8000/ui/`)をブラウザで開くと、動いている Process の一覧が見られます。
+`my_juiz_add0` を選ぶと、引数 `a`・`b` の入力欄がある呼び出しフォームが出るので、値を入れて呼び出すと結果が表示されます(管理画面の使い方は [ガイドの「管理画面」](/ja/guides/web-ui/) にあります)。
 
-```
-http://127.0.0.1:8000/docs/
-```
-
-一覧から `PATCH /api/process/call` を開き、「Try it out」を押して次のように入力し、「Execute」を押すと結果が返ってきます。
-
-- identifier: `core://core/process/increment_process_cpp0::increment_process_cpp`
-- Request body: `{"arg1": 3}`
-
-<Aside>
-Swagger UI で呼び出すときは、ブローカー自身の中にある Process を指す `core://core/...` という形の ID を使います。
-</Aside>
-
-`juiz` コマンドも Swagger UI も、HTTP で同じ API を呼んでいるだけです。
+`juiz` コマンドも管理画面も、HTTP で同じ API を呼んでいるだけです。
 つまり、HTTP を話せるプログラムなら、どの言語からでも Process を呼び出して結果を受け取れます。
 これが、juiz をサーバー・クライアントのように使う **call** という使い方です。
 
+## 雛形の中身を読む
+
+動くことを確かめたので、雛形のファイルを読んでいきます。
+
+### Process のコード: src/my_juiz.cpp
+
+```cpp title="src/my_juiz.cpp"
+#include <cstdint>
+#include <optional>
+
+#include "juiz/juiz.h"
+
+// Process my_juiz_add. The arguments are passed in the order they are added to the manifest
+static auto my_juiz_add_manif = ProcessManifest("my_juiz_add")
+    .description("Returns a + b.")
+    .add_int_arg("a", "the first value", 0)
+    .add_int_arg("b", "the second value", 0);
+std::optional<int64_t> my_juiz_add(int64_t a, int64_t b) {
+    return a + b;
+}
+COMPONENT_PROCESS_FACTORY(my_juiz_add_manif, my_juiz_add);
+
+// The manifest of the whole Component (the types in this plugin)
+auto my_juiz_component_manifest() {
+    return ComponentManifest("my_juiz")
+        .description("my_juiz: a juiz component")
+        .add_process(my_juiz_add_manifest());
+}
+DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(my_juiz_component_manifest)
+```
+
+ファイルの先頭のコメントは省いています。
+
+| 部分 | 意味 |
+| --- | --- |
+| `#include "juiz/juiz.h"` | juiz の C++ ヘッダです。libjuiz_sdk に入っています |
+| `my_juiz_add_manif` | Process の説明書(マニフェスト)です。`ProcessManifest("my_juiz_add")` の文字列が Process の**型名**になります |
+| `.description(...)` | Process の説明です。管理画面などに表示されます |
+| `.add_int_arg("a", "the first value", 0)` | 整数の引数 `a` を宣言します。説明と既定値(0)も書きます。呼び出すときに省いた引数には、既定値が使われます |
+| `my_juiz_add(int64_t a, int64_t b)` | Process の本体です。引数は、マニフェストで宣言した順に渡されます |
+| `std::optional<int64_t>` | 戻り値です。値を返せないときは `std::nullopt` を返すとエラーになります |
+| `COMPONENT_PROCESS_FACTORY(...)` | マニフェストと本体を組にして、`juiz` から使えるようにします。マニフェストの関数 `my_juiz_add_manifest()` も、このマクロが作ります |
+| `my_juiz_component_manifest()` | このライブラリに入っている型の一覧です。`ComponentManifest("my_juiz")` はライブラリの名前で、`.add_process(...)` で Process を並べます |
+| `DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(...)` | 型の一覧を、`juiz` が読み込めるように公開します |
+
+Rust や Python と違い、C++ では型名と引数(名前・説明・既定値)をマニフェストに自分で書きます。
+
+雛形では、複数の型を 1 つのライブラリにまとめる **Component** という形で書かれています(`COMPONENT_...` や `ComponentManifest` という名前はそのためです)。
+この章では Process が 1 つだけですが、第 2 章で Container を同じファイルに足していきます。Component については第 5 章で詳しく扱います。
+
+### ビルドの設定: CMakeLists.txt
+
+```cmake title="CMakeLists.txt"
+cmake_minimum_required(VERSION 3.16)
+project(my_juiz VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(JUIZ_VERSION "0.2.11")
+if(WIN32)
+  file(TO_CMAKE_PATH "$ENV{USERPROFILE}/.juiz/sdk/${JUIZ_VERSION}" JUIZ_SDK_DEFAULT_DIR)
+else()
+  set(JUIZ_SDK_DEFAULT_DIR "$ENV{HOME}/.juiz/sdk/${JUIZ_VERSION}")
+endif()
+set(JUIZ_SDK_DIR "${JUIZ_SDK_DEFAULT_DIR}" CACHE PATH "libjuiz_sdk directory")
+find_package(juiz_sdk ${JUIZ_VERSION} EXACT CONFIG REQUIRED PATHS "${JUIZ_SDK_DIR}" NO_DEFAULT_PATH)
+
+add_library(my_juiz SHARED src/my_juiz.cpp)
+target_link_libraries(my_juiz PRIVATE juiz_sdk::juiz_sdk)
+set_target_properties(my_juiz PROPERTIES
+  LIBRARY_OUTPUT_DIRECTORY "$<1:${CMAKE_BINARY_DIR}/plugins>"
+  RUNTIME_OUTPUT_DIRECTORY "$<1:${CMAKE_BINARY_DIR}/plugins>")
+juiz_sdk_bundle(my_juiz)
+```
+
+コメントは省いています。上から順に見ていきます。
+
+| 部分 | 意味 |
+| --- | --- |
+| `cmake_minimum_required`・`project` | 使う CMake の版と、プロジェクトの名前・版です。言語は C++(`CXX`)だけです |
+| `CMAKE_CXX_STANDARD 17` | juiz の C++ ヘッダは C++17 を使うので、C++17 でコンパイルします |
+| `JUIZ_VERSION`・`JUIZ_SDK_DIR` | libjuiz_sdk を展開した場所です。雛形を作った `juiz` と同じ版が書かれています。別の場所に置いた場合は、`cmake -D JUIZ_SDK_DIR=<場所>`(`scripts/dev.sh` では環境変数 `JUIZ_SDK_DIR`)で変えられます |
+| `find_package(juiz_sdk ...)` | `JUIZ_SDK_DIR` から libjuiz_sdk を探します。`EXACT` を付けているので、版が違えばここで止まって教えてくれます。見つかると `juiz_sdk::juiz_sdk` というターゲットができます |
+| `add_library(my_juiz SHARED ...)` | 共有ライブラリとしてビルドします。`juiz` が読み込めるのはこの形式です。ファイル名は Linux では `libmy_juiz.so`、macOS では `libmy_juiz.dylib`、Windows では `my_juiz.dll` になります |
+| `target_link_libraries(... juiz_sdk::juiz_sdk)` | libjuiz_sdk にリンクします。juiz のヘッダを使う設定も、このターゲットに入っています |
+| `LIBRARY_OUTPUT_DIRECTORY`・`RUNTIME_OUTPUT_DIRECTORY` | できた共有ライブラリを `build/plugins` に置きます |
+| `juiz_sdk_bundle(my_juiz)` | プラグインが、隣に置いた libjuiz_sdk を使うようにし、`build/plugins` に libjuiz_sdk を写します。`scripts/dev.sh` は、この 2 つを `app/plugins/<ターゲット>/` に写します |
+
+**libjuiz_sdk の版は、`juiz --version` で表示される版と同じにしてください。** 版が違うプラグインは、`juiz` が読み込めません。
+`juiz` を新しい版にしたときは、同じ版の libjuiz_sdk を入れ、`JUIZ_VERSION` の 1 行も書き換えてください。
+
+### 起動の設定ファイル: app/app.conf
+
+`juiz -f` に渡した設定ファイルです(先頭のコメントは省いています)。
+
+```yaml title="app/app.conf"
+"name": "my_juiz"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"plugins":
+  "components":
+    "my_juiz":
+      "language": "c++"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+```
+
+設定ファイルは YAML で書きます。ここでは、大まかに次のことが書かれています。
+
+- `option`: HTTP ブローカーを 8000 番ポートで立ち上げる
+- `plugins`: `plugins/{target}` から、Component `my_juiz` のライブラリを C++ のプラグインとして**読み込む**。`{target}` は動かしているマシンのターゲット名に置き換わるので、`scripts/dev.sh` が置いた `app/plugins/<ターゲット>/libmy_juiz.so` が読み込まれます(パスは、設定ファイルのあるディレクトリ `app/` からの相対です)
+- `processes`: 読み込んだ型 `my_juiz_add` から、`my_juiz_add0` という名前の**インスタンスを作る**
+
+ここで「読み込む」と「インスタンスを作る」が分かれていることに注目してください。
+ライブラリを読み込むと、juiz は Process の**型**(作り方)を覚えます。`processes` に書くと、その型から名前の付いた**インスタンス**を作ります。
+呼び出すときの ID に入っていた `my_juiz_add0` がインスタンス名、`my_juiz_add` が型名です。
+同じ型から、名前の違うインスタンスをいくつも作ることもできます(第 3 章で扱います)。
+
+### scripts と app/juizapp.yaml
+
+`scripts/dev.sh`(Windows は `scripts\dev.ps1`)は、上で使ったビルド用のスクリプトです。
+`scripts/pack.sh` と `app/juizapp.yaml` は、できあがった部品を `.juizapp` というファイル 1 つにまとめて配る(`juiz run` だけで動かせる)ためのものです。チュートリアルでは使いません。使い方は [アプリの配布(.juizapp)](/ja/guides/app-package/) にあります。
+
 ## Process は冪等な関数
 
-`increment_process_cpp` は、引数を受け取って結果を返すだけです。
+`my_juiz_add` は、引数を受け取って結果を返すだけです。
 外部の状態を読み書きしないので、同じ引数を渡せばいつも同じ結果が返ります(冪等)。
 この性質のおかげで、Process はテストしやすく、あとでつないだり別のマシンに置いたりしても振る舞いが変わりません。
 
 ## やってみよう
 
-- 本体を書き換えて、1 を足す代わりに 2 倍にして返すようにしてみましょう。`cmake --build build`(Windows では `cmake --build build --config Release`)でビルドし直して `juiz` を起動し直すと、`{"arg1": 3}` に対して `6` が返ってくるはずです。
-- 1 を引く Process `decrement_process_cpp` を足してみましょう。`process/decrement_process_cpp/decrement_process_cpp.cpp` を作り、`CMakeLists.txt` に `add_juiz_plugin(decrement_process_cpp ...)` を 1 行足します。答えはサンプル集の [`process/decrement_process_cpp`](https://github.com/OpenJUIZ/juiz_examples_cpp/tree/main/process/decrement_process_cpp) にあります。
+- `src/my_juiz.cpp` を書き換えて、足す代わりに掛け算(`a * b`)を返すようにしてみましょう。`scripts/dev.sh` でビルドし直して `juiz` を起動し直すと、`{"a": 3, "b": 4}` に対して `12` が返ってくるはずです。
+- `juiz pkg add process my_juiz_sub` を打つと、`src/my_juiz.cpp` と `app/app.conf` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `a - b` に書き換え、ビルドし直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
 
 ## まとめ
 
-- C++ の Process は、libjuiz_sdk にリンクした共有ライブラリとしてビルドします。libjuiz_sdk は `juiz` と同じ版を使います。
-- `CMakeLists.txt` に `add_juiz_plugin` のような関数を作っておくと、Process を 1 行で足せます。
-- Process は、引数を受け取って結果を返すだけの冪等な関数です。C++ では `manifest()` に型名と引数を書き、`PROCESS_FACTORY` で公開します。
-- juiz はファイルを読み込んで Process の**型**を覚え、そこから名前の付いた**インスタンス**を作ります。
+- `juiz pkg create <名前> -b cpp` で、ビルド・起動・呼び出しまでそのまま通るプロジェクトの雛形を作れます。libjuiz_sdk の版も `juiz` にそろえて書かれます。
+- C++ の Process は、libjuiz_sdk にリンクした共有ライブラリとしてビルドし、`juiz` がプラグインとして読み込みます。雛形では `scripts/dev.sh` がビルドして、libjuiz_sdk と一緒に `app/plugins/<ターゲット>/` に置きます。
+- Process は、引数を受け取って結果を返すだけの冪等な関数です。C++ では、型名と引数をマニフェストに書きます。
+- juiz はライブラリを読み込んで Process の**型**を覚え、設定ファイルに書いたとおりに、そこから名前の付いた**インスタンス**を作ります。
 - 動いている Process には URL の形をした ID があり、ID と引数を指定して外から呼び出せます(call)。
 
 次の章では、このプロジェクトにカウンタの Container を足して、状態を持つ部品の書き方を学びます。[状態を持つ: Container と ContainerProcess(C++)](/ja/tutorial/container/cpp/) に進みましょう。
