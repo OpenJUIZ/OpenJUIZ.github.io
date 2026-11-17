@@ -98,7 +98,7 @@ The legend at the bottom left of the diagram also lists the line styles.
 
 ## Showing juiz in other processes
 
-When a second juiz is registered as a subsystem of the first, as in [Chapter 6: Connecting separate processes](/tutorial/multi-process/), the first juiz's web UI shows the second one as well.
+When a second juiz is registered as a subsystem of the first, as in [Chapter 4: Connecting Processes in separate processes](/tutorial/multi-process/), the first juiz's web UI shows the second one as well.
 For example, start listener on port 8000 and talker on port 8001, connect talker → listener, and open `http://localhost:8000/ui/`:
 
 ![Subsystem view: an arrow crosses the frames from talker0 in subsystem 127.0.0.1:8001 to listener0 in System localhost:8000](../../../assets/web-ui/subsystem.png)

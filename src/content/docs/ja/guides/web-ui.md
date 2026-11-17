@@ -98,7 +98,7 @@ juiz に接続できなくなると、上部の状態が「未接続」になり
 
 ## 別プロセスの juiz を表示する
 
-[第6章 別々のプロセスをつなぐ](/ja/tutorial/multi-process/) のように、2 つ目の juiz が 1 つ目の juiz のサブシステムとして登録されていると、1 つ目の juiz の管理画面に 2 つ目の中身も出ます。
+[第4章 別々のプロセスで動く Process をつなぐ](/ja/tutorial/multi-process/) のように、2 つ目の juiz が 1 つ目の juiz のサブシステムとして登録されていると、1 つ目の juiz の管理画面に 2 つ目の中身も出ます。
 たとえば listener を 8000 番、talker を 8001 番で起動して talker → listener をつないだあと、`http://localhost:8000/ui/` を開くと次のようになります。
 
 ![副系の表示。副系 127.0.0.1:8001 の talker0 から、系 localhost:8000 の listener0 へ矢印が枠をまたいでいる](../../../../assets/web-ui/subsystem.png)

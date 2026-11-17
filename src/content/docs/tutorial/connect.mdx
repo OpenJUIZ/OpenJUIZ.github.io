@@ -1,47 +1,37 @@
 ---
-title: "4. Connecting Processes: connect and Execution Context"
-description: Connect a talker and a listener and run them periodically with an Execution Context. Learn connect, the other way to use a Process. Pick your language.
+title: "5. Connecting several libraries in one juiz: connect and Execution Context"
+description: Load the two libraries talker and listener from chapter 4 into one juiz, and connect and run them with connections and an Execution Context in the configuration file. Pick your language.
 sidebar:
-  order: 4
+  order: 5
   label: Overview
 prev:
-  link: /tutorial/config-file/
-  label: "3. Starting everything from a configuration file (all languages)"
+  link: /tutorial/multi-process/
+  label: "4. Connecting Processes in separate processes: Topic"
 next: false
 ---
 
 import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-So far you have used **call**: calling a Process from outside and getting the result back.
-Robots often need something else too: "as soon as a sensor value is read, pass it to the control Process", that is, keep feeding one Process's output into the next Process's input.
-In this chapter you connect a `talker` that outputs a string to a `listener` that prints the string it receives, and run them periodically.
+In chapter 4 you started the talker and the listener in separate juiz instances and connected them over HTTP.
+For parts that always run together on the same computer, you can also load both libraries into one juiz and connect them there. The values are passed inside the same process, with no communication cost.
+In this chapter you list the two libraries from chapter 4 in one configuration file and connect them with `connections` and an Execution Context.
 
 <Aside type="tip" title="What you will learn">
-- Connecting a Process's output to another Process's argument (**connect**)
+- Libraries made separately can be loaded side by side into one juiz
+- Connecting Processes with `connections` in a configuration file (**connect**), and the difference between `Push` and `Pull`
 - When a Process runs is decided by an **Execution Context** (EC), not by the Process itself
 - The difference between call and running from an EC
 </Aside>
 
-Up to chapter 3 you used your own project made from the skeleton. From here on there are more building blocks, so clone and build the example repository and read its files as you go.
-Preparing the examples and the code differ by language, so this chapter and chapter 5 are split into one page per language. Pick your language.
+You use the `talker` and `listener` skeletons from chapter 4. Where the libraries are differs by language, so pick your language.
 
 <CardGrid>
-	<LinkCard title="Rust" href="/tutorial/connect/rust/" description="Clone juiz_examples_rust and build it with cargo build." />
-	<LinkCard title="Python" href="/tutorial/connect/python/" description="Clone juiz_examples_python and install juiz-cli into a venv." />
-	<LinkCard title="C++" href="/tutorial/connect/cpp/" description="Clone juiz_examples_cpp and build it with CMake." />
-	<LinkCard title="Haskell" href="/tutorial/connect/haskell/" description="Clone juiz_examples_haskell and build it with build.sh." />
+	<LinkCard title="Rust" href="/tutorial/connect/rust/" description="Load the plugins of two crates into one juiz." />
+	<LinkCard title="Python" href="/tutorial/connect/python/" description="Load two .py files into one juiz." />
+	<LinkCard title="C++" href="/tutorial/connect/cpp/" description="Load the plugins of two CMake projects into one juiz." />
+	<LinkCard title="Haskell" href="/tutorial/connect/haskell/" description="Load the plugins of two cabal packages into one juiz (Linux and macOS)." />
 </CardGrid>
 
-In every language, this chapter uses the following.
+Drawn as an abbreviated diagram by [juiz_opm](/guides/juiz-opm/), the system of the configuration file `talker_listener.conf` in this chapter looks like this (how to read it is in [Drawing a system](/guides/juiz-opm/#reading-the-abbreviated-diagram)).
 
-| Role | What it does |
-| --- | --- |
-| Process `talker` | Takes no arguments; prints and returns a fixed string |
-| Process `listener` | Prints the string received in the argument `arg1` |
-| Configuration file `talker_listener.conf` | Connects the two and runs them every second from an EC |
-
-Drawn as an abbreviated diagram with [juiz_opm](/guides/juiz-opm/), this system looks like this (see [Drawing a system](/guides/juiz-opm/#reading-the-abbreviated-diagram) for how to read it).
-
-![Abbreviated diagram: the EC ec0 runs talker0 every second, and the output of talker0 goes to the argument arg1 of listener0 over the push connection con0](../../../assets/tutorial-diagrams/talker_listener.png)
-
-You keep using the example repository you clone here in chapters 5 to 8.
+![Abbreviated diagram: the EC ec0 runs talker_talk0 every second, and the output of talker_talk0 goes to the argument arg1 of listener_listen0 through the push connection con0](../../../assets/tutorial-diagrams/talker_listener.png)

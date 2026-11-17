@@ -236,7 +236,7 @@ std::optional<juiz::Image> image_flip_cpp(const juiz::Image& img) {
     cv::flip(m, m, 1);
     return juiz::from_mat(m);        // enters juiz as RGB8
 }
-COMPONENT_PROCESS_FACTORY(image_flip_cpp_manif, image_flip_cpp);   // register in a Component as in chapter 5
+COMPONENT_PROCESS_FACTORY(image_flip_cpp_manif, image_flip_cpp);   // register in a Component as in chapter 6
 ```
 
 To read an image without copying, borrow it for the duration of a function with `juiz::with_image(cm, name, f)`.

@@ -56,7 +56,7 @@ export default defineConfig({
 				{
 					label: 'Tutorial',
 					translations: { ja: 'チュートリアル' },
-					// 第 1・2・4・5 章は言語ごとのページに分かれるので、章ごとのグループにする
+					// 第 1・2・4・5・6 章は言語ごとのページに分かれるので、章ごとのグループにする
 					items: [
 						'tutorial',
 						{
@@ -71,16 +71,20 @@ export default defineConfig({
 						},
 						'tutorial/config-file',
 						{
-							label: '4. Connecting Processes',
-							translations: { ja: '4. Process をつなぐ' },
+							label: '4. Processes in separate processes',
+							translations: { ja: '4. 別々のプロセスをつなぐ' },
+							items: ['tutorial/multi-process', { autogenerate: { directory: 'tutorial/multi-process' } }],
+						},
+						{
+							label: '5. Several libraries in one juiz',
+							translations: { ja: '5. 1 つの juiz でつなぐ' },
 							items: ['tutorial/connect', { autogenerate: { directory: 'tutorial/connect' } }],
 						},
 						{
-							label: '5. Packaging as a Component',
-							translations: { ja: '5. Component にまとめて配布する' },
+							label: '6. Packaging as a Component',
+							translations: { ja: '6. Component にまとめて配布する' },
 							items: ['tutorial/component', { autogenerate: { directory: 'tutorial/component' } }],
 						},
-						'tutorial/multi-process',
 						'tutorial/quic-broker',
 						'tutorial/datatype',
 					],

@@ -7,8 +7,8 @@ prev:
   link: /tutorial/container/
   label: "2. Keeping state: Container and ContainerProcess"
 next:
-  link: /tutorial/connect/
-  label: "4. Connecting Processes: connect and Execution Context"
+  link: /tutorial/multi-process/
+  label: "4. Connecting Processes in separate processes: Topic"
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
@@ -226,8 +226,8 @@ plugins:
       path: "./target/debug"
 ```
 
-In this case juiz builds the file name (`libtalker.so` and so on) from the type name `talker`. The examples used in chapter 4 are written this way.
-Chapter 5 covers the difference between the two ways.
+In this case juiz builds the file name (`libtalker.so` and so on) from the type name `talker`. The example repositories used from chapter 6 on are written this way.
+Chapter 6 covers the difference between the two ways.
 </Aside>
 
 ### processes and containers: creating
@@ -468,4 +468,4 @@ Here is what goes into the arguments you leave out, for the three ways of runnin
 - `p_apply` gives initial values to a Process's arguments. They are used when the Process runs without arguments (for example, when an Execution Context runs it). To use them in a call, use call_partial.
 - The configuration file items are summarized in the [Configuration file guide](/guides/config/).
 
-In the next chapter you add connections between Processes, and when to run them, to the configuration file. Move on to [Connecting Processes: connect and Execution Context](/tutorial/connect/).
+In the next chapter you make two skeletons, talker and listener, start them in separate juiz instances, and connect them. Move on to [Connecting Processes in separate processes: Topic](/tutorial/multi-process/).

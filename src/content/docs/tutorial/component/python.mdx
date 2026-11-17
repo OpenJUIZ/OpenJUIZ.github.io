@@ -1,21 +1,21 @@
 ---
-title: "5. Packaging as a Component (Python)"
+title: "6. Packaging as a Component (Python)"
 description: Bundle Processes, Containers and ContainerProcesses written in Python into one Component and load it with one line of configuration.
 sidebar:
   order: 2
   label: Python
 prev:
   link: /tutorial/connect/python/
-  label: "4. Connecting Processes (Python)"
+  label: "5. Connecting several libraries in one juiz (Python)"
 next:
-  link: /tutorial/multi-process/
-  label: "6. Connecting separate processes"
+  link: /tutorial/quic-broker/
+  label: "7. Choosing a transport: the QUIC broker"
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 In the skeleton of chapters 1 to 3, you wrote the Process, Container and ContainerProcesses in one source, built them into one library, and loaded it with one line under `components` in `plugins` of `app/app.conf`.
-The talker and listener examples in chapter 4, on the other hand, are separate files (libraries), one per type, loaded by listing the types one by one under `process_factories`.
+The talker and listener in the example repository, on the other hand, are separate files (libraries), one per type, loaded by listing the types one by one under `process_factories`.
 
 When you want to hand someone "the full set of parts for this camera", scattered files are inconvenient.
 In this chapter you take another look at the form the skeleton used, the **Component**, which bundles Processes, Containers and ContainerProcesses into one library, using the example repository, and compare it with one file per type.
@@ -28,8 +28,54 @@ In this chapter you take another look at the form the skeleton used, the **Compo
 
 ## Prepare the samples
 
-Keep using the example repository you cloned and built in chapter 4. The Component example was built along with everything else in chapter 4.
-If you have not done that yet, follow [Prepare the samples in chapter 4 (Python)](/tutorial/connect/python/#prepare-the-samples).
+
+Up to chapter 5 you used your own project made from the skeleton. From here on there are more building blocks, so clone and build the example repository and read its files as you go.
+Run all commands in the following chapters from the root of the cloned repository.
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git
+cd juiz_examples_python
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt  # installs juiz-cli
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git
+cd juiz_examples_python
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt  # installs juiz-cli
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+git clone https://github.com/OpenJUIZ/juiz_examples_python.git
+cd juiz_examples_python
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt  # installs juiz-cli
+```
+
+</TabItem>
+</Tabs>
+
+`requirements.txt` lists [juiz-cli](https://pypi.org/project/juiz-cli/), which installs the `juiz` command and `pyjuiz` into the venv.
+Run the following steps in a terminal where this venv is activated.
+
+<Aside type="note">
+If you use the `juiz` installed with `cargo install juiz_app`, install only pyjuiz of the same version as `juiz`, such as `pip install pyjuiz==0.2.11`, instead of `requirements.txt`.
+</Aside>
+
+The Component example is built along with the rest.
 
 The Component used in this chapter contains the following. Each works the same as what you built in the earlier chapters.
 
@@ -77,10 +123,10 @@ def example_component_python_container_get(container) -> int:
     return container.value
 ```
 
-The decorators are exactly the same as in `app/python/my_juiz.py` of the skeleton in chapters 1 and 2, and in the talker and listener of chapter 4. The only difference is that they are **placed in one file**.
+The decorators are exactly the same as in `app/python/my_juiz.py` of the skeleton in chapters 1 and 2, and in the talker and listener of the example repository. The only difference is that they are **placed in one file**.
 When loaded as a Component, every decorated function in this file becomes a type of this Component. The file name `example_component_python` is the Component's name.
 
-What the chapter 4 examples split per type now lives in one file.
+What the talker and listener examples split per type now lives in one file.
 The bodies of the Processes and ContainerProcesses are unchanged. Processes are still idempotent functions, and only ContainerProcesses touch state.
 
 ## Read the configuration file
@@ -111,7 +157,7 @@ containers:
         name: get0
 ```
 
-Compare it with `talker_listener.conf`, the configuration file from chapter 4.
+Compare it with `talker_listener.conf` in the example repository (it loads talker and listener from one file per type and connects them).
 
 ### plugins: one Component entry
 
@@ -123,7 +169,7 @@ plugins:
       path: "./component"
 ```
 
-In chapter 4 you listed types one by one in `process_factories` (Containers go in `container_factories`, with each ContainerProcess under its Container).
+`talker_listener.conf` lists types one by one in `process_factories` (Containers go in `container_factories`, with each ContainerProcess under its Container).
 With a Component, as in `app/app.conf` from chapter 3, you write **just one Component name** in `components`. As with one file per type, the key determines which file is loaded.
 
 For the Component name `example_component_python`, juiz loads `example_component_python.py` from `./component`.
@@ -146,7 +192,7 @@ Pass the configuration file with `-f`.
 juiz -f example_component.conf -d
 ```
 
-Run it in a terminal where the venv from chapter 4 is activated.
+Run it in a terminal where the venv from "Prepare the samples" is activated.
 
 ## Call it from outside
 
@@ -174,7 +220,7 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 ```
 
 The Process adds 1 to its argument and returns it, and the ContainerProcesses change or read the Container's value.
-From the caller's point of view, they are indistinguishable from types loaded from one file per type, as in chapter 4.
+From the caller's point of view, they are indistinguishable from types loaded from one file per type, as with the talker and listener in the example repository.
 
 ## A Component is the unit of distribution
 
@@ -193,7 +239,7 @@ In other words, Processes, Containers and ContainerProcesses are "units for runn
 
 - Add another instance of `example_component_python_increment` to `processes`. As in chapter 3, you can create any number of instances from types loaded from a Component.
 - Add another Container (for example `container1`) and its ContainerProcesses to `containers`. `container0` and `container1` hold separate values.
-- Add `connections` and `ecs` from chapter 4 and connect the first Process's output to `arg1` of the second Process you added. Types from a Component connect the same way as any other. `plugins` can list `components` and `process_factories` side by side, so you can also connect to a Process from a separate file, such as the talker from chapter 4.
+- Add `connections` and `ecs` from chapter 5 and connect the first Process's output to `arg1` of the second Process you added. Types from a Component connect the same way as any other. `plugins` can list `components` and `process_factories` side by side, so you can also connect to a Process from a separate file, such as the talker in the example repository.
 - You can also load a Component from the command line without a configuration file. With `-1`, juiz creates one instance of every type in the Component (named "type name + `0`", as in the skeleton's `app/app.conf`).
 
 ```sh
@@ -206,4 +252,4 @@ juiz --component ./component/example_component_python.py -l python -1 -d
 - In a configuration file, writing one Component name in `components` under `plugins` loads every type inside it.
 - Creating instances, IDs, calling and connecting all work the same as when types are loaded from separate files. A Component does not change how things run; it is the **unit of distribution**.
 
-In the next chapter you connect juiz instances started separately, using only commands and no configuration file. Move on to [Connecting separate processes](/tutorial/multi-process/).
+In the next chapter you choose the transport that connects juiz instances. Move on to [Choosing a transport: the QUIC broker](/tutorial/quic-broker/).

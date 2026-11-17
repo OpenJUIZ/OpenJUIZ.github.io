@@ -13,7 +13,7 @@ From a config file (conf) or a running System it makes a model you can read as E
 Diagrams use one notation, the **abbreviated diagram**. A Process is an ellipse, a Container a box, an EC a box with states, a System a frame, and arguments are small circles on the edge of the ellipse.
 The diagrams in the chapters of the [tutorial](/tutorial/) on this site were drawn with this command from each chapter's config file.
 
-![The abbreviated diagram of talker_listener from tutorial chapter 4. The EC ec0 runs talker0 every second, and the output of talker0 goes to the argument arg1 of listener0 over a push connection](../../../assets/tutorial-diagrams/talker_listener.png)
+![The abbreviated diagram of talker_listener from tutorial chapter 5. The EC ec0 runs talker_talk0 every second, and the output of talker_talk0 goes to the argument arg1 of listener_listen0 over a push connection](../../../assets/tutorial-diagrams/talker_listener.png)
 
 :::note[A separate command from juiz]
 juiz_opm is not part of the `juiz` command, and juiz does not need it to run.
@@ -73,7 +73,7 @@ juiz_opm --help
 
 ## Draw a config file
 
-Take `talker_listener.conf` from [chapter 4](/tutorial/connect/) as the example. Run these in the root of the samples repository.
+Take `talker_listener.conf` of the samples repository, used from [chapter 6](/tutorial/component/) on, as the example. Run these in the root of the samples repository.
 
 ```sh
 juiz_opm from-conf talker_listener.conf -o talker_listener.opl   # make the model
@@ -162,23 +162,25 @@ The same system after `initial_value` and `p_apply` are added later in the chapt
 
 ![Abbreviated diagram of chapter 3 with initial_value and p_apply: initial_value 3 in the band of counter0, and p_apply values on the argument a of my_juiz_add0 and the argument step of counter_increment0](../../../assets/tutorial-diagrams/tutorial_p_apply.png)
 
-### Chapter 4: talker_listener.conf
+### Chapter 4: app/app.conf of talker and listener (Topic)
 
-The EC `ec0` runs `talker0` every second, and the output of `talker0` goes to the argument `arg1` of `listener0` over the push connection `con0`. → [4. Connecting Processes](/tutorial/connect/)
+In the talker's juiz, the EC `talker_ec` runs `talker_talk0` every second and publishes its output to the Topic `chatter`. In the listener's juiz, `listener_listen0` subscribes to `chatter` with its argument `arg1`. The `mastersystem` that joins the two juiz instances does not appear in the diagrams. → [4. Connecting Processes in separate processes](/tutorial/multi-process/)
+
+![Abbreviated diagram of the talker's juiz](../../../assets/tutorial-diagrams/talker_topic.png)
+
+![Abbreviated diagram of the listener's juiz](../../../assets/tutorial-diagrams/listener_topic.png)
+
+### Chapter 5: talker_listener.conf
+
+The EC `ec0` runs `talker_talk0` every second, and the output of `talker_talk0` goes to the argument `arg1` of `listener_listen0` over the push connection `con0`. → [5. Connecting several libraries in one juiz](/tutorial/connect/)
 
 ![Abbreviated diagram of talker_listener](../../../assets/tutorial-diagrams/talker_listener.png)
 
-### Chapter 5: example_component.conf
+### Chapter 6: example_component.conf
 
-The Process `proc0` and the Container `container0` with initial value 100, made from a Component. → [5. Packaging as a Component](/tutorial/component/)
+The Process `proc0` and the Container `container0` with initial value 100, made from a Component. → [6. Packaging as a Component](/tutorial/component/)
 
 ![Abbreviated diagram of example_component: add0, get0 and increment0 inside Container container0, and Process proc0 outside](../../../assets/tutorial-diagrams/example_component.png)
-
-### Chapter 6: talker_ec.conf
-
-The talker side. The EC starts stopped (`auto_start: false`). The listener side is connected with a command, so that connection is in neither the config file nor the diagram. → [6. Connecting separate processes](/tutorial/multi-process/)
-
-![Abbreviated diagram of talker_ec: stopped of EC ec0 has the thick border](../../../assets/tutorial-diagrams/talker_ec.png)
 
 ### Chapter 8: typed_pose.conf
 

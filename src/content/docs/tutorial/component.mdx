@@ -1,19 +1,19 @@
 ---
-title: 5. Packaging as a Component
+title: 6. Packaging as a Component
 description: Bundle Processes, Containers and ContainerProcesses into one library and load it with one line of configuration. Learn that a Component is the unit of distribution. Pick your language.
 sidebar:
-  order: 5
+  order: 6
   label: Overview
 prev:
   link: /tutorial/connect/
-  label: "4. Connecting Processes: connect and Execution Context"
+  label: "5. Connecting several libraries in one juiz: connect and Execution Context"
 next: false
 ---
 
 import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 In the skeleton of chapters 1 to 3, you wrote the Process, Container and ContainerProcesses in one source, built them into one library, and loaded it with one line under `components` in `plugins` of `app/app.conf`.
-The talker and listener examples in chapter 4, on the other hand, are separate files (libraries), one per type, loaded by listing the types one by one under `process_factories`.
+The talker and listener in the example repository, on the other hand, are separate files (libraries), one per type, loaded by listing the types one by one under `process_factories`.
 
 When you want to hand someone "the full set of parts for this camera", scattered files are inconvenient.
 In this chapter you take another look at the form the skeleton used, the **Component**, which bundles Processes, Containers and ContainerProcesses into one library, using the example repository, and compare it with one file per type.
@@ -24,7 +24,7 @@ In this chapter you take another look at the form the skeleton used, the **Compo
 - `components` in `plugins` takes a single Component name instead of each type
 </Aside>
 
-Keep using the example repository you cloned and built in chapter 4. How you write a Component differs by language, so pick your language.
+From this chapter on, you clone and build the example repository and read its files. Each language page starts with how to prepare it. How you write a Component differs by language, so pick your language.
 
 <CardGrid>
 	<LinkCard title="Rust" href="/tutorial/component/rust/" description="Bundle everything into one crate with the Component attribute macros and juiz_component_manifest!." />
