@@ -205,7 +205,7 @@ This suits data where "only the latest frame matters", like camera images. For d
 
 #### Counters
 
-The Topic profile on the sender and the receiver (in `core_store.topics` of HTTP `system/profile_full`) shows these counts.
+The Topic profile on the sender and the receiver (in `core_store.topics` of HTTP `system/profile`) shows these counts.
 
 ```json
 "shared_memory": {"slots": 4, "slot_bytes": 25165824, "sent": 1200, "fallback": 0, "dropped": 3, "overwritten": 0}

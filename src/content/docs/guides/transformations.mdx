@@ -628,11 +628,11 @@ The System API has the following classes, callable through any broker (HTTP, QUI
 |---|---|---|
 | `container/pose` | READ (GET) | Read the ContainerPose of `identifier` seen from `reference` |
 | `container/set_pose` | UPDATE (PATCH) | Write `identifier`. Body: `reference`, `pose` |
-| `transform/list`, `transform/profile_full` | READ | List Transforms and show one |
+| `transform/list`, `transform/profile` | READ | List Transforms and show one |
 | `transform/create`, `transform/update`, `transform/destroy` | CREATE, UPDATE, DELETE | Create, change and delete a Transform |
 | `anchor/list`, `anchor/update` | READ, UPDATE | List Anchors, recompute |
 | `transformations/tree` | READ | The tree of `anchor` (pose of each node and the Transform from its parent) |
-| `pose_listener/list`, `profile_full`, `create`, `destroy` | | Pose notification registrations |
+| `pose_listener/list`, `profile`, `create`, `destroy` | | Pose notification registrations |
 
 ```sh
 curl "http://127.0.0.1:8000/api/container/pose?identifier=camera0&reference=map"
@@ -785,9 +785,9 @@ juiz container list --long                         # Systems fetching from a Con
 |---|---|
 | `container/pose_state` | New API. Returns the Container's PoseState with a version number (this is what child Systems call) |
 | `transform/create` | Arguments `rate` and `timeout`. Forwarded when the destination is in another System |
-| `transform/profile_full` | `remote: {system, rate, timeout, state, last_success}` |
+| `transform/profile` | `remote: {system, rate, timeout, state, last_success}` |
 | `container/pose`, `container/set_pose` | Forwarded when `identifier` is in another System |
-| `container/profile_full` | `remote_children: [{system, destinations, last_access}]` |
+| `container/profile` | `remote_children: [{system, destinations, last_access}]` |
 | `anchor/list`, `transformations/tree` | Include and accept replica Anchors. `anchor/update` on a replica fetches once right away |
 
 In pyjuiz, `create_transform` takes `rate` and `timeout`, and `pose_state()` reads the PoseState. Pass **a `ContainerProxy` of another System** to `pose`, `set_pose` or `create_transform`, and it is sent as a broker-qualified ID for that System.

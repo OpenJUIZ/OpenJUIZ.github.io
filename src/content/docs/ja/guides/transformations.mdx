@@ -628,11 +628,11 @@ System の API に次のクラスがあり、HTTP・QUIC・IPC のどのブロ�
 |---|---|---|
 | `container/pose` | READ(GET) | `identifier` の ContainerPose を `reference` から見て読む |
 | `container/set_pose` | UPDATE(PATCH) | `identifier` を書く。ボディは `reference`・`pose` |
-| `transform/list`・`transform/profile_full` | READ | Transform の一覧と中身 |
+| `transform/list`・`transform/profile` | READ | Transform の一覧と中身 |
 | `transform/create`・`transform/update`・`transform/destroy` | CREATE・UPDATE・DELETE | Transform を作る・値を変える・消す |
 | `anchor/list`・`anchor/update` | READ・UPDATE | Anchor の一覧、計算し直し |
 | `transformations/tree` | READ | `anchor` の木(各ノードの位置姿勢と親からの Transform) |
-| `pose_listener/list`・`profile_full`・`create`・`destroy` | | Pose 通知の登録 |
+| `pose_listener/list`・`profile`・`create`・`destroy` | | Pose 通知の登録 |
 
 ```sh
 curl "http://127.0.0.1:8000/api/container/pose?identifier=camera0&reference=map"
@@ -785,9 +785,9 @@ juiz container list --long                         # 取りに来ている Syste
 |---|---|
 | `container/pose_state` | 新しい API。Container の PoseState を版番号つきで返す(子の System が取りに来るのもこれ) |
 | `transform/create` | 引数 `rate`・`timeout`。終点が別 System なら回す |
-| `transform/profile_full` | `remote: {system, rate, timeout, state, last_success}` |
+| `transform/profile` | `remote: {system, rate, timeout, state, last_success}` |
 | `container/pose`・`container/set_pose` | `identifier` が別 System なら回す |
-| `container/profile_full` | `remote_children: [{system, destinations, last_access}]` |
+| `container/profile` | `remote_children: [{system, destinations, last_access}]` |
 | `anchor/list`・`transformations/tree` | 写しの Anchor も入る・指定できる。`anchor/update` に写しを渡すと、すぐ 1 回取りに行く |
 
 pyjuiz では、`create_transform` に `rate`・`timeout` を渡せ、`pose_state()` で PoseState を読めます。`pose`・`set_pose`・`create_transform` に**別 System の `ContainerProxy`** を渡すと、その System へのブローカー付きの ID にして送ります。

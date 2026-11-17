@@ -246,7 +246,7 @@ juiz container destroy "core://core/container/cc0::composite_container"   # Comp
 - 作った Composite は普通の型として、`process/create`(スロットがあれば `container_process/create`)でインスタンスを作れます。
 - 消せるのは Composite の型だけです。その型のインスタンスがあるとき、ほかの Composite が子として使っているときは消せません(`CompositeInUseError`)。先にそちらを消します。
 - API で作る CompositeContainer の `namespace` は絶対指定として扱います。
-- HTTP の API は `POST /api/composite/create`(ボディ `{"__manifest__": <定義>}`)、`GET /api/composite/list`、`GET /api/composite/profile_full?identifier=<型名>`、`DELETE /api/composite/destroy?identifier=<型名>`、`POST /api/composite_container/create` です。
+- HTTP の API は `POST /api/composite/create`(ボディ `{"__manifest__": <定義>}`)、`GET /api/composite/list`、`GET /api/composite/profile?identifier=<型名>`、`DELETE /api/composite/destroy?identifier=<型名>`、`POST /api/composite_container/create` です。
 
 Python(pyjuiz)では `SystemProxy` から呼びます。
 

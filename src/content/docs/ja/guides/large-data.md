@@ -205,7 +205,7 @@ topics:
 
 #### 数え上げ
 
-送り手と受け手の Topic の profile(HTTP の `system/profile_full` の `core_store.topics`)に、次の数が出ます。
+送り手と受け手の Topic の profile(HTTP の `system/profile` の `core_store.topics`)に、次の数が出ます。
 
 ```json
 "shared_memory": {"slots": 4, "slot_bytes": 25165824, "sent": 1200, "fallback": 0, "dropped": 3, "overwritten": 0}

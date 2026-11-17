@@ -5,7 +5,7 @@ sidebar:
   order: 11.5
 ---
 
-Container に **3D モデル**(ContainerModel)のファイルを付けられます。設定ファイルの Container に `model:` を書くだけで、プラグインのコードは変えません。プラグインの側で、その型の Container の[既定のモデル](#型ごとの既定のモデル)を決めておくこともできます(juiz 0.2.10 から)。
+Container に **3D モデル**(ContainerModel)のファイルを付けられます。設定ファイルの Container に `model:` を書くだけで、プラグインのコードは変えません。プラグインの側で、その型の Container の[既定のモデル](#型ごとの既定のモデル)を決めておくこともできます(juiz 0.2.11 から)。
 [Transformations](/ja/guides/transformations/) と組み合わせると、「どの Container が、どこに、どんな形で」あるかがそろい、[管理画面](/ja/guides/web-ui/)の「3D」で系全体を立体で見られます。
 
 ![管理画面の 3D 表示。odom を基準に、台車 base0(青い箱と車輪)の上に雲台 pantilt0(灰色の台座とオレンジの頭)とカメラ camera0 が位置姿勢のとおりに置かれている](../../../../assets/container-model/web-ui-3d.png)
@@ -18,7 +18,7 @@ Container の 3D モデルは juiz 0.2.9 で入った機能です。それより
 
 - **juiz はモデルの中身を解釈しません**。ファイルを不透明なバイト列として持ち、確かめるのは形式(先頭のバイト)・大きさ・SHA-256 だけです。メッシュを開いて描くのは受け取った側(管理画面や、利用者のツール)です。
 - **1 つの Container に 1 つ**です。部品が多いロボットは部品ごとに Container を分け、Transform でつなぎます(関節で動く部分は、もともと別の Container のはずです)。
-- **モデルは Container の属性**で、Process(ContainerProcess)ではありません。`container/profile_full` と同じ種類の API で取り出します。
+- **モデルは Container の属性**で、Process(ContainerProcess)ではありません。`container/profile` と同じ種類の API で取り出します。
 - 設定ファイルに書く機能なので、Container の中身の言語(Rust・Python・C++・Haskell)に関係なく使えます。
 - Anchor([Transformations](/ja/guides/transformations/))も Container なので、床や地図のモデルを持てます。CompositeContainer も持てます。
 
@@ -280,7 +280,7 @@ juiz container model base0 -o .         # 中身を書き出す(ディレクト�
 
 | パス(GET) | 返すもの |
 |---|---|
-| `/api/container/profile_full?identifier=` | 今までの profile に `model`(モデル情報か `null`) |
+| `/api/container/profile?identifier=` | 今までの profile に `model`(モデル情報か `null`) |
 | `/api/container/model_info?identifier=` | モデル情報。モデルが無ければ `null` |
 | `/api/container/model?identifier=` | 中身のバイト列そのまま |
 
