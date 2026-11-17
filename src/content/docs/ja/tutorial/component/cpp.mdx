@@ -14,11 +14,11 @@ next:
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-ここまでは、Process も Container も ContainerProcess も、1 つの型ごとに別々のファイル(ライブラリ)として作ってきました。
-第 3 章の設定ファイルでも、`plugins` に型を 1 つずつ並べて、それぞれのファイルを読み込ませていました。
+第 1〜3 章の雛形では、Process・Container・ContainerProcess を 1 つのソースに書いて 1 つのライブラリにし、`app/app.conf` の `plugins` の `components` に 1 行書いて読み込みました。
+一方、第 4 章のサンプルの talker と listener は、1 つの型ごとに別々のファイル(ライブラリ)にして、`process_factories` に型を 1 つずつ並べて読み込みました。
 
 実際に「このカメラを動かす部品一式」を誰かに渡すときに、ファイルがばらばらだと不便です。
-この章では、Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を作り、設定ファイルから読み込みます。
+この章では、雛形がとっていた形、つまり Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を、サンプル集の例で改めて読み、型ごとのファイルと比べます。
 
 <Aside type="tip" title="この章で学ぶこと">
 - Component は、複数の Process・Container・ContainerProcess を 1 つにまとめた**配布の単位**であること
@@ -35,7 +35,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 | 種類 | 働き |
 | --- | --- |
-| Process | 引数に 1 を足して返す(第 1 章の `increment_process` と同じ) |
+| Process | 引数に 1 を足して返す(第 1 章の `my_juiz_add` と同じく、ふつうの Process) |
 | Container | 整数値を 1 つ持つ(第 2 章のカウンタと同じ) |
 | ContainerProcess | Container の値を読む・変える |
 
@@ -107,7 +107,7 @@ auto component_manifest() {
 DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(component_manifest)
 ```
 
-1 つのライブラリにいくつもの型を入れるので、これまでとは書き方が少し変わります。
+書き方は、第 1・2 章の雛形の `src/my_juiz.cpp` と同じです。第 4 章の talker・listener のように、型ごとに別のライブラリにするときとは、次の点が違います。
 
 - 型ごとのマニフェストは、`manifest()` という同じ名前の関数ではなく、`example_component_cpp_increment_manif` のように型ごとに名前を付けた変数に置きます。
 - 公開には `PROCESS_FACTORY` などの代わりに、`COMPONENT_PROCESS_FACTORY`・`COMPONENT_CONTAINER_FACTORY`・`COMPONENT_CONTAINER_PROCESS_FACTORY` を使います。これらは、関数のほかに `<関数名>_manifest()` という関数も作ります。
@@ -121,7 +121,7 @@ add_juiz_component(example_component_cpp SOURCES example_component_cpp/example_c
 
 1 つの共有ライブラリができます。ファイル名は Linux では `build/plugins/libexample_component_cpp.so`、macOS では `build/plugins/libexample_component_cpp.dylib`、Windows では `build/plugins/example_component_cpp.dll` です。
 
-これまで型ごとに分かれていたものが、Component では1 つのライブラリに入っています。
+第 4 章のサンプルでは型ごとに分かれていたものが、Component では 1 つのライブラリに入っています。
 それぞれの Process や ContainerProcess の中身は、これまでと変わりません。Process は冪等な関数のまま、状態に触れるのは ContainerProcess だけ、という考え方もそのままです。
 
 ## 設定ファイルを読む
@@ -153,7 +153,7 @@ containers:
         name: get0
 ```
 
-第 3 章の設定ファイルと比べてみましょう。
+第 4 章の設定ファイル `talker_listener.conf` と比べてみましょう。
 
 ### plugins: Component を 1 つ書く
 
@@ -165,8 +165,8 @@ plugins:
       path: "./build/plugins"
 ```
 
-第 3 章では、`process_factories` と `container_factories` に型を 1 つずつ書き、ContainerProcess も Container の下に 1 つずつ書いていました。
-Component では、`components` に **Component の名前を 1 つ**書くだけです。キーの名前から読み込むファイルが決まるのは、第 3 章と同じです。
+第 4 章では、`process_factories` に型を 1 つずつ書いていました(Container なら `container_factories` に書き、ContainerProcess も Container の下に 1 つずつ書きます)。
+Component では、第 3 章の `app/app.conf` と同じく、`components` に **Component の名前を 1 つ**書くだけです。キーの名前から読み込むファイルが決まるのは、型ごとのときと同じです。
 
 Component 名 `example_component_cpp` なら、`./build/plugins` の中の `libexample_component_cpp.so`(macOS では `libexample_component_cpp.dylib`、Windows では `example_component_cpp.dll`)が読み込まれます。設定ファイルには拡張子を書かないので、同じ設定ファイルがどの OS でも使えます。
 
@@ -216,7 +216,7 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 ```
 
 Process は引数に 1 を足して返し、ContainerProcess は Container の値を変えたり読んだりします。
-呼び出す側から見ると、第 1 章〜第 3 章で別々のファイルから作ったものと区別がつきません。
+呼び出す側から見ると、第 4 章のように型ごとのファイルから読み込んだものと区別がつきません。
 
 ## Component は配布の単位
 
@@ -225,14 +225,18 @@ Process は引数に 1 を足して返し、ContainerProcess は Container の�
 - **作る人**は、関連する Process・Container・ContainerProcess を 1 つのプロジェクトで書き、1 つのライブラリとして配れます。たとえばカメラなら、カメラを開いて持っておく Container、画像を読む ContainerProcess、画像を変換する Process を 1 つの Component にできます。
 - **使う人**は、`plugins` の `components` に 1 行書くだけで、中の型を全部使えるようになります。どの型を何個作るかは、これまでどおり `processes` と `containers` で自由に決められます。
 
+<Aside type="tip" title="雛形を配布する">
+第 1〜3 章で作った `my_juiz` も 1 つの Component です。雛形の `scripts/pack.sh`(Windows は `scripts\pack.ps1`)を実行すると、Component のライブラリと `app/app.conf` を `.juizapp` というファイル 1 つにまとめられ、受け取った人は `juiz run` だけで動かせます。詳しくは [雛形から始める(juiz pkg)の「配布する」](/ja/guides/pkg/#配布する) と [アプリの配布(.juizapp)](/ja/guides/app-package/) を見てください。
+</Aside>
+
 つまり、Process・Container・ContainerProcess が「動かすときの単位」であるのに対して、Component は「配るときの単位」です。
 
 ## やってみよう
 
 - `processes` に `example_component_cpp_increment`のインスタンスをもう 1 つ書き足してみましょう。Component から読み込んだ型からも、第 3 章と同じように、いくつでもインスタンスを作れます。
 - `containers` にもう 1 つ Container(たとえば `container1`)と、それに結びつく ContainerProcess を書き足してみましょう。`container0` と `container1` は別々の値を持ちます。
-- 第 4 章の `connections` と `ecs` を書き足して、1 つ目の Process の出力を、書き足した 2 つ目の Process の `arg1` につないでみましょう。Component から読み込んだ型かどうかに関係なく、同じようにつなげます。`plugins` には `components` と `process_factories` を並べて書けるので、第 3 章の `increment_process` のような別ファイルの Process とつなぐこともできます。
-- 設定ファイルを使わずに、コマンドラインから Component を読み込むこともできます。`-1` を付けると、Component の中のすべての型から、インスタンスを 1 つずつ作ります(名前は第 1 章と同じく「型名 + `0`」になります)。
+- 第 4 章の `connections` と `ecs` を書き足して、1 つ目の Process の出力を、書き足した 2 つ目の Process の `arg1` につないでみましょう。Component から読み込んだ型かどうかに関係なく、同じようにつなげます。`plugins` には `components` と `process_factories` を並べて書けるので、第 4 章の talker のような別ファイルの Process とつなぐこともできます。
+- 設定ファイルを使わずに、コマンドラインから Component を読み込むこともできます。`-1` を付けると、Component の中のすべての型から、インスタンスを 1 つずつ作ります(名前は雛形の `app/app.conf` と同じく「型名 + `0`」になります)。
 
 <Tabs syncKey="platform">
 <TabItem label="Linux">

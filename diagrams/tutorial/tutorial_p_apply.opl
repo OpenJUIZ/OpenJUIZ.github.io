@@ -1,38 +1,38 @@
-Model "tutorial".
+Model "my_juiz".
 
-"counter0" is an object [role: container, name: counter0, type: example_container, params: {"initial_value":3}].
+"counter0" is an object [role: container, name: counter0, type: counter, params: {"initial_value":3}].
 
-"get0" is a process [role: container_process, name: get0, type: example_container_get].
-"get0" affects "counter0".
-"get0" yields "get0 out".
+"counter_get0" is a process [role: container_process, name: counter_get0, type: counter_get].
+"counter_get0" affects "counter0".
+"counter_get0" yields "counter_get0 out".
 
-"get0 out" is an object [role: value, value_kind: output].
+"counter_get0 out" is an object [role: value, value_kind: output].
 
-"inc0" is a process [role: process, name: inc0, type: increment_process].
-"inc0" yields "inc0 out".
-"inc0" requires "inc0 arg1" [arg: arg1, arg_index: 0, applied: 10].
+"counter_increment0" is a process [role: container_process, name: counter_increment0, type: counter_increment].
+"counter_increment0" affects "counter0".
+"counter_increment0" yields "counter_increment0 out".
+"counter_increment0" requires "counter_increment0 step" [arg: step, arg_index: 0, applied: 5].
 
-"inc0 arg1" is an object [role: value, value_kind: input].
+"counter_increment0 out" is an object [role: value, value_kind: output].
 
-"inc0 out" is an object [role: value, value_kind: output].
+"counter_increment0 step" is an object [role: value, value_kind: input].
 
-"inc1" is a process [role: process, name: inc1, type: increment_process].
-"inc1" yields "inc1 out".
+"my_juiz" is an object [role: system, name: my_juiz].
+"my_juiz" consists of "counter0".
+"my_juiz" exhibits "counter_get0".
+"my_juiz" exhibits "counter_increment0".
+"my_juiz" exhibits "my_juiz_add0".
+"my_juiz" exhibits "my_juiz_add1".
 
-"inc1 out" is an object [role: value, value_kind: output].
+"my_juiz_add0" is a process [role: process, name: my_juiz_add0, type: my_juiz_add].
+"my_juiz_add0" yields "my_juiz_add0 out".
+"my_juiz_add0" requires "my_juiz_add0 a" [arg: a, arg_index: 0, applied: 10].
 
-"increment0" is a process [role: container_process, name: increment0, type: example_container_increment].
-"increment0" affects "counter0".
-"increment0" yields "increment0 out".
-"increment0" requires "increment0 arg1" [arg: arg1, arg_index: 0, applied: 5].
+"my_juiz_add0 a" is an object [role: value, value_kind: input].
 
-"increment0 arg1" is an object [role: value, value_kind: input].
+"my_juiz_add0 out" is an object [role: value, value_kind: output].
 
-"increment0 out" is an object [role: value, value_kind: output].
+"my_juiz_add1" is a process [role: process, name: my_juiz_add1, type: my_juiz_add].
+"my_juiz_add1" yields "my_juiz_add1 out".
 
-"tutorial" is an object [role: system, name: tutorial].
-"tutorial" consists of "counter0".
-"tutorial" exhibits "get0".
-"tutorial" exhibits "inc0".
-"tutorial" exhibits "inc1".
-"tutorial" exhibits "increment0".
+"my_juiz_add1 out" is an object [role: value, value_kind: output].

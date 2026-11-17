@@ -1,6 +1,6 @@
 ---
 title: 1. Your first Process
-description: Create a Process that adds 1 to its argument from scratch, run it, call it from outside and get the result back. Pick your language.
+description: Create a project skeleton with juiz pkg create, run its Process that adds two numbers, and call it from outside to get the result back. Pick your language.
 sidebar:
   order: 1
   label: Overview
@@ -12,30 +12,30 @@ next: false
 
 import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-In this first chapter you start from an empty directory and run a Process that just adds 1 to its argument and returns it.
-The code you write is a single short function, but juiz loads it and turns it into a building block you can call over the network.
+In this first chapter you create a project skeleton with `juiz pkg create` and run the Process in it, which adds two numbers and returns the sum.
+The skeleton comes with the build settings, the Process code and the start-up configuration file already in place, so a few commands give you a building block you can call over the network.
+While running it, you read what each file in the skeleton does.
 
 <Aside type="tip" title="What you will learn">
-- How to set up a project for writing Processes (how to write `Cargo.toml`, `pyproject.toml`, `CMakeLists.txt` or the `.cabal` file)
+- How to create a project skeleton for writing Processes with `juiz pkg create`
+- How to read the skeleton (the build settings, the Process code and the start-up configuration file `app/app.conf`)
 - A Process is an idempotent function that takes arguments and returns a result
 - A Process has a "type name" and an "instance name"
 - How to call a Process from outside and get the result back (call)
 </Aside>
 
-<Aside type="note" title="You can also start from a skeleton">
-From juiz 0.2.6, a single command such as `juiz pkg create my_robot -b rust` makes a project of the same shape as the one you build in chapters 1 to 5 ([Starting from a skeleton (juiz pkg)](/guides/pkg/)).
-The tutorial builds everything by hand so that you see how it works, but when you start your own component, the skeleton is quicker and safer.
+<Aside type="caution" title="juiz 0.2.6 or later is required">
+`juiz pkg` is available from juiz 0.2.6. Check with `juiz --version`.
 </Aside>
 
-How you set up a project differs a lot between languages, so this chapter and chapter 2 have a separate page for each language. Pick the one you use.
+The build tools and the files in the skeleton differ by language, so this chapter and chapter 2 have a page per language. Pick your language.
 
 <CardGrid>
-	<LinkCard title="Rust" href="/tutorial/first-process/rust/" description="Create a Cargo workspace and build the Process as a shared library." />
-	<LinkCard title="Python" href="/tutorial/first-process/python/" description="Set up pyproject.toml and a venv, and let juiz load the .py file directly." />
-	<LinkCard title="C++" href="/tutorial/first-process/cpp/" description="Write CMakeLists.txt and build against libjuiz_sdk." />
-	<LinkCard title="Haskell" href="/tutorial/first-process/haskell/" description="Create a cabal project and build it as a shared library with foreign-library." />
+	<LinkCard title="Rust" href="/tutorial/first-process/rust/" description="Create a Cargo crate skeleton and build it into a shared library with scripts/dev.sh." />
+	<LinkCard title="Python" href="/tutorial/first-process/python/" description="Create a pyproject.toml skeleton, install pyjuiz in a venv, and let juiz load the .py file as is." />
+	<LinkCard title="C++" href="/tutorial/first-process/cpp/" description="Create a CMake project skeleton and build it against libjuiz_sdk." />
+	<LinkCard title="Haskell" href="/tutorial/first-process/haskell/" description="Create a cabal project skeleton and build it into a shared library as a foreign-library." />
 </CardGrid>
 
-You grow the project you create here: chapter 2 adds a Container, and chapter 3 adds a configuration file.
-The file names and locations match the examples ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp), [Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell)), so if you get stuck, compare your files with the ones in the same place in the examples.
-
+You grow the project `my_juiz` you create here: in chapter 2 you add a counter Container with `juiz pkg add`, and in chapter 3 you edit the start-up configuration file `app/app.conf`.
+The skeleton's options and the steps up to distributing it as a `.juizapp` are in the guide [Starting from a skeleton (juiz pkg)](/guides/pkg/).

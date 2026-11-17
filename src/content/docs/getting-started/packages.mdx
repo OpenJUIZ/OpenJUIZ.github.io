@@ -22,7 +22,7 @@ crate-type = ["cdylib"]
 juiz_sdk = "0.2.11"
 ```
 
-[Tutorial chapter 1 (Rust)](/tutorial/first-process/rust/) explains `Cargo.toml` line by line.
+[Tutorial chapter 1 (Rust)](/tutorial/first-process/rust/) explains `Cargo.toml` while reading the skeleton made with `juiz pkg create`.
 
 ## Python
 
@@ -173,7 +173,7 @@ juiz_sdk_copy_runtime(my_process)   # on Windows, copies juiz_sdk.dll next to th
 ```
 
 `juiz_sdk::juiz_sdk` also carries the header directories and the C++17 requirement. On Windows, juiz looks for the `juiz_sdk.dll` a plugin uses in the plugin's directory (and in `PATH`), so `juiz_sdk_copy_runtime` copies it there.
-[Tutorial chapter 1 (C++)](/tutorial/first-process/cpp/) explains the CMake file line by line.
+[Tutorial chapter 1 (C++)](/tutorial/first-process/cpp/) explains the CMake file while reading the skeleton made with `juiz pkg create`.
 
 Without CMake, add `cjuiz/include` and `cppjuiz/include` to the include path, and link to libjuiz_sdk in `lib` (`lib/juiz_sdk.dll.lib` on Windows).
 You can also let CMake fetch libjuiz_sdk, as [cmake/Juiz.cmake](https://github.com/OpenJUIZ/juiz_examples_cpp/blob/main/cmake/Juiz.cmake) in the [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) examples does.

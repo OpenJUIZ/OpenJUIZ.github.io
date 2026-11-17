@@ -32,7 +32,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 ## listener を起動する
 
-ターミナル 1 で、listener を読み込んだ `juiz` を起動します。第 1 章と同じく、`-1` でインスタンスを 1 つ作り、`-d` でサーバーとして動かし続けます。
+ターミナル 1 で、listener を読み込んだ `juiz` を起動します。`--process` で Process のファイルを読み込み、`-1` でその型からインスタンスを 1 つ(名前は「型名 + `0`」)作り、`-d` でサーバーとして動かし続けます。設定ファイルを使わずに起動する書き方です。
 
 <Tabs syncKey="lang">
 <TabItem label="Rust">

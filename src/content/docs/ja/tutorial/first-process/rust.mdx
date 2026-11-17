@@ -1,6 +1,6 @@
 ---
 title: "1. はじめての Process(Rust)"
-description: Cargo のワークスペースを 1 から作り、引数に 1 を足す Process を Rust で書いて動かします。
+description: juiz pkg create で Rust の雛形を作り、2 つの数を足す Process をビルドして動かし、外から呼び出します。
 sidebar:
   order: 1
   label: Rust
@@ -14,11 +14,12 @@ next:
 
 import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
-この章では、空のディレクトリから Cargo のプロジェクトを作り、引数に 1 を足して返す Process を Rust で書いて動かします。
-できあがるものは、サンプル集 [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust) の `process/increment_process` と同じです。
+この章では、`juiz pkg create` で Rust のプロジェクトの雛形を作り、その中の「2 つの数を足して返す」Process をビルドして動かします。
+動かしたあとで、雛形の中のファイルを 1 つずつ読んでいきます。
 
 <Aside type="tip" title="この章で学ぶこと">
-- Process を書く Cargo のプロジェクトの作り方(`Cargo.toml` の書き方)
+- `juiz pkg create` で、Process を書く Cargo のプロジェクトの雛形を作る方法
+- 雛形の中身(`Cargo.toml`・`src/lib.rs`・`app/app.conf`・`scripts/`)の読み方
 - Process は、引数を受け取って結果を返す冪等な関数であること
 - Process には「型名」と「インスタンス名」があること
 - 外から Process を呼び出して結果を受け取る使い方(call)
@@ -34,271 +35,287 @@ juiz --version
 # => juiz 0.2.11
 ```
 
-Rust で書いたプラグインは、`cargo install juiz_app` で入れた `juiz` で動かします(juiz 0.0.30 からは、pip で入れた `juiz` でも動きます)。
+`juiz pkg` は juiz 0.2.6 から使えます。版が古いときは、`cargo install juiz_app` で入れ直してください。
+
+## 雛形を作る
+
+作業用のディレクトリで、次のコマンドを打ちます。
+
+```sh
+juiz pkg create my_juiz -b rust -t process
+```
+
+| 部分 | 意味 |
+| --- | --- |
+| `my_juiz` | プロジェクトの名前です。同じ名前のディレクトリが作られ、型名の頭にもなります。英小文字で始まり、英小文字・数字・`_` だけが使えます |
+| `-b rust` | 使う言語です(`rust` / `python` / `cpp` / `haskell`) |
+| `-t process` | 入れる型の種類です。`process` では Process を 1 つだけ入れます。省略すると Container も入りますが、この章では Process だけから始めます |
+
+作ると、次に打つコマンドが表示されます。
+
+```text
+Created my_juiz (rust, process) in ./my_juiz  [juiz_sdk =0.2.11]
+
+Next steps:
+  cd my_juiz
+  scripts/dev.sh                  # build and put the plugin in app/plugins/<target>/
+  juiz -f app/app.conf -d         # start (keep it running)
+  ...
+```
+
+以降のコマンドは、すべて `my_juiz` で実行します。
+
+```sh
+cd my_juiz
+```
 
 ## プロジェクトの形
 
-この章では、次の形のプロジェクトを作ります。
+雛形には、次のファイルが入っています。
 
 <FileTree>
-- my_juiz_rust/
-  - Cargo.toml ワークスペースの設定
-  - process/
-    - increment_process/
-      - Cargo.toml Process のクレートの設定
-      - src/
-        - lib.rs Process のコード
+- my_juiz/
+  - Cargo.toml クレートの設定
+  - src/
+    - lib.rs Process のコード
+  - app/
+    - app.conf 起動の設定ファイル
+    - juizapp.yaml 配布用のパッケージ(.juizapp)の情報
+  - scripts/
+    - dev.sh ビルドして app/plugins/ に置く(Windows は dev.ps1)
+    - pack.sh 配布用のパッケージを作る(Windows は pack.ps1)
+  - README.md この雛形の使い方(英語)
+  - .gitignore
 </FileTree>
 
-juiz では、Process をひとつずつ共有ライブラリ(`.so`・`.dylib`・`.dll`)としてビルドし、`juiz` コマンドがそれをプラグインとして読み込みます。
-Process を 1 つ書くごとにクレートが 1 つ増えるので、最初から Cargo の **ワークスペース** にしておき、その中に Process のクレートを並べていきます。
-第 2 章では、このワークスペースに Container のクレートを足します。
-
-まず、ディレクトリを作ります。
-
-```sh
-mkdir my_juiz_rust
-cd my_juiz_rust
-mkdir -p process/increment_process/src
-```
-
-Windows の PowerShell でも、同じコマンドで作れます。
-
-以降のコマンドは、すべて `my_juiz_rust` で実行します。
-
-## ワークスペースの Cargo.toml を書く
-
-`my_juiz_rust/Cargo.toml` を、次の内容で作ります。
-
-```toml title="Cargo.toml"
-[workspace]
-resolver = "2"
-members = [
-    "process/increment_process",
-]
-
-[workspace.dependencies]
-juiz_sdk = "0.2.11"
-```
-
-| 項目 | 意味 |
-| --- | --- |
-| `[workspace]` | このディレクトリがワークスペースのルートであることを表します。ここには `[package]` を書きません |
-| `resolver = "2"` | 依存関係の解決方法の版です。ワークスペースでは明示しておくのがおすすめです |
-| `members` | ワークスペースに入れるクレートのディレクトリです。Process を増やしたら、ここに足していきます |
-| `[workspace.dependencies]` | ワークスペースの全クレートで共通に使う依存クレートと、その版です |
-
-`juiz_sdk` は、Process や Container を書くためのクレートです。
-**`juiz_sdk` の版は、`juiz --version` で表示される版と同じにしてください。** 版が食い違うプラグインは、`juiz` が読み込むときにエラーで止まります。
-ここで版を 1 か所にまとめておくと、`juiz` を新しい版にしたときに、書き換えるのがこの 1 行だけで済みます。
-
-## Process のクレートの Cargo.toml を書く
-
-`process/increment_process/Cargo.toml` を、次の内容で作ります。
-
-```toml title="process/increment_process/Cargo.toml"
-[package]
-name = "increment_process"
-version = "0.1.0"
-edition = "2021"
-
-[lib]
-crate-type = ["cdylib"]
-
-[dependencies]
-juiz_sdk = { workspace = true }
-```
-
-| 項目 | 意味 |
-| --- | --- |
-| `name` | クレートの名前です。ビルドしてできる共有ライブラリのファイル名になります。Linux では `libincrement_process.so`、macOS では `libincrement_process.dylib`、Windows では先頭に `lib` が付かず `increment_process.dll` です |
-| `edition` | Rust のエディションです |
-| `[lib]` の `crate-type = ["cdylib"]` | このクレートを、ほかの言語からも読み込める共有ライブラリ(C 形式の動的ライブラリ)としてビルドします。`juiz` が読み込めるのはこの形式です |
-| `juiz_sdk = { workspace = true }` | ワークスペースの `[workspace.dependencies]` に書いた版の `juiz_sdk` を使います |
-
-`crate-type` を書き忘れると、ふつうの Rust のライブラリ(`.rlib`)しかできず、`juiz` から読み込めません。
-
-<Aside type="tip">
-クレートの名前は、このあと書く関数名(Process の型名)と同じにしておきます。
-第 3 章で使う設定ファイルは、型名 `increment_process` から `libincrement_process.so`(Windows では `increment_process.dll`)というファイル名を作って探すからです。
-</Aside>
-
-## Process のコードを書く
-
-`process/increment_process/src/lib.rs` を、次の内容で作ります。引数 `arg1` に 1 を足して返す Process です。
-
-```rust title="process/increment_process/src/lib.rs"
-use juiz_sdk::prelude::*;
-
-#[juiz_process]
-fn increment_process(arg1: i64) -> JuizResult<Capsule> {
-    log::trace!("increment_process({:?}) called", arg1);
-    return Ok(jvalue!(arg1 + 1).into());
-}
-```
-
-| 行 | 意味 |
-| --- | --- |
-| `use juiz_sdk::prelude::*;` | Process を書くのに使うマクロや型(`juiz_process`・`JuizResult`・`Capsule`・`jvalue!`・`log` など)をまとめて読み込みます |
-| `#[juiz_process]` | この関数を Process にします。`juiz` から読み込むための関数も、このマクロが作ります |
-| `fn increment_process(arg1: i64)` | 関数名 `increment_process` が Process の**型名**、引数名 `arg1` がそのまま引数の名前になります |
-| `-> JuizResult<Capsule>` | 戻り値です。`Capsule` は juiz で値を受け渡す入れ物です |
-| `jvalue!(arg1 + 1).into()` | `jvalue!` で値を作り、`into()` で `Capsule` に変換して返します |
-
-`log::trace!` はログを出す行で、なくてもかまいません。
+juiz では、Process を共有ライブラリ(`.so`・`.dylib`・`.dll`)としてビルドし、`juiz` コマンドがそれをプラグインとして読み込みます。
+雛形では、`src/lib.rs` に書いた型をまとめて 1 つの共有ライブラリにし、`app/app.conf` に書いたとおりに読み込んで起動します。
+まず動かしてみて、それから中身を読みましょう。
 
 ## ビルドする
 
-```sh
-cargo build
-```
-
-初回は `juiz_sdk` とその依存クレートを取得してビルドするので、少し時間がかかります。
-できあがった共有ライブラリは `target/debug` に置かれます。
+`scripts/dev.sh` でビルドします。
 
 <Tabs syncKey="platform">
 <TabItem label="Linux">
 
 ```sh
-ls target/debug/libincrement_process.*
-# => target/debug/libincrement_process.so
+scripts/dev.sh
+# => ...
+#    app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so
 ```
 
 </TabItem>
 <TabItem label="macOS">
 
 ```sh
-ls target/debug/libincrement_process.*
-# => target/debug/libincrement_process.dylib
+scripts/dev.sh
+# => ...
+#    app/plugins/aarch64-apple-darwin/libmy_juiz.dylib
 ```
+
+Intel の Mac では、`aarch64-apple-darwin` の所が `x86_64-apple-darwin` になります。
 
 </TabItem>
 <TabItem label="Windows">
 
 ```powershell
-ls target\debug\increment_process.dll
-# => increment_process.dll
+scripts\dev.ps1
+# => ...
+#    app\plugins\x86_64-pc-windows-msvc\my_juiz.dll
 ```
 
 Windows では、ファイル名の先頭に `lib` が付きません。
-同じ場所に `increment_process.dll.lib` や `increment_process.pdb` もできますが、`juiz` が読み込むのは `.dll` です。
+
+<Aside type="caution" title="スクリプトの実行が禁止されているとき">
+「このシステムではスクリプトの実行が無効になっているため…」と表示されたら、一度だけ `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` を実行してから、もう一度打ってください。
+</Aside>
 
 </TabItem>
 </Tabs>
 
-ワークスペースにしたので、クレートが増えても、ルートで `cargo build` を 1 回実行すれば全部ビルドされ、成果物も同じ `target/debug` にそろいます。
+`scripts/dev.sh` は、`cargo build` でビルドし、できあがった共有ライブラリを `app/plugins/<ターゲット>/` に写します。
+`<ターゲット>` は、`x86_64-unknown-linux-gnu` のような「どの CPU・OS 向けか」を表す名前で、`juiz pkg target` で表示できます。
+初回は `juiz_sdk` とその依存クレートを取得してビルドするので、少し時間がかかります。
 
 ## 動かす
 
-`--process` でファイルを指定して `juiz` を起動します。
-
-<Tabs syncKey="platform">
-<TabItem label="Linux">
+設定ファイル `app/app.conf` を `-f` で渡して、`juiz` を起動します。
 
 ```sh
-juiz --process ./target/debug/libincrement_process.so -e -1 -d
+juiz -f app/app.conf -d
 ```
-
-</TabItem>
-<TabItem label="macOS">
-
-```sh
-juiz --process ./target/debug/libincrement_process.dylib -e -1 -d
-```
-
-</TabItem>
-<TabItem label="Windows">
-
-```powershell
-juiz --process ./target/debug/increment_process.dll -e -1 -d
-```
-
-</TabItem>
-</Tabs>
-
-
-オプションの意味は次のとおりです。
 
 | オプション | 意味 |
 | --- | --- |
-| `--process <パス>` | Process のファイルを読み込む |
-| `-l <言語>` | ファイルの言語(`rust` / `python` / `cpp` / `haskell`、既定は `rust` なので Rust では省略できる) |
-| `-1` | 読み込んだ Process から、インスタンスを 1 つ作る |
-| `-e` | 作ったインスタンスを、既定の引数で 1 回実行する |
-| `-d` | HTTP ブローカーを 8000 番ポートで立ち上げて待機する(Ctrl+C で終了) |
+| `-f <ファイル>` | 設定ファイルを読み込み、そこに書かれたとおりにプラグインを読み込んで、インスタンスを作る |
+| `-d` | 起動したまま待機する(Ctrl+C で終了) |
 
-ここで「読み込む」と「インスタンスを作る」が分かれていることに注目してください。
-ファイルを読み込むと、juiz は Process の**型**(作り方)を覚えます。`-1` を付けると、その型から**インスタンス**を 1 つ作ります。
-インスタンス名は、型名の後ろに `0` を付けた名前(`increment_process0`)になります。
-同じ型から、名前の違うインスタンスをいくつも作ることもできます(第 3 章で扱います)。
+起動すると、`juiz 管理画面: http://localhost:8000/ui/` と表示されます。HTTP ブローカーが 8000 番ポートで待ち受けています。
 
 ## 外から呼び出す
 
-`juiz` を起動したまま、別のターミナルを開いて Process を呼び出してみます。
+`juiz` を起動したまま、別のターミナルを開いて `my_juiz` に移り、Process を呼び出してみます。
 まず、動いている Process の一覧を見ます。
 
 ```sh
 juiz process list
-# => ["http://127.0.0.1:8000/process/increment_process0::increment_process"]
+# => ["http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add"]
 ```
 
 表示された URL が、この Process の **ID** です。
 `http://127.0.0.1:8000` は Process がいる場所(ブローカー)、`process/` の後ろは「インスタンス名`::`型名」を表しています。
-[ネームスペース](/ja/guides/namespace/)を使うと、インスタンス名の前に `robot1/` のようにネームスペースが入ります(`process/robot1/increment_process0::increment_process`)。使わなければ上のとおりです。
+[ネームスペース](/ja/guides/namespace/)を使うと、インスタンス名の前に `robot1/` のようにネームスペースが入ります(`process/robot1/my_juiz_add0::my_juiz_add`)。使わなければ上のとおりです。
 
 この ID と引数を指定して、Process を呼び出します(call)。引数は JSON で渡します。
 
 ```sh
-juiz process call "http://127.0.0.1:8000/process/increment_process0::increment_process" '{"arg1": 3}' -p
-# => CapsulePtr((value:Value(4), option: []))
+juiz process call "http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add" '{"a": 1, "b": 2}' -p
+# => CapsulePtr((value:Value(3), option: []))
 ```
 
-`3` を渡して `4` が返ってきました。`-p` は結果を表示するオプションです。
+`1` と `2` を渡して `3` が返ってきました。`-p` は結果を表示するオプションです。
+引数を省くと、既定値(`a` も `b` も `0`)が使われます。`'{"a": 5}'` を渡すと `5` が返ります。
 
 <Aside type="caution" title="Windows PowerShell 5.1 で JSON を渡すとき">
-Windows に最初から入っている Windows PowerShell 5.1 は、`'{"arg1": 3}'` の `"` を消して `juiz` に渡してしまいます。
-`'{\"arg1\": 3}'` のように `"` の前に `\` を書いてください。PowerShell 7.3 以降では、上のとおりに書けば動きます。
+Windows に最初から入っている Windows PowerShell 5.1 は、`'{"a": 1, "b": 2}'` の `"` を消して `juiz` に渡してしまいます。
+`'{\"a\": 1, \"b\": 2}'` のように `"` の前に `\` を書いてください。PowerShell 7.3 以降では、上のとおりに書けば動きます。
 </Aside>
+
 何度呼び出しても、同じ引数なら同じ結果が返ることも確かめてみてください。
 
 ### ブラウザから呼び出す
 
-`-d` で立ち上げた HTTP ブローカーは、Swagger UI も提供しています。ブラウザで次の URL を開きます。
+起動したときに表示された管理画面(`http://localhost:8000/ui/`)をブラウザで開くと、動いている Process の一覧が見られます。
+`my_juiz_add0` を選ぶと、引数 `a`・`b` の入力欄がある呼び出しフォームが出るので、値を入れて呼び出すと結果が表示されます(管理画面の使い方は [ガイドの「管理画面」](/ja/guides/web-ui/) にあります)。
 
-```
-http://127.0.0.1:8000/docs/
-```
-
-一覧から `PATCH /api/process/call` を開き、「Try it out」を押して次のように入力し、「Execute」を押すと結果が返ってきます。
-
-- identifier: `core://core/process/increment_process0::increment_process`
-- Request body: `{"arg1": 3}`
-
-<Aside>
-Swagger UI で呼び出すときは、ブローカー自身の中にある Process を指す `core://core/...` という形の ID を使います。
-</Aside>
-
-`juiz` コマンドも Swagger UI も、HTTP で同じ API を呼んでいるだけです。
+`juiz` コマンドも管理画面も、HTTP で同じ API を呼んでいるだけです。
 つまり、HTTP を話せるプログラムなら、どの言語からでも Process を呼び出して結果を受け取れます。
 これが、juiz をサーバー・クライアントのように使う **call** という使い方です。
 
+## 雛形の中身を読む
+
+動くことを確かめたので、雛形のファイルを読んでいきます。
+
+### Process のコード: src/lib.rs
+
+```rust title="src/lib.rs"
+use juiz_sdk::prelude::*;
+
+#[juiz_component_process(
+    description = "Returns a + b."
+    arguments = { default = { a = 0 b = 0 } }
+)]
+fn my_juiz_add(a: i64, b: i64) -> JuizResult<i64> {
+    Ok(a + b)
+}
+
+juiz_component_manifest!(
+    component_name = "my_juiz"
+    processes = [ my_juiz_add ]
+);
+```
+
+ファイルの先頭のコメントと、末尾のテスト(`#[cfg(test)]` の部分)は省いています。
+
+| 部分 | 意味 |
+| --- | --- |
+| `use juiz_sdk::prelude::*;` | Process を書くのに使うマクロや型(`juiz_component_process`・`JuizResult` など)をまとめて読み込みます |
+| `#[juiz_component_process(...)]` | この関数を Process にします |
+| `description` | Process の説明です。管理画面などに表示されます |
+| `arguments = { default = { a = 0 b = 0 } }` | 引数の既定値です。呼び出すときに省いた引数には、この値が使われます |
+| `fn my_juiz_add(a: i64, b: i64)` | 関数名 `my_juiz_add` が Process の**型名**、引数名 `a`・`b` がそのまま引数の名前になります |
+| `-> JuizResult<i64>` | 戻り値です。成功したら `Ok(値)` を、失敗したら `Err(...)` を返します |
+| `juiz_component_manifest!(...)` | このライブラリに入っている型の一覧です。`component_name` はライブラリの名前で、`processes` に Process の関数名を並べます |
+
+Process 本体は、`a + b` を返すだけの短い関数です。juiz と値を受け渡す部分は、マクロが作ってくれます。
+
+雛形では、複数の型を 1 つのライブラリにまとめる **Component** という形で書かれています(`juiz_component_*` という名前はそのためです)。
+この章では Process が 1 つだけですが、第 2 章で Container を同じファイルに足していきます。Component については第 5 章で詳しく扱います。
+
+`cargo test` で、末尾のテスト(`my_juiz_add` に 1 と 2 を渡して 3 が返ることを確かめるもの)を動かせます。
+
+### クレートの設定: Cargo.toml
+
+```toml title="Cargo.toml"
+[package]
+name = "my_juiz"
+version = "0.1.0"
+edition = "2021"
+description = "my_juiz: a juiz component"
+publish = false
+
+[lib]
+# cdylib: the plugin juiz loads (C ABI). rlib: for cargo test
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Same version as the juiz that made this skeleton (juiz --version)
+juiz_sdk = "=0.2.11"
+```
+
+| 項目 | 意味 |
+| --- | --- |
+| `name` | クレートの名前です。ビルドしてできる共有ライブラリのファイル名になります。Linux では `libmy_juiz.so`、macOS では `libmy_juiz.dylib`、Windows では先頭に `lib` が付かず `my_juiz.dll` です |
+| `[lib]` の `crate-type` | `"cdylib"` は、ほかの言語からも読み込める共有ライブラリ(C 形式の動的ライブラリ)です。`juiz` が読み込めるのはこの形式です。`"rlib"` は `cargo test` のために付いています |
+| `juiz_sdk = "=0.2.11"` | Process を書くためのクレートと、その版です |
+
+**`juiz_sdk` の版は、`juiz --version` で表示される版と同じにしておくのがおすすめです。** 雛形では、雛形を作った `juiz` と同じ版が `=` で固定して書かれています。
+`juiz` を新しい版にしたときは、この 1 行も同じ版に書き換えてください。
+
+### 起動の設定ファイル: app/app.conf
+
+`juiz -f` に渡した設定ファイルです(先頭のコメントは省いています)。
+
+```yaml title="app/app.conf"
+"name": "my_juiz"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"plugins":
+  "components":
+    "my_juiz":
+      "language": "rust"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+```
+
+設定ファイルは YAML で書きます。ここでは、大まかに次のことが書かれています。
+
+- `option`: HTTP ブローカーを 8000 番ポートで立ち上げる
+- `plugins`: `plugins/{target}` から、Component `my_juiz` のライブラリを**読み込む**。`{target}` は動かしているマシンのターゲット名に置き換わるので、`scripts/dev.sh` が置いた `app/plugins/<ターゲット>/libmy_juiz.so` が読み込まれます(パスは、設定ファイルのあるディレクトリ `app/` からの相対です)
+- `processes`: 読み込んだ型 `my_juiz_add` から、`my_juiz_add0` という名前の**インスタンスを作る**
+
+ここで「読み込む」と「インスタンスを作る」が分かれていることに注目してください。
+ライブラリを読み込むと、juiz は Process の**型**(作り方)を覚えます。`processes` に書くと、その型から名前の付いた**インスタンス**を作ります。
+呼び出すときの ID に入っていた `my_juiz_add0` がインスタンス名、`my_juiz_add` が型名です。
+同じ型から、名前の違うインスタンスをいくつも作ることもできます(第 3 章で扱います)。
+
+### scripts と app/juizapp.yaml
+
+`scripts/dev.sh`(Windows は `scripts\dev.ps1`)は、上で使ったビルド用のスクリプトです。
+`scripts/pack.sh` と `app/juizapp.yaml` は、できあがった部品を `.juizapp` というファイル 1 つにまとめて配る(`juiz run` だけで動かせる)ためのものです。チュートリアルでは使いません。使い方は [アプリの配布(.juizapp)](/ja/guides/app-package/) にあります。
+
 ## Process は冪等な関数
 
-`increment_process` は、引数を受け取って結果を返すだけです。
+`my_juiz_add` は、引数を受け取って結果を返すだけです。
 外部の状態を読み書きしないので、同じ引数を渡せばいつも同じ結果が返ります(冪等)。
 この性質のおかげで、Process はテストしやすく、あとでつないだり別のマシンに置いたりしても振る舞いが変わりません。
 
 ## やってみよう
 
-- `lib.rs` を書き換えて、1 を足す代わりに 2 倍にして返すようにしてみましょう。`cargo build` でビルドし直して `juiz` を起動し直すと、`{"arg1": 3}` に対して `6` が返ってくるはずです。
-- 1 を引く Process `decrement_process` を、もう 1 つのクレートとして足してみましょう。`process/decrement_process` に同じ形のファイルを作り、ワークスペースの `members` に足します。答えはサンプル集の [`process/decrement_process`](https://github.com/OpenJUIZ/juiz_examples_rust/tree/main/process/decrement_process) にあります。
+- `src/lib.rs` を書き換えて、足す代わりに掛け算(`a * b`)を返すようにしてみましょう。`scripts/dev.sh` でビルドし直して `juiz` を起動し直すと、`{"a": 3, "b": 4}` に対して `12` が返ってくるはずです。
+- `juiz pkg add process my_juiz_sub` を打つと、`src/lib.rs` と `app/app.conf` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `a - b` に書き換え、ビルドし直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
 
 ## まとめ
 
-- Rust の Process は、`crate-type = ["cdylib"]` のクレートとしてビルドします。Process が増えることを見越して、ワークスペースにしておくと便利です。
-- `juiz_sdk` の版は、`juiz` コマンドの版と同じにします。
-- Process は、引数を受け取って結果を返すだけの冪等な関数です。`#[juiz_process]` を付けた関数の名前が型名になります。
-- juiz はファイルを読み込んで Process の**型**を覚え、そこから名前の付いた**インスタンス**を作ります。
+- `juiz pkg create <名前> -b rust` で、ビルド・起動・呼び出しまでそのまま通るプロジェクトの雛形を作れます。`juiz_sdk` の版も `juiz` にそろえて書かれます。
+- Rust の Process は、`crate-type` に `"cdylib"` を含むクレートとしてビルドし、`juiz` がプラグインとして読み込みます。雛形では `scripts/dev.sh` がビルドして `app/plugins/<ターゲット>/` に置きます。
+- Process は、引数を受け取って結果を返すだけの冪等な関数です。`#[juiz_component_process]` を付けた関数の名前が型名になります。
+- juiz はライブラリを読み込んで Process の**型**を覚え、設定ファイルに書いたとおりに、そこから名前の付いた**インスタンス**を作ります。
 - 動いている Process には URL の形をした ID があり、ID と引数を指定して外から呼び出せます(call)。
 
-次の章では、このワークスペースにカウンタの Container を足して、状態を持つ部品の書き方を学びます。[状態を持つ: Container と ContainerProcess(Rust)](/ja/tutorial/container/rust/) に進みましょう。
+次の章では、このプロジェクトにカウンタの Container を足して、状態を持つ部品の書き方を学びます。[状態を持つ: Container と ContainerProcess(Rust)](/ja/tutorial/container/rust/) に進みましょう。

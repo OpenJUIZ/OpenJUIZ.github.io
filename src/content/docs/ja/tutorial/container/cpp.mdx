@@ -1,6 +1,6 @@
 ---
 title: "2. 状態を持つ(C++)"
-description: 第 1 章の CMake のプロジェクトにカウンタの Container と ContainerProcess を足し、状態の扱い方を学びます。
+description: 第 1 章の雛形に juiz pkg add container でカウンタの Container と ContainerProcess を足し、状態の扱い方を学びます。
 sidebar:
   order: 3
   label: C++
@@ -12,368 +12,249 @@ next:
   label: "3. 設定ファイルでまとめて起動する"
 ---
 
-import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 第 1 章の Process は、同じ引数を渡せばいつも同じ結果を返す冪等な関数でした。
 しかし、ロボットや IoT の部品を作っていると、カウンタの値やモータの現在位置、カメラの接続のように「覚えておきたいもの」が必ず出てきます。
-この章では、整数を 1 つ覚えておくカウンタを、第 1 章で作ったプロジェクト `my_juiz_cpp` に足していきます。
-できあがるものは、サンプル集 [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) の `container/` と同じです。
+この章では、整数を 1 つ覚えておくカウンタを、第 1 章で作ったプロジェクト `my_juiz` に足していきます。
 
 <Aside type="tip" title="この章で学ぶこと">
 - 状態は **Container** に置き、Process には持たせないこと
 - 状態に触れるのは、Container に結びついた **ContainerProcess** だけであること
 - 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられること
-- Container のクラスを ContainerProcess と共有する `CMakeLists.txt` の書き方
+- `juiz pkg add container` で、プロジェクトに Container と ContainerProcess を足す方法
 </Aside>
 
-## プロジェクトの形
+## Container を足す
 
-この章では、第 1 章のプロジェクトに `container/` を足して、次の形にします。
-
-<FileTree>
-- my_juiz_cpp/
-  - CMakeLists.txt プラグインを 3 つ足す
-  - example_container.conf 起動用の設定ファイル(新しく作る)
-  - process/
-    - increment_process_cpp/ 第 1 章で作った Process
-  - container/
-    - example_container_cpp/ Container(カウンタの値)
-      - example_container_cpp.h Container のクラス
-      - example_container_cpp.cpp
-    - example_container_cpp_increment/ ContainerProcess(値を足す)
-      - example_container_cpp_increment.cpp
-    - example_container_cpp_get/ ContainerProcess(値を読む)
-      - example_container_cpp_get.cpp
-</FileTree>
-
-ディレクトリを作ります。以降のコマンドは、すべて `my_juiz_cpp` で実行します。
+第 1 章のプロジェクト `my_juiz` で、次のコマンドを打ちます。`juiz` を起動したままなら、Ctrl+C で止めておいてください。
 
 ```sh
-cd my_juiz_cpp
-mkdir container
-mkdir container/example_container_cpp
-mkdir container/example_container_cpp_increment
-mkdir container/example_container_cpp_get
+juiz pkg add container counter
 ```
 
-Windows の PowerShell でも、同じコマンドで作れます。
+```text
+Added container counter to my_juiz (cpp): counter, counter_increment, counter_get
+Edited src/my_juiz.cpp, app/app.conf
 
-## Container を書く
+Next steps:
+  scripts/dev.sh                  # rebuild the plugin
+  juiz -f app/app.conf -d         # restart juiz
+  ...
+```
 
-Container は、状態そのものです。値を入れておく入れ物と、それを作る関数だけを書きます。
+`juiz pkg add container <名前>` は、次の 3 つの型を足します。
 
-状態を入れておくクラスはヘッダに書きます。ContainerProcess も、このクラスの中身を読み書きするからです。
+| 役割 | 型名 | 内容 |
+| --- | --- | --- |
+| Container | `counter` | カウンタの値を 1 つ持つ。作るときに初期値 `initial_value` を受け取る |
+| ContainerProcess | `counter_increment` | Container の値に `step` を足して、足した後の値を返す |
+| ContainerProcess | `counter_get` | Container の値をそのまま返す |
 
-```cpp title="container/example_container_cpp/example_container_cpp.h"
-#pragma once
+書き換わるのは `src/my_juiz.cpp` と `app/app.conf` の 2 つだけで、新しいファイルは増えません。
+足された型も、第 1 章の Process と同じ 1 つのライブラリ(Component)に入ります。`CMakeLists.txt` を直す必要もありません。
 
-#include <cstdint>
+足されたところを順に読んでいきます。
 
-// Container が保持する状態
-// Container と、それを操作する ContainerProcess で共有する。
-class ExampleContainer {
+## Container: 状態を入れておく
+
+Container は、状態そのものです。値を入れておく入れ物と、それを作る関数だけが書かれています。
+
+```cpp title="src/my_juiz.cpp(足された部分)"
+// State of the container counter
+class Counter {
 public:
+    explicit Counter(int64_t initial_value) : value(initial_value) {}
     int64_t value;
-    ExampleContainer(int64_t v) : value(v) {}
 };
-```
 
-```cpp title="container/example_container_cpp/example_container_cpp.cpp"
-#include "juiz/juiz.h"
-#include "example_container_cpp.h"
-
-// 整数値を 1 つ保持する Container
-auto manifest() {
-    return ContainerManifest("example_container_cpp")
-        .description("Holds an integer value.");
+// Container counter. args holds the container entry of app/app.conf (initial_value)
+static auto counter_manif = ContainerManifest("counter")
+    .description("Holds an integer value.");
+Counter* counter(juiz::CapsuleMap args) {
+    int64_t initial_value = args.has("initial_value") ? args.get_int("initial_value") : 0;
+    return new Counter(initial_value);
 }
-
-// 設定ファイルの containers に書いた項目 (value など) を受け取って Container を作る
-ExampleContainer* create_container(juiz::CapsuleMap args) {
-    int64_t initial_value = 0;
-    if (args.has("value")) {
-        initial_value = args.get_int("value");
-    }
-    return new ExampleContainer(initial_value);
-}
-
-CONTAINER_FACTORY(manifest, create_container);
+COMPONENT_CONTAINER_FACTORY(counter_manif, counter);
 ```
 
 | 部分 | 意味 |
 | --- | --- |
-| `ContainerManifest("example_container_cpp")` | Container の説明書です。文字列が Container の**型名**になります |
-| `create_container(juiz::CapsuleMap args)` | Container を作る関数です。`args` には、設定ファイルで Container に書いた項目が入ります(第 3 章)。ここでは `value` があれば初期値にします |
-| `return new ExampleContainer(...)` | 作った Container のポインタを返します |
-| `CONTAINER_FACTORY(manifest, create_container)` | `juiz` から読み込めるように公開します |
+| `class Counter` | 状態を入れておくクラスです。ここではカウンタの値 `value` を 1 つ持ちます |
+| `ContainerManifest("counter")` | Container の説明書(マニフェスト)です。文字列 `counter` が Container の**型名**になります |
+| `Counter* counter(juiz::CapsuleMap args)` | Container を作る関数です。`args` には、設定ファイルの Container の項目が入っています。`initial_value` があればそれを、なければ 0 を初期値にします(設定ファイルから渡すのは第 3 章で扱います) |
+| `COMPONENT_CONTAINER_FACTORY(...)` | マニフェストと作る関数を組にして、`juiz` から使えるようにします |
 
 Container には、値を変えたり読んだりする処理は書いていません。Container は「何を覚えておくか」だけを表します。
 
-## ContainerProcess を書く
+## ContainerProcess: 状態を変える・読む
 
 状態を変えたり読んだりする処理は、ContainerProcess に書きます。
-ContainerProcess は、**最初の引数に Container を受け取る** Process です。どの Container と組になるかは、Container の型名で指定します。
+ContainerProcess は、**最初の引数に Container を受け取る** Process です。
 
-### increment: 値を足す
+### counter_increment: 値を足す
 
-```cpp title="container/example_container_cpp_increment/example_container_cpp_increment.cpp"
-#include "juiz/juiz.h"
-#include "example_container_cpp.h"
-
-// Container の値に arg1 を足して、足した後の値を返す ContainerProcess
-auto manifest() {
-    return ProcessManifest("example_container_cpp_increment")
-        .description("Adds arg1 to the value of the container.")
-        .container_type("example_container_cpp")
-        .add_int_arg("arg1", "value to be added", 1);
-}
-
-std::optional<int64_t> example_container_cpp_increment(ExampleContainer* container, int64_t arg1) {
-    container->value += arg1;
+```cpp title="src/my_juiz.cpp(足された部分)"
+// ContainerProcess counter_increment
+static auto counter_increment_manif = ProcessManifest("counter_increment")
+    .description("Adds step to the value and returns it.")
+    .add_int_arg("step", "the value to add", 1);
+std::optional<int64_t> counter_increment(Counter* container, int64_t step) {
+    container->value += step;
     return container->value;
 }
-
-CONTAINER_PROCESS_FACTORY(ExampleContainer, manifest, example_container_cpp_increment);
+COMPONENT_CONTAINER_PROCESS_FACTORY(Counter, counter_increment_manif, counter_increment);
 ```
 
 | 部分 | 意味 |
 | --- | --- |
-| `#include "example_container_cpp.h"` | Container のクラスを読み込みます。`CMakeLists.txt` でインクルードパスを足します(後述) |
-| `.container_type("example_container_cpp")` | 結びつける Container の型名です |
-| `ExampleContainer* container` | 最初の引数で Container のポインタを受け取ります。続けて `manifest()` で宣言した引数を受け取ります |
-| `CONTAINER_PROCESS_FACTORY(ExampleContainer, ...)` | 公開には `PROCESS_FACTORY` ではなく `CONTAINER_PROCESS_FACTORY` を使い、Container のクラスも渡します |
+| `ProcessManifest("counter_increment")` | ContainerProcess のマニフェストです。書き方は第 1 章の Process と同じで、文字列が型名になります |
+| `.add_int_arg("step", "the value to add", 1)` | 引数 `step` を宣言します。既定値は 1 です |
+| `Counter* container` | 最初の引数で Container を受け取ります。`container->value` のように中の値を読み書きできます |
+| `int64_t step` | 2 番目以降の引数は、第 1 章の Process と同じように呼び出すときに渡します |
+| `COMPONENT_CONTAINER_PROCESS_FACTORY(Counter, ...)` | 状態のクラス `Counter` を受け取る ContainerProcess として、`juiz` から使えるようにします |
 
-### get: 値を読む
+### counter_get: 値を読む
 
-```cpp title="container/example_container_cpp_get/example_container_cpp_get.cpp"
-#include "juiz/juiz.h"
-#include "example_container_cpp.h"
-
-// Container の値を返す ContainerProcess
-auto manifest() {
-    return ProcessManifest("example_container_cpp_get")
-        .description("Returns the value of the container.")
-        .container_type("example_container_cpp");
-}
-
-std::optional<int64_t> example_container_cpp_get(ExampleContainer* container) {
+```cpp title="src/my_juiz.cpp(足された部分)"
+// ContainerProcess counter_get. readonly() in the manifest and the const pointer make it readonly
+// (juiz may run readonly container processes of the same container in parallel)
+static auto counter_get_manif = ProcessManifest("counter_get")
+    .description("Returns the value.")
+    .readonly();
+std::optional<int64_t> counter_get(const Counter* container) {
     return container->value;
 }
-
-CONTAINER_PROCESS_FACTORY(ExampleContainer, manifest, example_container_cpp_get);
+COMPONENT_CONTAINER_PROCESS_FACTORY(Counter, counter_get_manif, counter_get);
 ```
 
-`get` は Container 以外の引数を持たず、値を返すだけです。
+`counter_get` は Container 以外の引数を持たず、値を返すだけです。
+マニフェストの `.readonly()` と、`const Counter*` で受け取っていることが、この ContainerProcess が値を読むだけで書き換えないことを表します。こうした「読むだけ」の ContainerProcess を **readonly** と呼びます。
+juiz は、同じ Container の readonly の ContainerProcess どうしを、並行に動かすことがあります。
 
 こうして、状態(Container)と振る舞い(ContainerProcess)を別々に書きます。
 状態を変えたり読んだりできるのは、その Container に結びついた ContainerProcess だけです。
 「この値はどこで書き換わるのか」を知りたいときは、ContainerProcess を見ればよいことになります。
 
-## CMakeLists.txt に足す
+### 型の一覧
 
-`CMakeLists.txt` の最後に、次の行を足します。第 1 章で作った `add_juiz_plugin` を使うので、1 つ 1 行で済みます。
+ファイルの末尾の Component のマニフェストにも、足した型が書き足されています。
 
-```cmake title="CMakeLists.txt(末尾に追加)"
-# 第 2 章: カウンタの Container と ContainerProcess
-add_juiz_plugin(example_container_cpp container/example_container_cpp/example_container_cpp.cpp)
-add_juiz_plugin(example_container_cpp_increment container/example_container_cpp_increment/example_container_cpp_increment.cpp)
-add_juiz_plugin(example_container_cpp_get container/example_container_cpp_get/example_container_cpp_get.cpp)
-
-# ContainerProcess も Container のクラス定義 (example_container_cpp.h) を使う
-foreach(target example_container_cpp example_container_cpp_increment example_container_cpp_get)
-  target_include_directories(${target} PRIVATE container/example_container_cpp)
-endforeach()
+```cpp title="src/my_juiz.cpp" ins={5-7}
+auto my_juiz_component_manifest() {
+    return ComponentManifest("my_juiz")
+        .description("my_juiz: a juiz component")
+        .add_process(my_juiz_add_manifest())
+        .add_container(counter_manifest()
+            .add_process(counter_increment_manifest())
+            .add_process(counter_get_manifest()));
+}
 ```
 
-`foreach` の部分で、3 つのプラグインのインクルードパスに `container/example_container_cpp` を足しています。これで、どのファイルからも `#include "example_container_cpp.h"` でクラスを読み込めます。
+`.add_container(...)` に Container のマニフェストを渡し、その `.add_process(...)` で、結びつく ContainerProcess を並べます。
+`counter_manifest()` などの関数は、`COMPONENT_..._FACTORY` のマクロが作ります。
 
-## ビルドする
+## 設定ファイルに足されたもの
+
+`app/app.conf` の末尾には、`containers` が足されています。
+
+```yaml title="app/app.conf" ins={4-12}
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 0
+    "processes":
+      - "type_name": "counter_increment"
+        "name": "counter_increment0"
+      - "type_name": "counter_get"
+        "name": "counter_get0"
+```
+
+- 型 `counter` から、Container のインスタンス `counter0` を 1 つ作る。`initial_value` に 0 を渡す
+- `counter0` に結びつけて、`counter_increment` のインスタンス `counter_increment0` と、`counter_get` のインスタンス `counter_get0` を作る
+
+「1 つの Container に、2 つの ContainerProcess がぶら下がっている」という形です。設定ファイルの書き方は、次の第 3 章で詳しく扱います。
+
+## ビルドして動かす
+
+第 1 章と同じように、ビルドして起動します。
 
 <Tabs syncKey="platform">
 <TabItem label="Linux">
 
 ```sh
-cmake -S . -B build
-cmake --build build
-ls build/plugins
-# => libexample_container_cpp.so  libexample_container_cpp_get.so
-#    libexample_container_cpp_increment.so  libincrement_process_cpp.so
+scripts/dev.sh
+juiz -f app/app.conf -d
 ```
 
 </TabItem>
 <TabItem label="macOS">
 
 ```sh
-cmake -S . -B build
-cmake --build build
-ls build/plugins
-# => libexample_container_cpp.dylib  libexample_container_cpp_get.dylib
-#    libexample_container_cpp_increment.dylib  libincrement_process_cpp.dylib
+scripts/dev.sh
+juiz -f app/app.conf -d
 ```
 
 </TabItem>
 <TabItem label="Windows">
 
 ```powershell
-cmake -S . -B build
-cmake --build build --config Release
-ls build\plugins
-# => example_container_cpp.dll  example_container_cpp_get.dll
-#    example_container_cpp_increment.dll  increment_process_cpp.dll  juiz_sdk.dll  ...
+scripts\dev.ps1
+juiz -f app/app.conf -d
 ```
 
 </TabItem>
 </Tabs>
-
-第 1 章の Process も含めて、すべて `build/plugins` にそろいます。
-
-## 動かす
-
-まずは第 1 章と同じように、ファイルを指定して `juiz` を起動します。
-Container は `--container`、ContainerProcess は `--container_process` で読み込みます。
-
-<Tabs syncKey="platform">
-<TabItem label="Linux">
-
-```sh
-juiz --container ./build/plugins/libexample_container_cpp.so \
-     --container_process ./build/plugins/libexample_container_cpp_increment.so -l cpp -1 -d
-```
-
-</TabItem>
-<TabItem label="macOS">
-
-```sh
-juiz --container ./build/plugins/libexample_container_cpp.dylib \
-     --container_process ./build/plugins/libexample_container_cpp_increment.dylib -l cpp -1 -d
-```
-
-</TabItem>
-<TabItem label="Windows">
-
-```powershell
-juiz --container ./build/plugins/example_container_cpp.dll `
-     --container_process ./build/plugins/example_container_cpp_increment.dll -l cpp -1 -d
-```
-
-</TabItem>
-</Tabs>
-
-`-1` を付けると、読み込んだ Container の型からインスタンスを 1 つ作り、そこに ContainerProcess のインスタンスを 1 つ結びつけます。
-インスタンス名は第 1 章と同じく型名の後ろに `0` を付けた名前で、Container は `example_container_cpp0`、ContainerProcess は `example_container_cpp_increment0` になります。
-Container は値 0 から始まります。
 
 ## 外から呼び出す
 
-`juiz` を起動したまま、別のターミナルを開きます。まず、動いている ContainerProcess の一覧を見ます。
+`juiz` を起動したまま、別のターミナルを開きます。まず、動いている Container と ContainerProcess の一覧を見ます(表示される順番は実行ごとに変わることがあります)。
 
 ```sh
+juiz container list
+# => ["http://127.0.0.1:8000/container/counter0::counter"]
 juiz container-process list
-# => ["http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0"]
+# => ["http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0", "http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0"]
 ```
 
 ContainerProcess の ID は「インスタンス名`::`型名`:`Container のインスタンス名」の形をしていて、どの Container に結びついているかが ID からわかります。
 
-`increment` を、同じ引数で 2 回呼び出してみましょう。
+`counter_get` で今の値を見てから、`counter_increment` を同じ引数で 2 回呼び出し、もう一度 `counter_get` で値を見てみましょう。
 
 ```sh
-juiz container-process call "http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0" '{"arg1": 5}' -p
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0" '{"step": 5}' -p
 # => CapsulePtr((value:Value(5), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/example_container_cpp_increment0::example_container_cpp_increment:example_container_cpp0" '{"arg1": 5}' -p
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0" '{"step": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0" '{}' -p
 # => CapsulePtr((value:Value(10), option: []))
 ```
 
-同じ `{"arg1": 5}` を渡しているのに、1 回目と 2 回目で結果が違います。
+同じ `{"step": 5}` を渡しているのに、1 回目と 2 回目で結果が違います。
 第 1 章の Process と違って、ContainerProcess の結果は引数だけでなく Container の状態にも左右されるからです。
 
-## 2 つの ContainerProcess で Container を共有する
+そして、`counter_increment` が変えた値を、別の ContainerProcess である `counter_get` が読めています。2 つの ContainerProcess は、同じ Container を共有しています。
 
-次は、`increment` が変えた値を `get` で読んでみます。
-コマンドラインからは ContainerProcess を 1 つしか読み込めないので、「どの Container に、どの ContainerProcess を結びつけるか」を設定ファイルに書きます。
-`my_juiz_cpp/example_container.conf` を、次の内容で作ってください。
-
-```yaml title="example_container.conf"
-name: example_container
-option:
-  http_broker:
-    start: true
-    port: 8000
-plugins:
-  container_factories:
-    example_container_cpp:
-      language: "c++"
-      path: "./build/plugins"
-      processes:
-        example_container_cpp_increment:
-          path: "./build/plugins"
-        example_container_cpp_get:
-          path: "./build/plugins"
-containers:
-  - type_name: example_container_cpp
-    name: container0
-    processes:
-      - type_name: example_container_cpp_increment
-        name: increment0
-      - type_name: example_container_cpp_get
-        name: get0
-```
-
-設定ファイルには、次のことが書かれています。
-
-- Container の型と ContainerProcess の型を、どこから読み込むか(`plugins`)。型名から `libexample_container_cpp.so`(Windows では `example_container_cpp.dll`)のようなファイル名を作って、`path` のディレクトリから探します。言語は `language: "c++"` と書きます(コマンドラインの `-l cpp` とは書き方が違うので注意してください)
-- Container のインスタンス `container0` を 1 つ作ること(`containers`)
-- `container0` に結びつけて、`increment` のインスタンス `increment0` と、`get` のインスタンス `get0` を作ること
-
-設定ファイルの書き方は、次の第 3 章で詳しく扱います。ここでは「1 つの Container に、2 つの ContainerProcess がぶら下がっている」という形だけ押さえておいてください。
-
-起動中の `juiz` を Ctrl+C で止めてから、設定ファイルを指定して起動し直します。
-
-```sh
-juiz -f example_container.conf -d
-```
-
-一覧を見ると、今度は ContainerProcess が 2 つあります(表示される順番は実行ごとに変わることがあります)。
-
-```sh
-juiz container-process list
-# => ["http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:container0", "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:container0"]
-```
-
-`get` で今の値を見てから、`increment` を 2 回呼び出し、もう一度 `get` で値を見てみましょう。
-
-```sh
-juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:container0" '{}' -p
-# => CapsulePtr((value:Value(0), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:container0" '{"arg1": 5}' -p
-# => CapsulePtr((value:Value(5), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_container_cpp_increment:container0" '{"arg1": 5}' -p
-# => CapsulePtr((value:Value(10), option: []))
-juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_container_cpp_get:container0" '{}' -p
-# => CapsulePtr((value:Value(10), option: []))
-```
-
-`increment` が変えた値を、別の ContainerProcess である `get` が読めています。2 つの ContainerProcess は、同じ Container を共有しています。
-
-### ブラウザから呼び出す
-
-第 1 章と同じく、Swagger UI(`http://127.0.0.1:8000/docs/`)からも呼び出せます。
-`PATCH /api/container_process/call` を開いて、identifier には、`juiz container-process list` で表示された ID の先頭 `http://127.0.0.1:8000` を `core://core` に置き換えた ID を入力します。
-
-- identifier: `core://core/container_process/get0::example_container_cpp_get:container0`
-- Request body: `{}`
+`'{}'` のように `step` を省くと、既定値の 1 が足されます。
+管理画面(`http://localhost:8000/ui/`)からも、第 1 章と同じように ContainerProcess を呼び出せます。
 
 ## やってみよう
 
-- `increment` に負の数(`{"arg1": -3}` など)を渡して、値が減ることを確かめてみましょう。
-- `juiz` を Ctrl+C で止めてから起動し直し、`get` を呼び出してみましょう。値は最初に戻っています。状態は、動いている Container の中にだけあることがわかります。
-- 値を 0 に戻す ContainerProcess(`example_container_cpp_reset`)を足してみましょう。`get` と同じ形のファイルを作り、`container->value = 0;` にして値を返します。`CMakeLists.txt` と `example_container.conf` の両方に書き足すのを忘れないでください。
+- `counter_increment` に負の数(`{"step": -3}` など)を渡して、値が減ることを確かめてみましょう。
+- `juiz` を Ctrl+C で止めてから起動し直し、`counter_get` を呼び出してみましょう。値は最初に戻っています。状態は、動いている Container の中にだけあることがわかります。
+- 値を 0 に戻す ContainerProcess `counter_reset` を、自分で書き足してみましょう。`counter_increment` をまねてマニフェストと関数を書き(`container->value = 0;` にして値を返す)、`COMPONENT_CONTAINER_PROCESS_FACTORY` で公開し、Component のマニフェストの `.add_container(...)` に `.add_process(counter_reset_manifest())` を足し、`app/app.conf` の `counter0` の `processes` に `counter_reset0` のインスタンスを足します。
 
 ## まとめ
 
+- `juiz pkg add container <名前>` で、Container と、それを読み書きする ContainerProcess をプロジェクトに足せます。書き換わるのはソースと `app/app.conf` だけです。
 - 状態は Container に置きます。Container には「何を覚えておくか」だけを書き、処理は書きません。
-- 状態を読み書きするのは、Container に結びついた ContainerProcess だけです。ContainerProcess は最初の引数で Container を受け取ります。
-- C++ では、Container のクラスをヘッダに書き、`CMakeLists.txt` で ContainerProcess からも読み込めるようにします。
+- 状態を読み書きするのは、Container に結びついた ContainerProcess だけです。ContainerProcess は最初の引数で Container を受け取ります。読むだけのものは、マニフェストに `.readonly()` を付け、`const` のポインタで受け取ります。
 - 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられます。それらは同じ状態を共有します。
 - ContainerProcess の結果は、引数だけでなく Container の状態にも左右されます。冪等な Process と、状態を扱う ContainerProcess を分けておくことで、状態がどこで変わるのかがはっきりします。
 
-次の章では、この章で使った設定ファイルの書き方を学び、第 1 章の Process とこの章の Container を 1 つの設定ファイルでまとめて起動します。[設定ファイルでまとめて起動する](/ja/tutorial/config-file/) に進みましょう。
+次の章では、`app/app.conf` の書き方を学び、書き換えてインスタンスを増やしたり、初期値を渡したりします。[設定ファイルでまとめて起動する](/ja/tutorial/config-file/) に進みましょう。
