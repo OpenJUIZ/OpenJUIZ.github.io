@@ -15,7 +15,7 @@ next:
 import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 
 この章では、`juiz pkg create` で C++(CMake)のプロジェクトの雛形を作り、その中の「2 つの数を足して返す」Process をビルドして動かします。
-動かしたあとで、雛形の中のファイルを 1 つずつ読んでいきます。
+まず本体の Process のコードを読み、それから動かして、ブラウザとターミナルから呼び出します。最後に、雛形のほかのファイルを読みます。
 
 <Aside type="tip" title="この章で学ぶこと">
 - `juiz pkg create` で、Process を書く CMake のプロジェクトの雛形を作る方法
@@ -133,7 +133,59 @@ cd my_juiz
 
 juiz では、Process を共有ライブラリ(`.so`・`.dylib`・`.dll`)としてビルドし、`juiz` コマンドがそれをプラグインとして読み込みます。
 雛形では、`src/my_juiz.cpp` に書いた型をまとめて 1 つの共有ライブラリにし、`app/app.conf` に書いたとおりに読み込んで起動します。
-まず動かしてみて、それから中身を読みましょう。
+まず、開発の本体である Process のコードから読みましょう。
+
+## Process のコード: src/my_juiz.cpp
+
+```cpp title="src/my_juiz.cpp"
+#include <cstdint>
+#include <optional>
+
+#include "juiz/juiz.h"
+
+// Process my_juiz_add. The arguments are passed in the order they are added to the manifest
+static auto my_juiz_add_manif = ProcessManifest("my_juiz_add")
+    .description("Returns a + b.")
+    .add_int_arg("a", "the first value", 0)
+    .add_int_arg("b", "the second value", 0);
+std::optional<int64_t> my_juiz_add(int64_t a, int64_t b) {
+    return a + b;
+}
+COMPONENT_PROCESS_FACTORY(my_juiz_add_manif, my_juiz_add);
+
+// The manifest of the whole Component (the types in this plugin)
+auto my_juiz_component_manifest() {
+    return ComponentManifest("my_juiz")
+        .description("my_juiz: a juiz component")
+        .add_process(my_juiz_add_manifest());
+}
+DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(my_juiz_component_manifest)
+```
+
+ファイルの先頭のコメントは省いています。
+
+| 部分 | 意味 |
+| --- | --- |
+| `#include "juiz/juiz.h"` | juiz の C++ ヘッダです。libjuiz_sdk に入っています |
+| `my_juiz_add_manif` | Process の説明書(マニフェスト)です。`ProcessManifest("my_juiz_add")` の文字列が Process の**型名**になります |
+| `.description(...)` | Process の説明です。管理画面などに表示されます |
+| `.add_int_arg("a", "the first value", 0)` | 整数の引数 `a` を宣言します。説明と既定値(0)も書きます。呼び出すときに省いた引数には、既定値が使われます |
+| `my_juiz_add(int64_t a, int64_t b)` | Process の本体です。引数は、マニフェストで宣言した順に渡されます |
+| `std::optional<int64_t>` | 戻り値です。値を返せないときは `std::nullopt` を返すとエラーになります |
+| `COMPONENT_PROCESS_FACTORY(...)` | マニフェストと本体を組にして、`juiz` から使えるようにします。マニフェストの関数 `my_juiz_add_manifest()` も、このマクロが作ります |
+| `my_juiz_component_manifest()` | このライブラリに入っている型の一覧です。`ComponentManifest("my_juiz")` はライブラリの名前で、`.add_process(...)` で Process を並べます |
+| `DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(...)` | 型の一覧を、`juiz` が読み込めるように公開します |
+
+Rust や Python と違い、C++ では型名と引数(名前・説明・既定値)をマニフェストに自分で書きます。
+
+雛形では、複数の型を 1 つのライブラリにまとめる **Component** という形で書かれています(`COMPONENT_...` や `ComponentManifest` という名前はそのためです)。
+この章では Process が 1 つだけですが、第 2 章で Container を同じファイルに足していきます。Component については第 5 章で詳しく扱います。
+
+## Process は冪等な関数
+
+`my_juiz_add` は、引数を受け取って結果を返すだけです。
+外部の状態を読み書きしないので、同じ引数を渡せばいつも同じ結果が返ります(冪等)。
+この性質のおかげで、Process はテストしやすく、あとでつないだり別のマシンに置いたりしても振る舞いが変わりません。
 
 ## ビルドする
 
@@ -201,9 +253,36 @@ juiz -f app/app.conf -d
 
 起動すると、`juiz 管理画面: http://localhost:8000/ui/` と表示されます。HTTP ブローカーが 8000 番ポートで待ち受けています。
 
-## 外から呼び出す
+## ブラウザから呼び出す
 
-`juiz` を起動したまま、別のターミナルを開いて `my_juiz` に移り、Process を呼び出してみます。
+`juiz` を起動したまま、ブラウザで管理画面 `http://localhost:8000/ui/` を開きます。次のような画面が出ます。
+
+![管理画面。左に「処理 Process」の下の my_juiz_add0、中央の図に my_juiz_add0 の楕円が描かれている](../../../../../assets/tutorial-web-ui/first-process-top.png)
+
+画面は 3 つの部分に分かれています。
+
+- **左の一覧**: 動いているものの一覧です。「処理 Process」の下に、インスタンス `my_juiz_add0` が型名 `my_juiz_add` と並んで出ています。
+- **中央の図**: 系の図です。Process は楕円で描かれ、大きな字がインスタンス名、小さな字が型名です。
+- **右の欄**: 選んだものの性質(詳しい情報)が出ます。まだ何も選んでいないので空です。
+
+左の一覧か中央の図で `my_juiz_add0` をクリックすると、右の欄に Process の情報が出ます。
+右の欄を下へスクロールすると「呼び出す」という見出しがあり、引数 `a`・`b` の入力欄が並んでいます。
+`a` に `1`、`b` に `2` を入れて「呼び出す」ボタンを押してください。下の「結果」に `3` が出れば成功です。
+
+![右の欄の拡大。引数の表(a と b、型 Int、既定値 0)、呼び出すの欄に a=1・b=2、結果に 3](../../../../../assets/tutorial-web-ui/first-process-call.png)
+
+右の欄のほかの部分も見ておきましょう。
+
+- 「引数」の表には、引数の名前・型・既定値が並んでいます。既定値は、呼び出すときに省いた引数に使われる値で、コードの `default` に書いたものです(「拘束値」は第 3 章で扱います)。
+- 「既定値に戻す」を押すと、入力欄が既定値(`0`)に戻ります。「JSON で編集」では、引数を JSON でまとめて書けます。
+- 上のほうの「基本」には、型名と、この Process の識別子(ID)が出ています。
+
+値を変えて、何度か呼び出してみてください。同じ引数なら、何度呼んでも同じ結果が返ります。
+管理画面のほかの使い方は [ガイドの「管理画面」](/ja/guides/web-ui/) にあります。
+
+## ターミナルから呼び出す
+
+ブラウザでしたことは、ターミナルからもできます。`juiz` を起動したまま、別のターミナルを開いて `my_juiz` に移り、Process を呼び出してみます。
 まず、動いている Process の一覧を見ます。
 
 ```sh
@@ -232,64 +311,13 @@ Windows に最初から入っている Windows PowerShell 5.1 は、`'{"a": 1, "
 
 何度呼び出しても、同じ引数なら同じ結果が返ることも確かめてみてください。
 
-### ブラウザから呼び出す
-
-起動したときに表示された管理画面(`http://localhost:8000/ui/`)をブラウザで開くと、動いている Process の一覧が見られます。
-`my_juiz_add0` を選ぶと、引数 `a`・`b` の入力欄がある呼び出しフォームが出るので、値を入れて呼び出すと結果が表示されます(管理画面の使い方は [ガイドの「管理画面」](/ja/guides/web-ui/) にあります)。
-
 `juiz` コマンドも管理画面も、HTTP で同じ API を呼んでいるだけです。
 つまり、HTTP を話せるプログラムなら、どの言語からでも Process を呼び出して結果を受け取れます。
 これが、juiz をサーバー・クライアントのように使う **call** という使い方です。
 
-## 雛形の中身を読む
+## 雛形のほかのファイルを読む
 
-動くことを確かめたので、雛形のファイルを読んでいきます。
-
-### Process のコード: src/my_juiz.cpp
-
-```cpp title="src/my_juiz.cpp"
-#include <cstdint>
-#include <optional>
-
-#include "juiz/juiz.h"
-
-// Process my_juiz_add. The arguments are passed in the order they are added to the manifest
-static auto my_juiz_add_manif = ProcessManifest("my_juiz_add")
-    .description("Returns a + b.")
-    .add_int_arg("a", "the first value", 0)
-    .add_int_arg("b", "the second value", 0);
-std::optional<int64_t> my_juiz_add(int64_t a, int64_t b) {
-    return a + b;
-}
-COMPONENT_PROCESS_FACTORY(my_juiz_add_manif, my_juiz_add);
-
-// The manifest of the whole Component (the types in this plugin)
-auto my_juiz_component_manifest() {
-    return ComponentManifest("my_juiz")
-        .description("my_juiz: a juiz component")
-        .add_process(my_juiz_add_manifest());
-}
-DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(my_juiz_component_manifest)
-```
-
-ファイルの先頭のコメントは省いています。
-
-| 部分 | 意味 |
-| --- | --- |
-| `#include "juiz/juiz.h"` | juiz の C++ ヘッダです。libjuiz_sdk に入っています |
-| `my_juiz_add_manif` | Process の説明書(マニフェスト)です。`ProcessManifest("my_juiz_add")` の文字列が Process の**型名**になります |
-| `.description(...)` | Process の説明です。管理画面などに表示されます |
-| `.add_int_arg("a", "the first value", 0)` | 整数の引数 `a` を宣言します。説明と既定値(0)も書きます。呼び出すときに省いた引数には、既定値が使われます |
-| `my_juiz_add(int64_t a, int64_t b)` | Process の本体です。引数は、マニフェストで宣言した順に渡されます |
-| `std::optional<int64_t>` | 戻り値です。値を返せないときは `std::nullopt` を返すとエラーになります |
-| `COMPONENT_PROCESS_FACTORY(...)` | マニフェストと本体を組にして、`juiz` から使えるようにします。マニフェストの関数 `my_juiz_add_manifest()` も、このマクロが作ります |
-| `my_juiz_component_manifest()` | このライブラリに入っている型の一覧です。`ComponentManifest("my_juiz")` はライブラリの名前で、`.add_process(...)` で Process を並べます |
-| `DEFINE_COMPONENT_MANIFEST_ENTRY_POINT(...)` | 型の一覧を、`juiz` が読み込めるように公開します |
-
-Rust や Python と違い、C++ では型名と引数(名前・説明・既定値)をマニフェストに自分で書きます。
-
-雛形では、複数の型を 1 つのライブラリにまとめる **Component** という形で書かれています(`COMPONENT_...` や `ComponentManifest` という名前はそのためです)。
-この章では Process が 1 つだけですが、第 2 章で Container を同じファイルに足していきます。Component については第 5 章で詳しく扱います。
+Process のコードのほかに、雛形にはビルドと起動のためのファイルが入っています。
 
 ### ビルドの設定: CMakeLists.txt
 
@@ -373,12 +401,6 @@ juiz_sdk_bundle(my_juiz)
 
 `scripts/dev.sh`(Windows は `scripts\dev.ps1`)は、上で使ったビルド用のスクリプトです。
 `scripts/pack.sh` と `app/juizapp.yaml` は、できあがった部品を `.juizapp` というファイル 1 つにまとめて配る(`juiz run` だけで動かせる)ためのものです。チュートリアルでは使いません。使い方は [アプリの配布(.juizapp)](/ja/guides/app-package/) にあります。
-
-## Process は冪等な関数
-
-`my_juiz_add` は、引数を受け取って結果を返すだけです。
-外部の状態を読み書きしないので、同じ引数を渡せばいつも同じ結果が返ります(冪等)。
-この性質のおかげで、Process はテストしやすく、あとでつないだり別のマシンに置いたりしても振る舞いが変わりません。
 
 ## やってみよう
 

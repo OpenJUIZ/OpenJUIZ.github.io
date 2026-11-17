@@ -17,13 +17,13 @@ import { Steps } from '@astrojs/starlight/components';
 
 1. **[はじめての Process](/ja/tutorial/first-process/)**([Rust](/ja/tutorial/first-process/rust/)・[Python](/ja/tutorial/first-process/python/)・[C++](/ja/tutorial/first-process/cpp/)・[Haskell](/ja/tutorial/first-process/haskell/))
 
-   `juiz pkg create` で雛形のプロジェクトを作り、2 つの数を足す Process を動かして、外から呼び出して結果を受け取ります。雛形の中身の読み方と、Process が冪等な関数であること、call という使い方を学びます。
+   `juiz pkg create` で雛形のプロジェクトを作り、2 つの数を足す Process のコードを読んでから動かし、管理画面とターミナルから呼び出して結果を受け取ります。雛形の中身の読み方と、Process が冪等な関数であること、call という使い方を学びます。
 
 2. **[状態を持つ: Container と ContainerProcess](/ja/tutorial/container/)**([Rust](/ja/tutorial/container/rust/)・[Python](/ja/tutorial/container/python/)・[C++](/ja/tutorial/container/cpp/)・[Haskell](/ja/tutorial/container/haskell/))
 
    `juiz pkg add container` でカウンタを足し、状態を Container に置き、ContainerProcess だけがそれに触れる設計を学びます。
 
-3. **[設定ファイルでまとめて起動する](/ja/tutorial/config-file/)**
+3. **[設定ファイルでまとめて起動する](/ja/tutorial/config-file/)**(全言語共通)
 
    雛形の設定ファイル `app/app.conf` を読んで書き換え、インスタンスを増やしたり初期値を渡したりします。読み込み(plugins)と実体化(processes / containers)の違いを学びます。
 
@@ -56,6 +56,7 @@ import { Steps } from '@astrojs/starlight/components';
 - 第 3 章は、第 1・2 章で作ったプロジェクトをそのまま使います。
 - 第 4 章からは、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp)・[Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell))をクローンして使います。各章に対応するファイルへのリンクを置いています。
 - 第 3 章以降のコード例は Rust・Python・C++・Haskell のタブで切り替えられます。一度選んだ言語は、ほかのページでもそのまま保たれます。
+- 用語(Process・Container・call・execute・call_partial・p_apply など)の意味は [用語集](/ja/concepts/glossary/) にまとめてあります。
 - やりたいことが決まっているときは、[ガイド](/ja/guides/process/) から逆引きで探すこともできます。
 - チュートリアルとは別に、できあがった juiz アプリを動かしてロボットらしいことをやってみる [演習](/ja/exercises/) もあります。
 

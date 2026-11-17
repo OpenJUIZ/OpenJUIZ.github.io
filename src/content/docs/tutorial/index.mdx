@@ -17,13 +17,13 @@ Each chapter is built around running things yourself, so you can follow along wi
 
 1. **[Your first Process](/tutorial/first-process/)** ([Rust](/tutorial/first-process/rust/), [Python](/tutorial/first-process/python/), [C++](/tutorial/first-process/cpp/), [Haskell](/tutorial/first-process/haskell/))
 
-   Create a project skeleton with `juiz pkg create`, run its Process that adds two numbers, and call it from outside to get the result back. You learn how to read the skeleton, that a Process is an idempotent function, and how to use it with call.
+   Create a project skeleton with `juiz pkg create`, read the code of its Process that adds two numbers, run it, and call it from the web UI and from a terminal to get the result back. You learn how to read the skeleton, that a Process is an idempotent function, and how to use it with call.
 
 2. **[Keeping state: Container and ContainerProcess](/tutorial/container/)** ([Rust](/tutorial/container/rust/), [Python](/tutorial/container/python/), [C++](/tutorial/container/cpp/), [Haskell](/tutorial/container/haskell/))
 
    Add a counter with `juiz pkg add container`, and learn a design where state lives in a Container and only ContainerProcesses touch it.
 
-3. **[Starting everything from a configuration file](/tutorial/config-file/)**
+3. **[Starting everything from a configuration file](/tutorial/config-file/)** (all languages)
 
    Read the skeleton's configuration file `app/app.conf` and edit it to add instances and pass initial values. You learn the difference between loading (plugins) and instantiating (processes / containers).
 
@@ -56,6 +56,7 @@ Each chapter is built around running things yourself, so you can follow along wi
 - Chapter 3 keeps using the project from chapters 1 and 2.
 - From chapter 4 on, you clone and use the example repositories ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp), [Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell)). Each chapter links to the corresponding files.
 - From chapter 3 on, code examples can be switched between Rust, Python, C++ and Haskell with tabs. The language you pick is kept on every other page.
+- The meanings of terms such as Process, Container, call, execute, call_partial and p_apply are collected in the [Glossary](/concepts/glossary/).
 - If you already know what you want to do, you can also look it up in the [Guides](/guides/process/).
 - Separately from the tutorial, there are [Exercises](/exercises/) where you run ready-made juiz apps to do robot-like things.
 
