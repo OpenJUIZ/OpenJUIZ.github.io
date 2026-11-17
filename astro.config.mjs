@@ -10,6 +10,8 @@ export default defineConfig({
 		'/en/getting-started/install': '/getting-started/install/',
 		'/en/getting-started/quickstart': '/getting-started/quickstart/',
 		'/en/concepts/overview': '/concepts/overview/',
+		'/tutorial/quic-broker': '/tutorial/ipc-broker/',
+		'/ja/tutorial/quic-broker': '/ja/tutorial/ipc-broker/',
 	},
 	integrations: [
 		starlight({
@@ -85,7 +87,7 @@ export default defineConfig({
 							translations: { ja: '6. Component にまとめて配布する' },
 							items: ['tutorial/component', { autogenerate: { directory: 'tutorial/component' } }],
 						},
-						'tutorial/quic-broker',
+						'tutorial/ipc-broker',
 						'tutorial/datatype',
 					],
 				},

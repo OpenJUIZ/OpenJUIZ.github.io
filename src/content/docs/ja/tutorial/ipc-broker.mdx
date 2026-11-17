@@ -1,0 +1,497 @@
+---
+title: "7. 通信方式を選ぶ: IPC ブローカー"
+description: 第 4 章の talker と listener を、HTTP ではなく IPC ブローカーでつなぎ直します。通信方式はブローカーとして差し替えられ、ID の先頭がそれを表すことを学びます。別のマシンとつなぐ Zenoh ブローカーと、ほかの選択肢にも触れます。
+sidebar:
+  order: 7
+prev:
+  link: /ja/tutorial/component/
+  label: "6. Component にまとめて配布する"
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+第 4 章では、別々に起動した talker と listener の juiz を、HTTP ブローカーでつなぎました。
+juiz では、juiz どうしや外のプログラムとやりとりする通信の部分を **ブローカー** と呼び、起動のオプションや設定ファイルで選べます。
+HTTP ブローカーはブラウザや curl からも使えて便利ですが、同じマシンの中のプロセスどうしなら、もっと速くつなげます。
+この章では、第 4 章の talker と listener を **IPC ブローカー** でつなぎ直します。最後に、別のマシンとつなぐときの Zenoh ブローカーと、ほかの選択肢を紹介します。
+
+<Aside type="tip" title="この章で学ぶこと">
+- 通信方式はブローカーとして選べ、Process のコードは変えずにすむこと
+- ID の先頭(`http://` や `ipc://`)が、どのブローカーを通るかを表すこと
+- 1 つの juiz が、複数のブローカーを同時に持てること
+- 同じマシンの中は IPC、別のマシンとは Zenoh、という選び方
+</Aside>
+
+この章の手順は、どの言語でも同じです。
+
+## IPC ブローカーとは
+
+IPC(プロセス間通信)ブローカーは、**同じマシンの中のプロセスどうしだけ**をつなぐブローカーです。
+Linux・macOS では Unix ドメインソケット、Windows では名前付きパイプを通り道にするので、ポートを使いません。相手は、ポート番号ではなく名前で指定します。
+ブローカーの種類名(ID の先頭)は `ipc` です。
+
+| | HTTP ブローカー | IPC ブローカー |
+| --- | --- | --- |
+| ID の先頭 | `http://127.0.0.1:8000` | `ipc://listener` |
+| 届く範囲 | 別のマシンにも届く | 同じマシンの中だけ(起動したユーザーのプロセスだけ) |
+| 相手の指定 | アドレスとポート番号 | 名前 |
+| 速さの目安(720p の画像を返す call) | 約 19ms | 約 1ms |
+| ブラウザ・curl・管理画面 | 使える | 使えない |
+| 起動のしかた | `-d` で起動する(既定) | `--ipc <名前>` か、設定ファイルの `brokers` |
+
+IPC ブローカーは `juiz` コマンドに組み込まれているので、新しく入れるものはありません。
+
+## 準備
+
+第 4 章で作った `talker` と `listener` を使います。設定ファイルは、第 4 章の最後の Topic の形(talker の `publishes` と `mastersystem`、listener の `subscribes`)のままにしておいてください。
+Rust・C++・Haskell は、第 4 章でビルドしたプラグインをそのまま使います。Process のコードは、この章では書き換えません。
+
+ターミナルは第 4 章と同じく 3 つ使います。どれも、`talker` と `listener` のあるディレクトリで開いておいてください(Python の場合は、どのターミナルでも venv を有効にしておきます)。
+
+## `--ipc` で IPC ブローカーを足す
+
+起動するときに `--ipc` を付けると、HTTP ブローカーに加えて、指定した名前の IPC ブローカーが立ち上がります。
+名前は、同じマシンの中で重ならないように付けます。ここでは、juiz の名前と同じ `listener` と `talker` にします。
+
+```sh
+# ターミナル 1
+cd listener
+juiz -f app/app.conf --ipc listener -d
+```
+
+```sh
+# ターミナル 2
+cd talker
+juiz -f app/app.conf --ipc talker -d
+```
+
+第 4 章と同じく、talker を起動したとたんに、ターミナル 1 に listener の表示が出始めます。
+
+ターミナル 3 から、`-s` に `ipc://` で始まるアドレスを指定して、talker の juiz に問い合わせます。
+
+```sh
+juiz -s ipc://talker process list
+# => ["ipc://talker/process/talker_talk0::talker_talk"]
+```
+
+ID の先頭が `ipc://talker` になりました。この問い合わせは、IPC ブローカーを通っています。
+第 4 章で見た `http://127.0.0.1:8001/process/talker_talk0::talker_talk` と同じ Process に、`ipc://` の ID もできたわけです。1 つの juiz が 2 つのブローカーを持っていて、ID の先頭がどちらを通るかを表しています。
+
+call も、`ipc://` の ID を指定すれば IPC ブローカーを通ります。
+
+```sh
+juiz process call "ipc://talker/process/talker_talk0::talker_talk" '{}' -p
+# => CapsulePtr((value:Value("Hello, juiz!"), option: []))
+```
+
+次に、listener の juiz に IPC で問い合わせてみましょう。
+
+```sh
+juiz -s ipc://listener process list
+# => ["ipc://listener/process/listener_listen0::listener_listen", "http://127.0.0.1:8001/process/talker_talk0::talker_talk"]
+```
+
+talker の Process は、`http://` の ID で出てきます。talker の juiz は、設定ファイルの `mastersystem` に書いたとおり、HTTP で listener の juiz のサブシステムになっているからです。Topic `chatter` の値も、この HTTP の通り道で届いています。
+次の節で、これも IPC に切り替えます。確かめたら、ターミナル 1 と 2 の juiz を Ctrl+C で止めてください。
+
+## 設定ファイルで IPC に切り替える
+
+`--ipc` はその場で IPC ブローカーを足すオプションです。いつも IPC を使うなら、設定ファイルに書いておきます。
+
+`listener/app/app.conf` に、`brokers` を足します。ほかのところは第 4 章のままです。
+
+```yaml title="listener/app/app.conf(足すところ)"
+"brokers":
+  - "type_name": "ipc"
+    "name": "listener"
+```
+
+`talker/app/app.conf` には `brokers` を足し、`mastersystem` を書き換えます。
+
+```yaml title="talker/app/app.conf(足すところ・変えるところ)"
+"brokers":
+  - "type_name": "ipc"
+    "name": "talker"
+"mastersystem":
+  "broker_type": "ipc"
+  "broker_name": "listener"
+```
+
+| 変えたところ | 内容 |
+| --- | --- |
+| `brokers` | 起動時に作るブローカーです。`type_name: ipc` で IPC ブローカーを、`name` に書いた名前で作ります(`--ipc <名前>` と同じです) |
+| `mastersystem` の `broker_type` | 親の juiz へ、HTTP ではなく IPC でつなぎます |
+| `mastersystem` の `broker_name` | 親の juiz の IPC ブローカーの名前です。HTTP のときはアドレスとポート番号(`127.0.0.1:8000`)を書きましたが、IPC では名前を書きます |
+
+<details>
+<summary>設定ファイル全体を見る</summary>
+
+書き換えたあとの 2 つの設定ファイルの全体です。言語によって違うのは、`plugins` の `language` と `path` だけです。
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```yaml title="listener/app/app.conf"
+"name": "listener"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"brokers":
+  - "type_name": "ipc"
+    "name": "listener"
+"plugins":
+  "components":
+    "listener":
+      "language": "rust"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "listener_listen"
+    "name": "listener_listen0"
+    "subscribes":
+      "arg1": "chatter"
+```
+
+```yaml title="talker/app/app.conf"
+"name": "talker"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8001
+"mastersystem":
+  "broker_type": "ipc"
+  "broker_name": "listener"
+"brokers":
+  - "type_name": "ipc"
+    "name": "talker"
+"plugins":
+  "components":
+    "talker":
+      "language": "rust"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "talker_talk"
+    "name": "talker_talk0"
+    "publishes":
+      - "chatter"
+"ecs":
+  - "type_name": "main_loop_ec"
+    "name": "talker_ec"
+    "rate": 1.0
+    "bind":
+      - "type_name": "talker_talk"
+        "name": "talker_talk0"
+    "auto_start": true
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```yaml title="listener/app/app.conf"
+"name": "listener"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"brokers":
+  - "type_name": "ipc"
+    "name": "listener"
+"plugins":
+  "components":
+    "listener":
+      "language": "python"
+      "path": "python"
+"processes":
+  - "type_name": "listener_listen"
+    "name": "listener_listen0"
+    "subscribes":
+      "arg1": "chatter"
+```
+
+```yaml title="talker/app/app.conf"
+"name": "talker"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8001
+"mastersystem":
+  "broker_type": "ipc"
+  "broker_name": "listener"
+"brokers":
+  - "type_name": "ipc"
+    "name": "talker"
+"plugins":
+  "components":
+    "talker":
+      "language": "python"
+      "path": "python"
+"processes":
+  - "type_name": "talker_talk"
+    "name": "talker_talk0"
+    "publishes":
+      - "chatter"
+"ecs":
+  - "type_name": "main_loop_ec"
+    "name": "talker_ec"
+    "rate": 1.0
+    "bind":
+      - "type_name": "talker_talk"
+        "name": "talker_talk0"
+    "auto_start": true
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```yaml title="listener/app/app.conf"
+"name": "listener"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"brokers":
+  - "type_name": "ipc"
+    "name": "listener"
+"plugins":
+  "components":
+    "listener":
+      "language": "c++"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "listener_listen"
+    "name": "listener_listen0"
+    "subscribes":
+      "arg1": "chatter"
+```
+
+```yaml title="talker/app/app.conf"
+"name": "talker"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8001
+"mastersystem":
+  "broker_type": "ipc"
+  "broker_name": "listener"
+"brokers":
+  - "type_name": "ipc"
+    "name": "talker"
+"plugins":
+  "components":
+    "talker":
+      "language": "c++"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "talker_talk"
+    "name": "talker_talk0"
+    "publishes":
+      - "chatter"
+"ecs":
+  - "type_name": "main_loop_ec"
+    "name": "talker_ec"
+    "rate": 1.0
+    "bind":
+      - "type_name": "talker_talk"
+        "name": "talker_talk0"
+    "auto_start": true
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```yaml title="listener/app/app.conf"
+"name": "listener"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"brokers":
+  - "type_name": "ipc"
+    "name": "listener"
+"plugins":
+  "components":
+    "listener":
+      "language": "haskell"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "listener_listen"
+    "name": "listener_listen0"
+    "subscribes":
+      "arg1": "chatter"
+```
+
+```yaml title="talker/app/app.conf"
+"name": "talker"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8001
+"mastersystem":
+  "broker_type": "ipc"
+  "broker_name": "listener"
+"brokers":
+  - "type_name": "ipc"
+    "name": "talker"
+"plugins":
+  "components":
+    "talker":
+      "language": "haskell"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "talker_talk"
+    "name": "talker_talk0"
+    "publishes":
+      - "chatter"
+"ecs":
+  - "type_name": "main_loop_ec"
+    "name": "talker_ec"
+    "rate": 1.0
+    "bind":
+      - "type_name": "talker_talk"
+        "name": "talker_talk0"
+    "auto_start": true
+```
+
+</TabItem>
+</Tabs>
+
+</details>
+
+2 つの juiz を、今度は `--ipc` を付けずに起動します。listener を先に、talker を後に起動するのは、第 4 章と同じです。
+
+```sh
+# ターミナル 1
+cd listener
+juiz -f app/app.conf -d
+```
+
+```sh
+# ターミナル 2
+cd talker
+juiz -f app/app.conf -d
+```
+
+ターミナル 1 に listener の表示が出始めます。ターミナル 3 から、listener の juiz に問い合わせます。
+
+```sh
+juiz -s ipc://listener process list
+# => ["ipc://listener/process/listener_listen0::listener_listen", "ipc://talker/process/talker_talk0::talker_talk"]
+```
+
+今度は talker の Process も `ipc://talker` の ID で出てきます。talker の juiz は IPC で listener の juiz のサブシステムになり、Topic `chatter` の値も IPC で届いています。
+HTTP ブローカーも動いたままなので、これまでどおり `juiz process list`(8000 番への問い合わせ)も使えます。そのときも、talker の Process は `ipc://talker/...` の ID で出てきます。
+
+<Aside type="caution" title="起動する順番と名前">
+- `mastersystem` に書いた相手(IPC の `listener`)が先に動いていないと、talker の juiz は `can not connect to ipc://listener` という ERROR を出し、サブシステムになれません。第 4 章と同じく、talker を Ctrl+C で止めて、起動し直してください。
+- 同じ名前の IPC ブローカーは、同じマシンで 1 つしか動かせません。listener をもう 1 つ同じ設定ファイルで起動すると、`ipc://listener is already in use` というエラーで止まります。HTTP ブローカーのように、自動で別の名前にはなりません。
+</Aside>
+
+## HTTP ブローカーを止める
+
+`--no-http` を付けて起動すると、HTTP ブローカーを立ち上げません。2 つの juiz を止めて、次のように起動し直してみましょう。
+
+```sh
+# ターミナル 1
+cd listener
+juiz -f app/app.conf -d --no-http
+```
+
+```sh
+# ターミナル 2
+cd talker
+juiz -f app/app.conf -d --no-http
+```
+
+listener の表示は、これまでどおり出ます。Topic の値は IPC だけで届いているからです。
+一方、ターミナル 3 で `juiz process list` と打つと、8000 番に誰もいないので `Connection refused` のエラーになります。`juiz -s ipc://listener process list` なら、これまでどおり 2 つの Process が見えます。
+
+このとき、2 つの juiz はポートを 1 つも使っていません。ポート番号がぶつかる心配がなく、ほかのマシンからは触れません。
+ただし、管理画面(`/ui`)や Swagger UI は HTTP ブローカーを通して使うので、HTTP を止めると使えなくなります。ふだんは HTTP を残したまま、Process どうしのやりとりを IPC にしておくのがおすすめです。
+
+## 別のマシンとつなぐ: Zenoh ブローカー
+
+IPC ブローカーは、同じマシンの中でしか使えません。listener と talker を別々のマシンで動かすときは、**Zenoh ブローカー** を使います。
+Zenoh ブローカーは [Zenoh](https://zenoh.io/) の TCP で別のマシンの juiz とつなぎ、画像などを PNG にせず画素のまま送ります。相手が同じマシンにいるときは、共有メモリで IPC に近い速さで送ります。ブローカーの種類名(ID の先頭)は `zenoh` です。
+
+### 入れ方
+
+| `juiz` の入れ方 | Zenoh ブローカー |
+| --- | --- |
+| `pip install juiz-cli` | 組み込み済み。そのまま使えます |
+| `cargo install juiz_app` | 組み込まれていません。`cargo install juiz_app --version 0.2.11 --features zenoh-broker` で入れ直します |
+
+組み込まれていない `juiz` で `type_name: zenoh` を書くと、知らないブローカーの種類としてエラーになり、入れ方が案内されます。
+
+### 設定ファイルの書き方
+
+IPC の設定を、次のように Zenoh に置き換えます。Zenoh ブローカーは TCP のポートで待ち受けます(既定は 7448 番)。
+
+```yaml title="listener/app/app.conf(Zenoh にするところ)"
+"brokers":
+  - "type_name": "zenoh"
+    "port": 7448
+```
+
+```yaml title="talker/app/app.conf(Zenoh にするところ)"
+"brokers":
+  - "type_name": "zenoh"
+    "port": 7449
+"mastersystem":
+  "broker_type": "zenoh"
+  "broker_name": "127.0.0.1:7448"
+```
+
+このまま同じマシンで起動すると、Topic の値が Zenoh で届きます。ID の先頭は `zenoh://` になります。
+
+```sh
+juiz -s zenoh://127.0.0.1:7448 process list
+# => ["zenoh://127.0.0.1:7448/process/listener_listen0::listener_listen", "zenoh://127.0.0.1:7449/process/talker_talk0::talker_talk"]
+```
+
+別々のマシンで動かすときは、talker の `mastersystem` の `broker_name` に listener のマシンの IP アドレスを書き、talker の Zenoh ブローカーに `host` で talker のマシンの IP アドレスを書きます(`host` を書かないと、相手に `127.0.0.1` と名乗ってしまいます)。ファイアウォールで、それぞれのポート(TCP)を開けておいてください。
+
+<Aside type="caution">
+Zenoh ブローカーは暗号化もアクセス制御もしません。信頼できるネットワークの中で使ってください。
+共有メモリの設定(Linux・macOS の `ulimit -l`)など、詳しくは [Zenoh ブローカー](/ja/guides/zenoh-broker/) のガイドを見てください。
+</Aside>
+
+## ほかの選択肢
+
+`juiz` コマンドに組み込まれているブローカーは、ここまでの 3 つと QUIC ブローカーの 4 種類です。どれも、Process のコードを変えずに選べます。
+
+| | HTTP(`http`) | IPC(`ipc`) | Zenoh(`zenoh`) | QUIC(`qmp`) |
+| --- | --- | --- | --- | --- |
+| 届く範囲 | 別のマシンにも | 同じマシンの中だけ | 別のマシンにも | 別のマシンにも |
+| 相手の指定 | アドレス:ポート(TCP) | 名前 | アドレス:ポート(TCP) | アドレス:ポート(UDP) |
+| 速さの目安(720p の画像を返す call) | 約 19ms | 約 1ms | 約 2.4ms(同じマシンでは共有メモリで約 1.3ms) | 約 7〜13ms |
+| 暗号化 | なし | なし(同じユーザーだけがつなげる) | なし | あり(相手の確認はしない) |
+| ブラウザ・管理画面 | 使える | 使えない | 使えない | 使えない |
+| 向いている場面 | 小さな値、ブラウザや管理画面から触るとき | 同じマシンの中、画像など大きなデータ | 別のマシンへ速く送るとき | 別のマシンへの経路を暗号化したいとき |
+
+QUIC ブローカーは、Zenoh ブローカーが入るまで、別のマシンへ画像を送るときの選択肢でした。今は Zenoh の方が速いので、経路を暗号化したいときに選びます。使い方は、設定ファイルの `brokers` に `type_name: qmp` を書き、ID の先頭を `qmp://` にするだけで、ここまでと同じです。
+
+```yaml
+"brokers":
+  - "type_name": "qmp"
+    "name": "qmp0"
+    "port": 5000
+```
+
+QUIC ブローカーは UDP のポートを使い、使用中なら起動に失敗します(HTTP のように次の番号は試しません)。
+ブローカーの選び方と、画像などの大きなデータの扱いは、[ブローカーの選び方と大きなデータ](/ja/guides/large-data/) のガイドにまとめてあります。
+
+## やってみよう
+
+- IPC でつないだまま、ターミナル 3 から listener を `ipc://` の ID で呼び出してみましょう。`juiz process call "ipc://listener/process/listener_listen0::listener_listen" '{"arg1": "Hi"}' -p` と打つと、ターミナル 1 に `listener: Hi` と出ます。
+- 第 4 章の「コマンドでつなぐ」を、`ipc://` の ID でやってみましょう。`juiz connection create -t push "ipc://talker/process/talker_talk0::talker_talk" arg1 "ipc://listener/process/listener_listen0::listener_listen"` と打つと、つなぎ方は HTTP のときと同じです。Topic とは別にもう 1 本つながるので、listener の表示が 1 秒に 2 回になります。
+- talker の設定ファイルの `mastersystem` だけを HTTP に戻して(`broker_type: http`、`broker_name: "127.0.0.1:8000"`)起動してみましょう。talker の juiz は IPC ブローカーを持ったまま、HTTP で listener の juiz につながります。`juiz -s ipc://listener process list` で、talker の ID がどうなるか確かめてみましょう。
+
+## まとめ
+
+- juiz の通信の部分はブローカーで、HTTP のほかに IPC・Zenoh・QUIC を選べます。どれも `juiz` コマンドに組み込まれていて(Zenoh は cargo では feature を付けて入れます)、設定ファイルの `brokers` で作ります。IPC は `--ipc <名前>` でも作れます。
+- ID の先頭(`http://`・`ipc://`・`zenoh://`・`qmp://`)が、どのブローカーを通るかを表します。`juiz -s`・`process call`・`connection create` は、ID を変えるだけで別のブローカーを使います。
+- 1 つの juiz は複数のブローカーを同時に持てます。同じ Process に、ブローカーごとの ID があります。`mastersystem` の `broker_type` で、サブシステムとしてつなぐブローカーを選ぶと、Topic の値もそのブローカーで届きます。
+- 同じマシンの中は IPC、別のマシンとは Zenoh が速い選択です。HTTP は、ブラウザや管理画面から触るために残しておけます。
+- Process のコードは、どのブローカーで呼ばれるのかを知りません。だから通信方式を変えても、Process はそのまま使えます。
+
+次の章では、Process の引数と戻り値にデータ型を付け、言語の違う Process どうしを型付きでつなぎます。[データ型: 型を決めて言語をまたいでつなぐ](/ja/tutorial/datatype/) に進みましょう。

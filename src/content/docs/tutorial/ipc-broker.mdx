@@ -1,0 +1,497 @@
+---
+title: "7. Choosing a transport: the IPC broker"
+description: Reconnect the talker and listener of chapter 4 through the IPC broker instead of HTTP. Learn that the transport is a broker you can swap, and that the start of an ID tells which one is used. The Zenoh broker for other machines and the other options are introduced too.
+sidebar:
+  order: 7
+prev:
+  link: /tutorial/component/
+  label: "6. Packaging as a Component"
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+In chapter 4 you connected the juiz instances of the talker and the listener, started separately, through the HTTP broker.
+In juiz, the part that talks to other juiz instances and outside programs is called a **broker**, and you choose brokers with start-up options or in the configuration file.
+The HTTP broker is handy because browsers and curl can use it too, but processes on the same machine can be connected much faster.
+In this chapter you reconnect the talker and the listener of chapter 4 through the **IPC broker**. At the end, you meet the Zenoh broker for connecting to other machines, and the other options.
+
+<Aside type="tip" title="What you learn in this chapter">
+- The transport is a broker you can choose, without changing the Process code
+- The start of an ID (`http://`, `ipc://`) tells which broker it goes through
+- One juiz can have several brokers at the same time
+- How to choose: IPC within one machine, Zenoh between machines
+</Aside>
+
+The steps in this chapter are the same for every language.
+
+## What is the IPC broker?
+
+The IPC (inter-process communication) broker connects **only processes on the same machine**.
+It uses Unix domain sockets on Linux and macOS and named pipes on Windows, so it uses no ports. You name the other side by a name instead of a port number.
+The broker's type name (the start of an ID) is `ipc`.
+
+| | HTTP broker | IPC broker |
+| --- | --- | --- |
+| Start of the ID | `http://127.0.0.1:8000` | `ipc://listener` |
+| Reach | Other machines too | The same machine only (only processes of the user who started it) |
+| How to name the other side | Address and port number | Name |
+| Rough speed (a call returning a 720p image) | about 19 ms | about 1 ms |
+| Browser, curl, web UI | Yes | No |
+| How to start it | `-d` starts it (default) | `--ipc <name>`, or `brokers` in the configuration file |
+
+The IPC broker is built into the `juiz` command, so there is nothing new to install.
+
+## Preparation
+
+Use the `talker` and `listener` you made in chapter 4. Keep their configuration files in the Topic form from the end of chapter 4 (`publishes` and `mastersystem` in the talker, `subscribes` in the listener).
+For Rust, C++ and Haskell, use the plugins you built in chapter 4 as they are. You do not change the Process code in this chapter.
+
+As in chapter 4, use three terminals, all opened in the directory that holds `talker` and `listener` (for Python, activate the venv in every terminal).
+
+## Adding an IPC broker with `--ipc`
+
+With `--ipc` at start-up, an IPC broker with the given name starts in addition to the HTTP broker.
+Choose names that do not clash on the same machine. Here, use the juiz names, `listener` and `talker`.
+
+```sh
+# terminal 1
+cd listener
+juiz -f app/app.conf --ipc listener -d
+```
+
+```sh
+# terminal 2
+cd talker
+juiz -f app/app.conf --ipc talker -d
+```
+
+As in chapter 4, the listener starts printing in terminal 1 as soon as the talker starts.
+
+From terminal 3, query the talker's juiz, giving `-s` an address that starts with `ipc://`.
+
+```sh
+juiz -s ipc://talker process list
+# => ["ipc://talker/process/talker_talk0::talker_talk"]
+```
+
+The ID now starts with `ipc://talker`. This query went through the IPC broker.
+The same Process that you saw in chapter 4 as `http://127.0.0.1:8001/process/talker_talk0::talker_talk` now has an `ipc://` ID as well. One juiz has two brokers, and the start of the ID tells which one is used.
+
+A call also goes through the IPC broker when you give it the `ipc://` ID.
+
+```sh
+juiz process call "ipc://talker/process/talker_talk0::talker_talk" '{}' -p
+# => CapsulePtr((value:Value("Hello, juiz!"), option: []))
+```
+
+Next, query the listener's juiz over IPC.
+
+```sh
+juiz -s ipc://listener process list
+# => ["ipc://listener/process/listener_listen0::listener_listen", "http://127.0.0.1:8001/process/talker_talk0::talker_talk"]
+```
+
+The talker's Process shows up with an `http://` ID. That is because the talker's juiz became a subsystem of the listener's juiz over HTTP, as written in `mastersystem` of its configuration file. The values of the Topic `chatter` also travel along this HTTP path.
+In the next section you switch that to IPC too. When you have checked this, stop the juiz in terminals 1 and 2 with Ctrl+C.
+
+## Switching to IPC in the configuration files
+
+`--ipc` adds an IPC broker on the spot. If you always use IPC, write it in the configuration file.
+
+Add `brokers` to `listener/app/app.conf`. Everything else stays as in chapter 4.
+
+```yaml title="listener/app/app.conf (what to add)"
+"brokers":
+  - "type_name": "ipc"
+    "name": "listener"
+```
+
+In `talker/app/app.conf`, add `brokers` and change `mastersystem`.
+
+```yaml title="talker/app/app.conf (what to add and change)"
+"brokers":
+  - "type_name": "ipc"
+    "name": "talker"
+"mastersystem":
+  "broker_type": "ipc"
+  "broker_name": "listener"
+```
+
+| What changed | Meaning |
+| --- | --- |
+| `brokers` | Brokers created at start-up. `type_name: ipc` creates an IPC broker with the name in `name` (the same as `--ipc <name>`) |
+| `broker_type` in `mastersystem` | Connect to the parent juiz over IPC instead of HTTP |
+| `broker_name` in `mastersystem` | The name of the parent juiz's IPC broker. For HTTP you wrote an address and port (`127.0.0.1:8000`); for IPC you write the name |
+
+<details>
+<summary>See the whole configuration files</summary>
+
+These are the two configuration files after the changes. Only `language` and `path` under `plugins` differ between languages.
+
+<Tabs syncKey="lang">
+<TabItem label="Rust">
+
+```yaml title="listener/app/app.conf"
+"name": "listener"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"brokers":
+  - "type_name": "ipc"
+    "name": "listener"
+"plugins":
+  "components":
+    "listener":
+      "language": "rust"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "listener_listen"
+    "name": "listener_listen0"
+    "subscribes":
+      "arg1": "chatter"
+```
+
+```yaml title="talker/app/app.conf"
+"name": "talker"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8001
+"mastersystem":
+  "broker_type": "ipc"
+  "broker_name": "listener"
+"brokers":
+  - "type_name": "ipc"
+    "name": "talker"
+"plugins":
+  "components":
+    "talker":
+      "language": "rust"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "talker_talk"
+    "name": "talker_talk0"
+    "publishes":
+      - "chatter"
+"ecs":
+  - "type_name": "main_loop_ec"
+    "name": "talker_ec"
+    "rate": 1.0
+    "bind":
+      - "type_name": "talker_talk"
+        "name": "talker_talk0"
+    "auto_start": true
+```
+
+</TabItem>
+<TabItem label="Python">
+
+```yaml title="listener/app/app.conf"
+"name": "listener"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"brokers":
+  - "type_name": "ipc"
+    "name": "listener"
+"plugins":
+  "components":
+    "listener":
+      "language": "python"
+      "path": "python"
+"processes":
+  - "type_name": "listener_listen"
+    "name": "listener_listen0"
+    "subscribes":
+      "arg1": "chatter"
+```
+
+```yaml title="talker/app/app.conf"
+"name": "talker"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8001
+"mastersystem":
+  "broker_type": "ipc"
+  "broker_name": "listener"
+"brokers":
+  - "type_name": "ipc"
+    "name": "talker"
+"plugins":
+  "components":
+    "talker":
+      "language": "python"
+      "path": "python"
+"processes":
+  - "type_name": "talker_talk"
+    "name": "talker_talk0"
+    "publishes":
+      - "chatter"
+"ecs":
+  - "type_name": "main_loop_ec"
+    "name": "talker_ec"
+    "rate": 1.0
+    "bind":
+      - "type_name": "talker_talk"
+        "name": "talker_talk0"
+    "auto_start": true
+```
+
+</TabItem>
+<TabItem label="C++">
+
+```yaml title="listener/app/app.conf"
+"name": "listener"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"brokers":
+  - "type_name": "ipc"
+    "name": "listener"
+"plugins":
+  "components":
+    "listener":
+      "language": "c++"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "listener_listen"
+    "name": "listener_listen0"
+    "subscribes":
+      "arg1": "chatter"
+```
+
+```yaml title="talker/app/app.conf"
+"name": "talker"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8001
+"mastersystem":
+  "broker_type": "ipc"
+  "broker_name": "listener"
+"brokers":
+  - "type_name": "ipc"
+    "name": "talker"
+"plugins":
+  "components":
+    "talker":
+      "language": "c++"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "talker_talk"
+    "name": "talker_talk0"
+    "publishes":
+      - "chatter"
+"ecs":
+  - "type_name": "main_loop_ec"
+    "name": "talker_ec"
+    "rate": 1.0
+    "bind":
+      - "type_name": "talker_talk"
+        "name": "talker_talk0"
+    "auto_start": true
+```
+
+</TabItem>
+<TabItem label="Haskell">
+
+```yaml title="listener/app/app.conf"
+"name": "listener"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"brokers":
+  - "type_name": "ipc"
+    "name": "listener"
+"plugins":
+  "components":
+    "listener":
+      "language": "haskell"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "listener_listen"
+    "name": "listener_listen0"
+    "subscribes":
+      "arg1": "chatter"
+```
+
+```yaml title="talker/app/app.conf"
+"name": "talker"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8001
+"mastersystem":
+  "broker_type": "ipc"
+  "broker_name": "listener"
+"brokers":
+  - "type_name": "ipc"
+    "name": "talker"
+"plugins":
+  "components":
+    "talker":
+      "language": "haskell"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "talker_talk"
+    "name": "talker_talk0"
+    "publishes":
+      - "chatter"
+"ecs":
+  - "type_name": "main_loop_ec"
+    "name": "talker_ec"
+    "rate": 1.0
+    "bind":
+      - "type_name": "talker_talk"
+        "name": "talker_talk0"
+    "auto_start": true
+```
+
+</TabItem>
+</Tabs>
+
+</details>
+
+Start the two juiz instances, this time without `--ipc`. Start the listener first and the talker second, as in chapter 4.
+
+```sh
+# terminal 1
+cd listener
+juiz -f app/app.conf -d
+```
+
+```sh
+# terminal 2
+cd talker
+juiz -f app/app.conf -d
+```
+
+The listener starts printing in terminal 1. From terminal 3, query the listener's juiz.
+
+```sh
+juiz -s ipc://listener process list
+# => ["ipc://listener/process/listener_listen0::listener_listen", "ipc://talker/process/talker_talk0::talker_talk"]
+```
+
+This time the talker's Process also shows up with the `ipc://talker` ID. The talker's juiz became a subsystem of the listener's juiz over IPC, and the values of the Topic `chatter` now arrive over IPC.
+The HTTP broker is still running, so `juiz process list` (a query to port 8000) works as before. There too, the talker's Process shows up with its `ipc://talker/...` ID.
+
+<Aside type="caution" title="Start-up order and names">
+- If the juiz named in `mastersystem` (the IPC broker `listener`) is not running yet, the talker's juiz logs an ERROR `can not connect to ipc://listener` and does not become a subsystem. As in chapter 4, stop the talker with Ctrl+C and start it again.
+- Only one IPC broker with a given name can run on a machine. If you start a second listener with the same configuration file, it stops with the error `ipc://listener is already in use`. Unlike the HTTP broker, it does not switch to another name by itself.
+</Aside>
+
+## Stopping the HTTP broker
+
+With `--no-http`, juiz does not start the HTTP broker. Stop the two juiz instances and start them again like this.
+
+```sh
+# terminal 1
+cd listener
+juiz -f app/app.conf -d --no-http
+```
+
+```sh
+# terminal 2
+cd talker
+juiz -f app/app.conf -d --no-http
+```
+
+The listener keeps printing, because the Topic values travel over IPC alone.
+On the other hand, `juiz process list` in terminal 3 fails with `Connection refused`, because nobody is on port 8000. `juiz -s ipc://listener process list` still shows both Processes.
+
+Now the two juiz instances use no ports at all. Port numbers cannot clash, and other machines cannot reach them.
+However, the web UI (`/ui`) and Swagger UI go through the HTTP broker, so they are unavailable without HTTP. Usually it is best to keep HTTP running and let the Processes talk to each other over IPC.
+
+## Connecting to other machines: the Zenoh broker
+
+The IPC broker works only within one machine. To run the listener and the talker on different machines, use the **Zenoh broker**.
+The Zenoh broker connects to juiz on other machines over [Zenoh](https://zenoh.io/)'s TCP, and sends images and other large data as raw pixels without turning them into PNG. When the other side is on the same machine, it uses shared memory and comes close to the speed of IPC. The broker's type name (the start of an ID) is `zenoh`.
+
+### Installing
+
+| How you installed `juiz` | Zenoh broker |
+| --- | --- |
+| `pip install juiz-cli` | Built in. Use it as it is |
+| `cargo install juiz_app` | Not built in. Reinstall with `cargo install juiz_app --version 0.2.11 --features zenoh-broker` |
+
+If you write `type_name: zenoh` with a `juiz` that does not have it built in, you get an error about an unknown broker type that tells you how to install it.
+
+### Writing the configuration files
+
+Replace the IPC settings with Zenoh as below. The Zenoh broker listens on a TCP port (7448 by default).
+
+```yaml title="listener/app/app.conf (the Zenoh part)"
+"brokers":
+  - "type_name": "zenoh"
+    "port": 7448
+```
+
+```yaml title="talker/app/app.conf (the Zenoh part)"
+"brokers":
+  - "type_name": "zenoh"
+    "port": 7449
+"mastersystem":
+  "broker_type": "zenoh"
+  "broker_name": "127.0.0.1:7448"
+```
+
+Started like this on one machine, the Topic values arrive over Zenoh. IDs start with `zenoh://`.
+
+```sh
+juiz -s zenoh://127.0.0.1:7448 process list
+# => ["zenoh://127.0.0.1:7448/process/listener_listen0::listener_listen", "zenoh://127.0.0.1:7449/process/talker_talk0::talker_talk"]
+```
+
+To run them on different machines, write the IP address of the listener's machine in `broker_name` of the talker's `mastersystem`, and the IP address of the talker's machine in `host` of the talker's Zenoh broker (without `host`, it introduces itself to the other side as `127.0.0.1`). Open each TCP port in the firewall.
+
+<Aside type="caution">
+The Zenoh broker does no encryption and no access control. Use it inside a trusted network.
+For the shared memory settings (`ulimit -l` on Linux and macOS) and other details, see the [Zenoh broker](/guides/zenoh-broker/) guide.
+</Aside>
+
+## Other options
+
+The brokers built into the `juiz` command are the three above and the QUIC broker, four in total. You can choose any of them without changing the Process code.
+
+| | HTTP (`http`) | IPC (`ipc`) | Zenoh (`zenoh`) | QUIC (`qmp`) |
+| --- | --- | --- | --- | --- |
+| Reach | Other machines too | The same machine only | Other machines too | Other machines too |
+| How to name the other side | address:port (TCP) | Name | address:port (TCP) | address:port (UDP) |
+| Rough speed (a call returning a 720p image) | about 19 ms | about 1 ms | about 2.4 ms (about 1.3 ms with shared memory on one machine) | about 7–13 ms |
+| Encryption | No | No (only the same user can connect) | No | Yes (the peer is not verified) |
+| Browser, web UI | Yes | No | No | No |
+| Good for | Small values; using a browser or the web UI | Within one machine; large data such as images | Sending fast to other machines | Encrypting the path to other machines |
+
+Until the Zenoh broker arrived, the QUIC broker was the choice for sending images to other machines. Zenoh is faster now, so choose QUIC when you want the path encrypted. To use it, write `type_name: qmp` in `brokers` and start IDs with `qmp://`; everything else is the same as above.
+
+```yaml
+"brokers":
+  - "type_name": "qmp"
+    "name": "qmp0"
+    "port": 5000
+```
+
+The QUIC broker uses a UDP port, and fails to start if the port is in use (it does not try the next number as HTTP does).
+How to choose a broker and how large data such as images are handled are summarized in the [Choosing a broker and large data](/guides/large-data/) guide.
+
+## Try it
+
+- While connected over IPC, call the listener by its `ipc://` ID from terminal 3. `juiz process call "ipc://listener/process/listener_listen0::listener_listen" '{"arg1": "Hi"}' -p` prints `listener: Hi` in terminal 1.
+- Try chapter 4's "connecting with a command" with `ipc://` IDs. `juiz connection create -t push "ipc://talker/process/talker_talk0::talker_talk" arg1 "ipc://listener/process/listener_listen0::listener_listen"` connects them the same way as with HTTP. This adds a second path besides the Topic, so the listener prints twice a second.
+- Put only the talker's `mastersystem` back to HTTP (`broker_type: http`, `broker_name: "127.0.0.1:8000"`) and start it. The talker's juiz keeps its IPC broker but joins the listener's juiz over HTTP. Check what the talker's ID looks like in `juiz -s ipc://listener process list`.
+
+## Summary
+
+- The transport in juiz is a broker, and besides HTTP you can choose IPC, Zenoh and QUIC. All are built into the `juiz` command (with cargo, Zenoh needs a feature), and you create them with `brokers` in the configuration file. IPC can also be created with `--ipc <name>`.
+- The start of an ID (`http://`, `ipc://`, `zenoh://`, `qmp://`) tells which broker it goes through. `juiz -s`, `process call` and `connection create` use another broker just by changing the ID.
+- One juiz can have several brokers at the same time, and the same Process has one ID per broker. `broker_type` in `mastersystem` chooses the broker for joining as a subsystem, and the Topic values then travel over that broker.
+- IPC within one machine and Zenoh between machines are the fast choices. You can keep HTTP for the browser and the web UI.
+- A Process does not know which broker calls it. That is why it works unchanged when you change the transport.
+
+In the next chapter you give the arguments and return values of Processes data types, and connect Processes written in different languages with types. Move on to [Data types: agree on types and connect across languages](/tutorial/datatype/).

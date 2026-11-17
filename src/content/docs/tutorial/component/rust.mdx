@@ -8,14 +8,14 @@ prev:
   link: /tutorial/connect/rust/
   label: "5. Connecting several libraries in one juiz (Rust)"
 next:
-  link: /tutorial/quic-broker/
-  label: "7. Choosing a transport: the QUIC broker"
+  link: /tutorial/ipc-broker/
+  label: "7. Choosing a transport: the IPC broker"
 ---
 
 import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-In the skeleton of chapters 1 to 3, you wrote the Process, Container and ContainerProcesses in one source, built them into one library, and loaded it with one line under `components` in `plugins` of `app/app.conf`.
-The talker and listener in the example repository, on the other hand, are separate files (libraries), one per type, loaded by listing the types one by one under `process_factories`.
+In the skeleton of chapters 1 to 3, you wrote the Process, Container and ContainerProcesses in one source, built them into one library, and loaded it with one line under `components` in `plugins` of `app/app.conf`. The talker and listener of chapters 4 and 5 were libraries of the same form, each holding a single Process.
+juiz also lets you write one file (library) per type and load them by listing the types one by one under `process_factories`. The talker and listener in the example repository are written that way.
 
 When you want to hand someone "the full set of parts for this camera", scattered files are inconvenient.
 In this chapter you take another look at the form the skeleton used, the **Component**, which bundles Processes, Containers and ContainerProcesses into one library, using the example repository, and compare it with one file per type.
@@ -311,4 +311,4 @@ juiz --component ./target/debug/example_component.dll -1 -d
 - In a configuration file, writing one Component name in `components` under `plugins` loads every type inside it.
 - Creating instances, IDs, calling and connecting all work the same as when types are loaded from separate files. A Component does not change how things run; it is the **unit of distribution**.
 
-In the next chapter you choose the transport that connects juiz instances. Move on to [Choosing a transport: the QUIC broker](/tutorial/quic-broker/).
+In the next chapter you choose the transport that connects juiz instances. Move on to [Choosing a transport: the IPC broker](/tutorial/ipc-broker/).
