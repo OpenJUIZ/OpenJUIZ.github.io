@@ -12,7 +12,7 @@ next:
 import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
 ここでは、juiz で作られたアプリを組み合わせて、シミュレータの中の移動ロボットを動かしてみます。
-コードを書いたりビルドしたりはしません。配布されている `.juizapp` を取ってきて、`juiz run` で起動するだけです。
+コードを書いたりビルドしたりはしません。配布されている `.juizapp` を取ってきて、ダブルクリックで起動するだけです。
 
 1. キーボードやゲームパッドでロボットを走らせ、
 2. LiDAR とオドメトリから **SLAM**(Simultaneous Localization and Mapping、自己位置の推定と地図づくりを同時に行う技術)で部屋の地図を作り、
@@ -38,67 +38,63 @@ import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 | [5. 自分の地図で走る](/ja/try/own-map/) | 2 で作った地図を配り、その地図の上で自律移動させる | 同じ |
 | [6. 自律移動の中を見る](/ja/try/inside/) | 木の形、トピックの中継、経路や局所計画の中身をのぞく | 同じ |
 
-## 使うアプリ
+## 使うアプリと準備
 
-どれも OpenJUIZ で公開しています。navigation_manager 以外は `.juizapp` です。
-
-| アプリ | 役割 | 画面 |
-| --- | --- | --- |
-| mobile_sim | 平面を走る移動ロボットのシミュレータ。LiDAR のスキャンとオドメトリを出す | http://localhost:8000/ |
-| teleop_twist | ブラウザでキーボードかゲームパッドの入力を読み、速度の指令を出す | http://localhost:8002/ |
-| mapper_gmapping | GMapping で、スキャンとオドメトリから地図と自己位置を推定する | http://localhost:8001/ |
-| localization_amcl | AMCL(粒子フィルタ)で、地図の上のロボットの位置を推定する | http://localhost:8002/ |
-| planner_dijkstra | ゴールまでの道筋(大域経路)をダイクストラ法で求める | http://localhost:8003/ |
-| planner_dwa | 大域経路に沿いながら障害物をよける速度の指令を DWA で求める | http://localhost:8004/ |
-| navigation_hub | 自律移動のアプリを 1 本の木にまとめ、トピックを中継する | http://localhost:8006/ |
-| navigation_manager | ゴールを受けて計画させ、追わせ、着いたかを判断する(Python、pip で入れる) | http://localhost:8005/ |
-
-teleop_twist と localization_amcl はどちらも 8002 番を使うので、前半(1〜3)と後半(4〜6)で入れ替えます。
-
-## 準備
+どのアプリも OpenJUIZ で公開しています。navigation_manager 以外は `.juizapp` です。
 
 <Steps>
 
-1. `juiz` コマンドと navigation_manager を pip で入れます。
+1. `juiz` コマンドと navigation_manager を pip で入れます(venv の作り方は [インストール](/ja/getting-started/install/#juiz-コマンドを入れる) にあります)。
 
    ```sh
-   pip install juiz-cli==0.2.11 navigation-manager==0.3.4
+   pip install juiz-cli==0.3.0 navigation-manager==0.3.5
    ```
 
    `juiz` と `navigation-manager` の 2 つのコマンドが使えるようになります。
-   mapper_gmapping 0.4.2 と localization_amcl 0.1.3 は C++ のアプリで、パッケージに `juiz: "=0.2.11"` と書いてあり、juiz 0.2.11 でしか起動しません。版はこのとおりに指定してください。
+   mapper_gmapping と localization_amcl は C++ のアプリで、パッケージに `juiz: "=0.3.0"` と書いてあり、juiz 0.3.0 でしか起動しません。版はこのとおりに指定してください。
 
-2. 作業用のディレクトリを作ります。アプリはどれもこのディレクトリから起動します。作った地図もここに保存されます。
+2. `.juizapp` をダブルクリックで起動できるようにします。venv に入れた場合は、その venv を有効にしたターミナルで 1 回だけ実行します。
 
    ```sh
-   mkdir try_juiz
-   cd try_juiz
+   juiz associate
    ```
 
-3. 7 つの `.juizapp` を作業用のディレクトリにダウンロードします。ブラウザなら次の表の「ダウンロード」から、ターミナルならその下のコマンドで取れます。
+   詳しくは [インストール: .juizapp をダブルクリックで開けるようにする](/ja/getting-started/install/#juizapp-をダブルクリックで開けるようにする) にあります。
 
-   | アプリ | ダウンロード | 配布元 |
+3. 作業用のフォルダ `try_juiz` を作ります。ダウンロードした `.juizapp` と、2 で作る地図をここに置きます。
+
+4. 次の表の「ダウンロード」から、7 つの `.juizapp` を `try_juiz` にダウンロードします。
+
+   | アプリ | 役割 | ダウンロード |
    | --- | --- | --- |
-   | mobile_sim | [mobile_sim-0.3.5.juizapp](https://github.com/OpenJUIZ/mobile_sim/releases/download/v0.3.5/mobile_sim-0.3.5.juizapp) | [Release v0.3.5](https://github.com/OpenJUIZ/mobile_sim/releases/tag/v0.3.5) ・ [リポジトリ](https://github.com/OpenJUIZ/mobile_sim) |
-   | teleop_twist | [teleop_twist-0.1.0.juizapp](https://github.com/OpenJUIZ/teleop_twist/releases/download/v0.1.0/teleop_twist-0.1.0.juizapp) | [Release v0.1.0](https://github.com/OpenJUIZ/teleop_twist/releases/tag/v0.1.0) ・ [リポジトリ](https://github.com/OpenJUIZ/teleop_twist) |
-   | mapper_gmapping | [mapper_gmapping-0.4.2.juizapp](https://github.com/OpenJUIZ/mapper_gmapping/releases/download/v0.4.2/mapper_gmapping-0.4.2.juizapp) | [Release v0.4.2](https://github.com/OpenJUIZ/mapper_gmapping/releases/tag/v0.4.2) ・ [リポジトリ](https://github.com/OpenJUIZ/mapper_gmapping) |
-   | localization_amcl | [localization_amcl-0.1.3.juizapp](https://github.com/OpenJUIZ/localization_amcl/releases/download/v0.1.3/localization_amcl-0.1.3.juizapp) | [Release v0.1.3](https://github.com/OpenJUIZ/localization_amcl/releases/tag/v0.1.3) ・ [リポジトリ](https://github.com/OpenJUIZ/localization_amcl) |
-   | planner_dijkstra | [planner_dijkstra-0.2.2.juizapp](https://github.com/OpenJUIZ/planner_dijkstra/releases/download/v0.2.2/planner_dijkstra-0.2.2.juizapp) | [Release v0.2.2](https://github.com/OpenJUIZ/planner_dijkstra/releases/tag/v0.2.2) ・ [リポジトリ](https://github.com/OpenJUIZ/planner_dijkstra) |
-   | planner_dwa | [planner_dwa-0.1.2.juizapp](https://github.com/OpenJUIZ/planner_dwa/releases/download/v0.1.2/planner_dwa-0.1.2.juizapp) | [Release v0.1.2](https://github.com/OpenJUIZ/planner_dwa/releases/tag/v0.1.2) ・ [リポジトリ](https://github.com/OpenJUIZ/planner_dwa) |
-   | navigation_hub | [navigation_hub-0.3.4.juizapp](https://github.com/OpenJUIZ/navigation_manager/releases/download/v0.3.4/navigation_hub-0.3.4.juizapp) | [Release v0.3.4](https://github.com/OpenJUIZ/navigation_manager/releases/tag/v0.3.4) ・ [リポジトリ](https://github.com/OpenJUIZ/navigation_manager) |
+   | [mobile_sim](https://github.com/OpenJUIZ/mobile_sim)<br/><span class="app-screen">[http://localhost:8000/](http://localhost:8000/)</span> | 平面を走る移動ロボットのシミュレータ。LiDAR のスキャンとオドメトリを出す | [mobile_sim-0.3.6.juizapp](https://github.com/OpenJUIZ/mobile_sim/releases/download/v0.3.6/mobile_sim-0.3.6.juizapp)<br/><span class="sha">SHA-256: fd2fb57c16789ce6802acd7acc55747e6404e68161b60f8a6b18433330dc914d</span> |
+   | [teleop_twist](https://github.com/OpenJUIZ/teleop_twist)<br/><span class="app-screen">[http://localhost:8002/](http://localhost:8002/)</span> | ブラウザでキーボードかゲームパッドの入力を読み、速度の指令を出す | [teleop_twist-0.1.1.juizapp](https://github.com/OpenJUIZ/teleop_twist/releases/download/v0.1.1/teleop_twist-0.1.1.juizapp)<br/><span class="sha">SHA-256: cbbce7bfe3e891e54cb86c5c2460ecf2f433de4bced81c73987010088d0ab862</span> |
+   | [mapper_gmapping](https://github.com/OpenJUIZ/mapper_gmapping)<br/><span class="app-screen">[http://localhost:8001/](http://localhost:8001/)</span> | GMapping で、スキャンとオドメトリから地図と自己位置を推定する | [mapper_gmapping-0.4.3.juizapp](https://github.com/OpenJUIZ/mapper_gmapping/releases/download/v0.4.3/mapper_gmapping-0.4.3.juizapp)<br/><span class="sha">SHA-256: 3b9c6e7e7befc10a136fff9ce28afba5e724b000316c9091d3f65b9296fd4d66</span> |
+   | [localization_amcl](https://github.com/OpenJUIZ/localization_amcl)<br/><span class="app-screen">[http://localhost:8002/](http://localhost:8002/)</span> | AMCL(粒子フィルタ)で、地図の上のロボットの位置を推定する | [localization_amcl-0.1.4.juizapp](https://github.com/OpenJUIZ/localization_amcl/releases/download/v0.1.4/localization_amcl-0.1.4.juizapp)<br/><span class="sha">SHA-256: c423e14f1ba6c48423c7679c3d2d11edfb538ea2661b8b67fd30c6123b0dc285</span> |
+   | [planner_dijkstra](https://github.com/OpenJUIZ/planner_dijkstra)<br/><span class="app-screen">[http://localhost:8003/](http://localhost:8003/)</span> | ゴールまでの道筋(大域経路)をダイクストラ法で求める | [planner_dijkstra-0.2.3.juizapp](https://github.com/OpenJUIZ/planner_dijkstra/releases/download/v0.2.3/planner_dijkstra-0.2.3.juizapp)<br/><span class="sha">SHA-256: 4a80242d3b5824c36f14feaa99e987c4b98fd3dfb6d223dc8a910afdf6f0cb99</span> |
+   | [planner_dwa](https://github.com/OpenJUIZ/planner_dwa)<br/><span class="app-screen">[http://localhost:8004/](http://localhost:8004/)</span> | 大域経路に沿いながら障害物をよける速度の指令を DWA で求める | [planner_dwa-0.1.3.juizapp](https://github.com/OpenJUIZ/planner_dwa/releases/download/v0.1.3/planner_dwa-0.1.3.juizapp)<br/><span class="sha">SHA-256: 1559b483b7d88be2129d1a335442749f99a4e00fc0cc67f4faa7e2ec142840e4</span> |
+   | [navigation_hub](https://github.com/OpenJUIZ/navigation_manager)<br/><span class="app-screen">[http://localhost:8006/](http://localhost:8006/)</span> | 自律移動のアプリを 1 本の木にまとめ、トピックを中継する | [navigation_hub-0.3.5.juizapp](https://github.com/OpenJUIZ/navigation_manager/releases/download/v0.3.5/navigation_hub-0.3.5.juizapp)<br/><span class="sha">SHA-256: 4323748320a7c64c839ab0fdd459ca9c2dad64a0079c156fbb4d9e1494b1da80</span> |
+   | [navigation_manager](https://github.com/OpenJUIZ/navigation_manager)<br/><span class="app-screen">[http://localhost:8005/](http://localhost:8005/)</span> | ゴールを受けて計画させ、追わせ、着いたかを判断する(Python) | 手順 1 で pip で入れたもの |
+
+   SHA-256 は、ダウンロードしたファイルが壊れていないか、すり替わっていないかを確かめるための値です。照合のしかたは [Tips: SHA-256 を照合する](/ja/tips/#sha-256-を照合する) にあります。
+
+   <details>
+   <summary>ターミナルでまとめてダウンロードする</summary>
+
+   `try_juiz` に移ってから実行します。
 
    <Tabs syncKey="platform">
    <TabItem label="Linux">
 
    ```sh
    for u in \
-       mobile_sim/releases/download/v0.3.5/mobile_sim-0.3.5.juizapp \
-       teleop_twist/releases/download/v0.1.0/teleop_twist-0.1.0.juizapp \
-       mapper_gmapping/releases/download/v0.4.2/mapper_gmapping-0.4.2.juizapp \
-       localization_amcl/releases/download/v0.1.3/localization_amcl-0.1.3.juizapp \
-       planner_dijkstra/releases/download/v0.2.2/planner_dijkstra-0.2.2.juizapp \
-       planner_dwa/releases/download/v0.1.2/planner_dwa-0.1.2.juizapp \
-       navigation_manager/releases/download/v0.3.4/navigation_hub-0.3.4.juizapp
+       mobile_sim/releases/download/v0.3.6/mobile_sim-0.3.6.juizapp \
+       teleop_twist/releases/download/v0.1.1/teleop_twist-0.1.1.juizapp \
+       mapper_gmapping/releases/download/v0.4.3/mapper_gmapping-0.4.3.juizapp \
+       localization_amcl/releases/download/v0.1.4/localization_amcl-0.1.4.juizapp \
+       planner_dijkstra/releases/download/v0.2.3/planner_dijkstra-0.2.3.juizapp \
+       planner_dwa/releases/download/v0.1.3/planner_dwa-0.1.3.juizapp \
+       navigation_manager/releases/download/v0.3.5/navigation_hub-0.3.5.juizapp
    do curl -fLO "https://github.com/OpenJUIZ/$u"; done
    ```
 
@@ -107,13 +103,13 @@ teleop_twist と localization_amcl はどちらも 8002 番を使うので、前
 
    ```sh
    for u in \
-       mobile_sim/releases/download/v0.3.5/mobile_sim-0.3.5.juizapp \
-       teleop_twist/releases/download/v0.1.0/teleop_twist-0.1.0.juizapp \
-       mapper_gmapping/releases/download/v0.4.2/mapper_gmapping-0.4.2.juizapp \
-       localization_amcl/releases/download/v0.1.3/localization_amcl-0.1.3.juizapp \
-       planner_dijkstra/releases/download/v0.2.2/planner_dijkstra-0.2.2.juizapp \
-       planner_dwa/releases/download/v0.1.2/planner_dwa-0.1.2.juizapp \
-       navigation_manager/releases/download/v0.3.4/navigation_hub-0.3.4.juizapp
+       mobile_sim/releases/download/v0.3.6/mobile_sim-0.3.6.juizapp \
+       teleop_twist/releases/download/v0.1.1/teleop_twist-0.1.1.juizapp \
+       mapper_gmapping/releases/download/v0.4.3/mapper_gmapping-0.4.3.juizapp \
+       localization_amcl/releases/download/v0.1.4/localization_amcl-0.1.4.juizapp \
+       planner_dijkstra/releases/download/v0.2.3/planner_dijkstra-0.2.3.juizapp \
+       planner_dwa/releases/download/v0.1.3/planner_dwa-0.1.3.juizapp \
+       navigation_manager/releases/download/v0.3.5/navigation_hub-0.3.5.juizapp
    do curl -fLO "https://github.com/OpenJUIZ/$u"; done
    ```
 
@@ -122,88 +118,85 @@ teleop_twist と localization_amcl はどちらも 8002 番を使うので、前
 
    ```powershell
    @(
-       'mobile_sim/releases/download/v0.3.5/mobile_sim-0.3.5.juizapp',
-       'teleop_twist/releases/download/v0.1.0/teleop_twist-0.1.0.juizapp',
-       'mapper_gmapping/releases/download/v0.4.2/mapper_gmapping-0.4.2.juizapp',
-       'localization_amcl/releases/download/v0.1.3/localization_amcl-0.1.3.juizapp',
-       'planner_dijkstra/releases/download/v0.2.2/planner_dijkstra-0.2.2.juizapp',
-       'planner_dwa/releases/download/v0.1.2/planner_dwa-0.1.2.juizapp',
-       'navigation_manager/releases/download/v0.3.4/navigation_hub-0.3.4.juizapp'
+       'mobile_sim/releases/download/v0.3.6/mobile_sim-0.3.6.juizapp',
+       'teleop_twist/releases/download/v0.1.1/teleop_twist-0.1.1.juizapp',
+       'mapper_gmapping/releases/download/v0.4.3/mapper_gmapping-0.4.3.juizapp',
+       'localization_amcl/releases/download/v0.1.4/localization_amcl-0.1.4.juizapp',
+       'planner_dijkstra/releases/download/v0.2.3/planner_dijkstra-0.2.3.juizapp',
+       'planner_dwa/releases/download/v0.1.3/planner_dwa-0.1.3.juizapp',
+       'navigation_manager/releases/download/v0.3.5/navigation_hub-0.3.5.juizapp'
    ) | ForEach-Object { Invoke-WebRequest "https://github.com/OpenJUIZ/$_" -OutFile ($_ -split '/')[-1] }
    ```
 
    </TabItem>
    </Tabs>
 
-   どのパッケージにも Linux(x86_64・arm64)、macOS(Intel・Apple シリコン)、Windows(x86_64)のプラグインが入っています。
-
-4. ダウンロードしたファイルが壊れていないか、すり替わっていないかを SHA-256 で確かめます(下の「SHA-256 を確かめる」)。
+   </details>
 
 </Steps>
 
-### SHA-256 を確かめる
+どのパッケージにも Linux(x86_64・arm64)、macOS(Intel・Apple シリコン)、Windows(x86_64)のプラグインが入っています。
+teleop_twist と localization_amcl はどちらも 8002 番を使うので、前半(1〜3)と後半(4〜6)で入れ替えます。
 
-7 つのファイルの SHA-256 は次のとおりです。この内容を、作業用のディレクトリに `SHA256SUMS` という名前で保存してください。
+## アプリの起動のしかた
 
-```text title="SHA256SUMS"
-a6aebb0aa9b1e625c95669fcc3c880816629f721e11e342e7ee3b44425c9efa7  mobile_sim-0.3.5.juizapp
-e58f32abaf0db9690d8b13cf42f43efdf6cc9b1831795a9d1704eadb136c88a5  teleop_twist-0.1.0.juizapp
-64b13b909f13e25fc637302bd9f136c8b5a66d7e5a9578682f5514166f0082e8  mapper_gmapping-0.4.2.juizapp
-f9ace568fe7d689f2d15e9ebdac59ceadd5565e9cdd5fba9cb6aa2e50f0bebbd  localization_amcl-0.1.3.juizapp
-0e8dcf40996579c27bab59c545c336b0cc5935e9a4143c986bc862e93ed7d59d  planner_dijkstra-0.2.2.juizapp
-f14a4d4a511ddae7520d0e361a34d1d9060b38bf87c08e7aaf3104584c4725fc  planner_dwa-0.1.2.juizapp
-ae0c992f1ca0808e51df5dad3cd6df3396e8af4460b6debdc9f166ae86526327  navigation_hub-0.3.4.juizapp
+`.juizapp` は、ファイルをダブルクリックして起動します。
+
+ダブルクリックすると新しいターミナルの窓が開き、その中で `juiz run` が動きます。窓のタイトルは `juiz - <アプリの名前> <版>` になります。
+アプリはこの窓が開いている間だけ動きます。止めるときは窓を閉じるか、窓の中で Ctrl+C を押します。
+
+<Aside type="note" title="macOS で初めてダブルクリックしたとき">
+「JUIZ Launcher が Terminal を制御しようとしています」と確認が出るので、許可してください。
+</Aside>
+
+### うまく起動したとき(OK)
+
+mobile_sim なら、窓に次のように出て、そのまま止まります(パスは環境によって変わります)。
+
+```text
+Running mobile_sim 0.3.6 from /home/you/.cache/juiz/apps/mobile_sim-0.3.6-fd2fb57c16789ce6
+Close this window or press Ctrl+C to stop.
+juiz 管理画面: http://localhost:8000/ui/
+IPC broker: ipc://mobile_sim
+HTTP broker: http://127.0.0.1:8000/
 ```
 
-そのうえで、次のコマンドで確かめます。
+最後に `HTTP broker: http://127.0.0.1:<番号>/` が出て、`error:` で始まる行が無く、窓が開いたままなら OK です。`<番号>` は上の表のアプリ名の下にある URL の番号です。
+各ページには、そのアプリが OK のときの表示を載せています。
 
-<Tabs syncKey="platform">
-<TabItem label="Linux">
+### うまく起動しなかったとき(NG)
 
-```sh
-sha256sum -c SHA256SUMS
-```
+- **`error:` で始まる行と `Press Enter to close.` が出た**: 起動に失敗しています。エラーの文を読んでから Enter で窓を閉じます。よくあるものは次のとおりです。
 
-</TabItem>
-<TabItem label="macOS">
+  | 表示 | 原因と直し方 |
+  | --- | --- |
+  | `error: mobile_sim is already running at ipc://mobile_sim.` | 同じアプリがもう動いています。前に開いた窓を探して使うか、閉じてから起動し直します |
+  | `error: mapper_gmapping 0.4.3 requires juiz =0.3.0, but this is juiz 0.2.11.` | juiz の版が合っていません。手順 1 の版(`juiz-cli==0.3.0`)で入れ直してから、`juiz associate` をもう一度実行します(別の venv の juiz に関連付けられていることもあります) |
 
-```sh
-shasum -a 256 -c SHA256SUMS
-```
+- **`depends on mobile_sim ... but it is not running` と番号つきの選択が出た**: 頼りにしている mobile_sim が動いていません。mobile_sim を先にダブルクリックして起動してから、この窓で `retry` の番号を入れて Enter を押します。
+  ```text
+  teleop_twist depends on mobile_sim >=0.3.1, <0.4, but it is not running at ipc://mobile_sim.
+    1) enter where mobile_sim is (ex., http://192.168.0.10:8100)
+    2) retry
+    3) quit
+  choose [1]:
+  ```
+- **窓が開いてすぐ消えた、何も起きない、別のアプリ(圧縮ファイルを開くアプリなど)が開いた、「このファイルを開く方法」を聞かれた**: `.juizapp` が juiz に関連付けられていません。
+  - `juiz` コマンドが入っていなければ、[インストール: juiz コマンドを入れる](/ja/getting-started/install/#juiz-コマンドを入れる) からやり直します。
+  - 入っていれば、[インストール: .juizapp をダブルクリックで開けるようにする](/ja/getting-started/install/#juizapp-をダブルクリックで開けるようにする) の `juiz associate` を実行します。OS ごとの違いは [ガイド: ダブルクリックで起動する](/ja/guides/app-package/#ダブルクリックで起動する) にあります。
 
-</TabItem>
-<TabItem label="Windows">
-
-```powershell
-Get-Content SHA256SUMS | ForEach-Object {
-    $hash, $file = $_ -split '\s+'
-    if ((Get-FileHash $file -Algorithm SHA256).Hash -eq $hash) { "${file}: OK" } else { "${file}: FAILED" }
-}
-```
-
-</TabItem>
-</Tabs>
-
-7 行とも `OK` と出れば大丈夫です。`FAILED` と出たファイルは、消してからダウンロードし直してください。
-
-<Aside type="note" title="この値はどこから来ているか">
-各 Release には、`SHA256SUMS` のようなチェックサムのファイルは置いていません。
-上の値は、GitHub が Release ページで各ファイルの横に表示している SHA-256 と同じものです(表の「Release」のリンクから見られます)。
-新しい版を取ってくるときは、その版の Release ページに出ている値と比べてください。
-
-なお `juiz run` も、パッケージの中のファイルが `juizapp.yaml` に書かれた SHA-256 と合っているかを、展開するときに確かめます。ただしこれは「パッケージの中身がそろっているか」の確認で、パッケージそのものがすり替わっていないかは、ここでの確認で確かめます。
+<Aside type="tip" title="ターミナルから起動してもかまいません">
+ダブルクリックの代わりに、`try_juiz` で開いたターミナルで `juiz run mobile_sim-0.3.6.juizapp` のように実行しても同じです(`Close this window ...` の行だけは出ません)。止めるときは Ctrl+C です。
 </Aside>
 
 ## ターミナル
 
-ターミナルを最大 4 つ使います。どれも作業用のディレクトリで開いておいてください(pip で venv に入れた場合は、どのターミナルでも venv を有効にしておきます)。
+アプリはダブルクリックでそれぞれの窓に起動するので、ターミナルは `juiz` コマンドで中を見るときと、後半の一式の起動に使います。pip で venv に入れた場合は、ターミナルで venv を有効にしておきます。
 
-| ターミナル | 1〜3(地図を作る) | 4〜6(自律移動) |
+| | 1〜3(地図を作る) | 4〜6(自律移動) |
 | --- | --- | --- |
-| 1 | mobile_sim | 一式(`navigation-manager stack`) |
-| 2 | teleop_twist | `juiz` コマンドなどで中を見る |
-| 3 | mapper_gmapping | 使わない |
-| 4 | `juiz` コマンドで中を見る | 使わない |
+| アプリ | mobile_sim、teleop_twist、mapper_gmapping をダブルクリック(それぞれの窓) | ターミナル 1 で一式(`navigation-manager stack`)。`try_juiz` で開く |
+| 中を見る | ターミナル 1 つで `juiz` コマンド | ターミナル 2 で `juiz` コマンドなど |
 
 <Aside type="note" title="読んでおくとよい章">
 コマンドを打つだけで進められますが、次の章を読んでおくと、何が起きているかがよくわかります。

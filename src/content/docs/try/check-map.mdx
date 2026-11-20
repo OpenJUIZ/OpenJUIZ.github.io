@@ -37,7 +37,7 @@ So far you have met three kinds of "position" of the robot.
 | Odometry | `odom0` (the odometry origin) | mobile_sim. Computed from wheel rotation; drift accumulates |
 | SLAM estimate | `map` (the SLAM map) | mapper_gmapping. Computed by matching scans against the map |
 
-In terminal 4, look at the three trees of coordinate frames in turn. The output below is an example after one lap of the room, back near the start (numbers rounded to two decimals).
+In the terminal you opened on page 1, look at the three trees of coordinate frames in turn. The output below is an example after one lap of the room, back near the start (numbers rounded to two decimals).
 
 ```sh
 juiz anchor tree world
@@ -100,7 +100,7 @@ See [Guide: Transformations](/guides/transformations/) for details.
 
 ## Stopping
 
-Press Ctrl+C in each terminal. Stop the dependent apps first: mapper_gmapping, then teleop_twist, then mobile_sim.
+Close each window, or press Ctrl+C in it. Stop the dependent apps first: mapper_gmapping, then teleop_twist, then mobile_sim.
 
 ## Try it
 

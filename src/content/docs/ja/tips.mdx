@@ -1,0 +1,110 @@
+---
+title: Tips
+description: juiz の使い方そのものではない、まわりの作業のしかたをまとめます。ダウンロードしたファイルの SHA-256 の照合など。
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+juiz の使い方そのものではないけれど、juiz を使うときに出てくる作業のしかたをまとめます。
+
+## SHA-256 を照合する
+
+SHA-256 は、ファイルの中身から計算する 64 けたの 16 進数の値です。中身が 1 バイトでも違えば、まったく違う値になります。
+配布元が公開している値と、手元のファイルから計算した値が同じなら、ダウンロードしたファイルが途中で壊れたり、別のものにすり替わったりしていないことがわかります。
+
+[使ってみる](/ja/try/#使うアプリと準備) のアプリ一覧では、各ファイルの下に小さく `SHA-256: …` と書いてあります。これが配布元の値です。
+
+### 1 つのファイルを照合する
+
+ダウンロードしたファイルのあるフォルダでターミナルを開き、次を実行します。`mobile_sim-0.3.6.juizapp` と値は、照合するファイルのものに置き換えてください。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+echo "fd2fb57c16789ce6802acd7acc55747e6404e68161b60f8a6b18433330dc914d  mobile_sim-0.3.6.juizapp" | sha256sum -c
+```
+
+```text
+mobile_sim-0.3.6.juizapp: OK
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+echo "fd2fb57c16789ce6802acd7acc55747e6404e68161b60f8a6b18433330dc914d  mobile_sim-0.3.6.juizapp" | shasum -a 256 -c
+```
+
+```text
+mobile_sim-0.3.6.juizapp: OK
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+PowerShell で実行します。
+
+```powershell
+(Get-FileHash mobile_sim-0.3.6.juizapp).Hash -eq 'fd2fb57c16789ce6802acd7acc55747e6404e68161b60f8a6b18433330dc914d'
+```
+
+```text
+True
+```
+
+`Get-FileHash` は既定で SHA-256 を計算し、大文字で表示します。`-eq` は大文字と小文字を区別しないので、そのまま比べられます。
+
+</TabItem>
+</Tabs>
+
+`OK`(Windows は `True`)と出れば大丈夫です。値を自分の目で見比べたいときは、`sha256sum <ファイル>`(macOS は `shasum -a 256 <ファイル>`、Windows は `Get-FileHash <ファイル>`)で値だけを出せます。
+
+### まとめて照合する
+
+いくつものファイルを照合するときは、値とファイル名を 1 行ずつ(間は空白 2 つ)並べたファイルを `SHA256SUMS` という名前で作ります。
+
+```text title="SHA256SUMS"
+fd2fb57c16789ce6802acd7acc55747e6404e68161b60f8a6b18433330dc914d  mobile_sim-0.3.6.juizapp
+cbbce7bfe3e891e54cb86c5c2460ecf2f433de4bced81c73987010088d0ab862  teleop_twist-0.1.1.juizapp
+```
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+sha256sum -c SHA256SUMS
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+shasum -a 256 -c SHA256SUMS
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+Get-Content SHA256SUMS | ForEach-Object {
+    $hash, $file = $_ -split '\s+'
+    if ((Get-FileHash $file -Algorithm SHA256).Hash -eq $hash) { "${file}: OK" } else { "${file}: FAILED" }
+}
+```
+
+</TabItem>
+</Tabs>
+
+### 合わなかったとき
+
+`FAILED`(Windows は `False`)と出たファイルは使わずに消し、ダウンロードし直してください。
+ダウンロードし直しても合わないときは、配布元の新しい版が出ていないか(版が違えば値も違います)を確かめ、それでも合わなければ使わずに配布元に知らせてください。
+
+<Aside type="note" title="値はどこから来ているか">
+OpenJUIZ のアプリの Release には、`SHA256SUMS` のようなチェックサムのファイルは置いていません。
+使ってみるの一覧の値は、GitHub が Release ページで各ファイルの横に表示している SHA-256 と同じものです。新しい版を取ってくるときは、その版の Release ページに出ている値と比べてください。
+
+なお `juiz run` も、`.juizapp` の中のファイルが `juizapp.yaml` に書かれた SHA-256 と合っているかを、展開するときに確かめます。
+ただしこれは「パッケージの中身がそろっているか」の確認で、パッケージそのものがすり替わっていないかは、ここでの照合で確かめます。
+</Aside>

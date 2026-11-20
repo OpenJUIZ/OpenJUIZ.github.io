@@ -17,13 +17,20 @@ First, start the simulator and drive the robot by hand.
 
 ## Start the simulator
 
-Start mobile_sim in terminal 1.
+Double-click `mobile_sim-0.3.6.juizapp` in `try_juiz`.
+A new window opens. It is OK when it shows the following and stays there (see [Starting an app](/try/#starting-an-app) for how to tell).
 
-```sh
-juiz run mobile_sim-0.3.5.juizapp
+```text
+Running mobile_sim 0.3.6 from …
+Close this window or press Ctrl+C to stop.
+juiz 管理画面: http://localhost:8000/ui/
+IPC broker: ipc://mobile_sim
+HTTP broker: http://127.0.0.1:8000/
 ```
 
-`juiz run` checks and extracts the package, then starts juiz with the configuration file inside.
+If you see an `error:` line and `Press Enter to close.`, see [When it does not start](/try/#when-it-does-not-start-ng). If no window opens, see [Installation: Opening .juizapp files with a double-click](/getting-started/install/#opening-juizapp-files-with-a-double-click).
+
+The `juiz run` running in the window checks and extracts the package, then starts juiz with the configuration file inside.
 Open http://localhost:8000/ in a browser to see the simulator.
 
 ![The mobile_sim screen. On the left, the map of a 10 m square room and the robot; on the right, a control pad and a status panel](../../../assets/try/slam/sim.png)
@@ -39,14 +46,18 @@ Commands from both would conflict, so do not press keys on the mobile_sim screen
 
 ## Start teleop_twist
 
-Start teleop_twist in terminal 2.
+Leave the mobile_sim window open and double-click `teleop_twist-0.1.1.juizapp`. It is OK when it shows the following.
 
-```sh
-juiz run teleop_twist-0.1.0.juizapp
+```text
+Running teleop_twist 0.1.1 from …
+Close this window or press Ctrl+C to stop.
+juiz 管理画面: http://localhost:8002/ui/
+HTTP broker: http://127.0.0.1:8002/
+IPC broker: ipc://teleop_twist-1234
 ```
 
 teleop_twist declares that it depends on mobile_sim, so `juiz run` looks for the running mobile_sim by the IPC name `mobile_sim`, checks its version, and connects.
-If mobile_sim is not running, it stops here with an error.
+If mobile_sim is not running, it shows `teleop_twist depends on mobile_sim ... but it is not running` and a numbered choice. Start mobile_sim, then choose `2) retry`.
 
 Open http://localhost:8002/ in a browser.
 
@@ -76,7 +87,7 @@ teleop_twist turns your input into a velocity `juiz_std.geometry.Twist2D` and pu
 The robot's ContainerProcess `robot_set_velocity0` in mobile_sim subscribes to this topic and moves the robot at the received velocity.
 
 They are separate apps, yet connected, because the juiz of teleop_twist connects the juiz of mobile_sim as a **subsystem** over IPC.
-In terminal 4, list the containers that teleop_twist (port 8002) can see.
+Open a terminal (activate the venv if you installed into one) and list the containers that teleop_twist (port 8002) can see.
 
 ```sh
 juiz -s http://localhost:8002 container list
@@ -92,7 +103,7 @@ As you saw in [chapter 4](/tutorial/multi-process/), the elements of juiz connec
 ## Read the robot's position
 
 mobile_sim keeps the robot's position as a ContainerPose of [Transformations](/guides/transformations/).
-In terminal 4, look at the tree of coordinate frames (without `-s`, the command asks mobile_sim on port 8000).
+In the same terminal, look at the tree of coordinate frames (without `-s`, the command asks mobile_sim on port 8000).
 
 ```sh
 juiz anchor tree world
@@ -120,7 +131,7 @@ A real robot cannot know its true position; it only has the drifting odometry. S
 
 ## Summary
 
-- `juiz run` alone starts separately distributed apps and connects them. Start the app they depend on (mobile_sim here) first.
+- Just double-clicking `.juizapp` files starts separately distributed apps and connects them. Start the app they depend on (mobile_sim here) first.
 - teleop_twist publishes a velocity `Twist2D` on the topic `cmd_vel`, and mobile_sim subscribes to it to move the robot.
 - The robot's true position is a ContainerPose seen from `world`, and its odometry is one seen from `odom0`. The odometry drifts as the robot moves.
 
