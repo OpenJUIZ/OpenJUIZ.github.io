@@ -1,49 +1,91 @@
 ---
-title: 1. 一式を動かす
-description: navigation-manager stack で 6 つのアプリを順に起動し、画面からゴールを出してロボットを自律移動させます。
+title: 4. 自律移動させる
+description: 自己位置推定・経路計画・局所計画のアプリを navigation-manager stack で一式起動し、画面からゴールを出してロボットを自律移動させます。
 sidebar:
-  order: 1
+  order: 4
 prev:
-  link: /ja/exercises/navigation/
-  label: 概要と準備
+  link: /ja/try/check-map/
+  label: 3. 地図と位置を確かめる
 next:
-  link: /ja/exercises/navigation/own-map/
-  label: 2. 自分の地図で走る
+  link: /ja/try/own-map/
+  label: 5. 自分の地図で走る
 ---
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-まずはシミュレータの地図のまま、一式を動かしてみます。
+ここからは、地図の上のゴールを与えると、ロボットが自分で道を決めてそこまで走る**自律移動**(ナビゲーション)をやってみます。
+まずはシミュレータが持っている地図のまま一式を動かし、次のページで 2 で作った自分の地図に替えます。
+
+<Aside type="caution" title="1〜3 のアプリは止めておく">
+teleop_twist は、ここで使う localization_amcl と同じ 8002 番を使います。teleop_twist・mapper_gmapping・mobile_sim が動いたままだと、ポートや IPC の名前がぶつかって一式が起動しません。ターミナル 3・2・1 の順に Ctrl+C で止めておいてください。
+</Aside>
+
+## 使うアプリ
+
+| アプリ | 役割 | 画面 |
+| --- | --- | --- |
+| [mobile_sim](https://github.com/OpenJUIZ/mobile_sim) | 移動ロボットのシミュレータ。1〜3 と同じもの | http://localhost:8000/ |
+| [localization_amcl](https://github.com/OpenJUIZ/localization_amcl) | AMCL(粒子フィルタ)で、地図・スキャン・オドメトリからロボットの位置を推定する | http://localhost:8002/ |
+| [planner_dijkstra](https://github.com/OpenJUIZ/planner_dijkstra) | 今の位置からゴールまでの道筋(大域経路)を、地図の上でダイクストラ法で求める | http://localhost:8003/ |
+| [planner_dwa](https://github.com/OpenJUIZ/planner_dwa) | 大域経路に沿いながら、目の前の障害物をよけて進む速度の指令を DWA(Dynamic Window Approach)で求める | http://localhost:8004/ |
+| navigation_hub([navigation_manager](https://github.com/OpenJUIZ/navigation_manager)) | 上の 4 つを 1 本の木にまとめ、トピックを中継する | http://localhost:8006/ |
+| navigation_manager(同じリポジトリ) | ゴールを受けて計画させ、追わせ、着いたかを判断する。画面からゴールを出す | http://localhost:8005/ |
+
+はじめの 5 つは [概要と準備](/ja/try/) でダウンロードした `.juizapp` です。navigation_manager は juiz の外から各アプリを HTTP で呼ぶ Python のプログラムで、準備で pip で入れました。
+
+## 全体の構成
+
+navigation_hub を根にして、ほかの 4 つのアプリを 1 本の木にします。
+
+```text
+navigation_hub (8006) ─┬─ localization_amcl (8002) ── mobile_sim (8000)
+                       ├─ planner_dijkstra (8003)
+                       └─ planner_dwa (8004)
+
+navigation_manager (8005) ── HTTP ──▶ 各アプリ
+```
+
+ロボットがゴールに向かう間、次の 2 種類のやり取りが同時に動いています。
+
+- **トピック**(周期的に流し続けるもの): mobile_sim のスキャン `scan` とオドメトリ `odom`、localization_amcl が推定した位置 `amcl_pose`、planner_dwa の速度の指令 `cmd_vel`。navigation_hub がこれらを受けて、ほかのアプリに向けて出し直します。
+- **HTTP の呼び出し**(必要なときだけ 1 回呼ぶもの): navigation_manager が、ゴールを planner_dijkstra に渡して大域経路を求めさせ、その経路を planner_dwa に渡します。地図を配る、キャンセルする、もここです。
+
+<Aside type="note" title="なぜ根が要るのか">
+juiz(0.2.5 時点)では、トピックは System の木(副系のつながり)をたどって届きます。
+すべてのアプリが mobile_sim だけを副系にする形だと、localization_amcl の `amcl_pose` が planner_dijkstra や planner_dwa に届きません([juiz#449](https://github.com/OpenJUIZ/juiz/issues/449))。
+そこで navigation_hub を根にした 1 本の木にし、根で中継しています。起動する順番も決まっているので、ここでは一式を起動するコマンドを使います。
+</Aside>
+
 
 ## 一式を起動する
 
-ターミナル 1 で、取ってきた 5 つの `.juizapp` を `navigation-manager stack` に渡します(`<版>` は取ってきたファイルの版に読み替えてください)。並べる順は問いません。
+ターミナル 1 で、ダウンロードした 5 つの `.juizapp` を `navigation-manager stack` に渡します。並べる順は問いません。
 
 <Tabs syncKey="platform">
 <TabItem label="Linux">
 
 ```sh
-navigation-manager stack mobile_sim-<版>.juizapp \
-    localization_amcl-<版>.juizapp planner_dijkstra-<版>.juizapp \
-    planner_dwa-<版>.juizapp navigation_hub-<版>.juizapp
+navigation-manager stack mobile_sim-0.3.5.juizapp \
+    localization_amcl-0.1.3.juizapp planner_dijkstra-0.2.2.juizapp \
+    planner_dwa-0.1.2.juizapp navigation_hub-0.3.4.juizapp
 ```
 
 </TabItem>
 <TabItem label="macOS">
 
 ```sh
-navigation-manager stack mobile_sim-<版>.juizapp \
-    localization_amcl-<版>.juizapp planner_dijkstra-<版>.juizapp \
-    planner_dwa-<版>.juizapp navigation_hub-<版>.juizapp
+navigation-manager stack mobile_sim-0.3.5.juizapp \
+    localization_amcl-0.1.3.juizapp planner_dijkstra-0.2.2.juizapp \
+    planner_dwa-0.1.2.juizapp navigation_hub-0.3.4.juizapp
 ```
 
 </TabItem>
 <TabItem label="Windows">
 
 ```powershell
-navigation-manager stack mobile_sim-<版>.juizapp `
-    localization_amcl-<版>.juizapp planner_dijkstra-<版>.juizapp `
-    planner_dwa-<版>.juizapp navigation_hub-<版>.juizapp
+navigation-manager stack mobile_sim-0.3.5.juizapp `
+    localization_amcl-0.1.3.juizapp planner_dijkstra-0.2.2.juizapp `
+    planner_dwa-0.1.2.juizapp navigation_hub-0.3.4.juizapp
 ```
 
 </TabItem>
@@ -95,7 +137,7 @@ topics reach the leaves through navigation_hub
 
 ブラウザで http://localhost:8005/ を開きます。navigation_manager の画面です。
 
-![navigation_manager の画面。左に部屋の地図と、ロボット・粒子・オレンジの大域経路・紫の局所計画・赤のゴールが描かれ、右に状態 following と、ゴールまでの距離・推定姿勢・真の姿勢などが並ぶ](../../../../../assets/exercises/navigation/manager-sim.png)
+![navigation_manager の画面。左に部屋の地図と、ロボット・粒子・オレンジの大域経路・紫の局所計画・赤のゴールが描かれ、右に状態 following と、ゴールまでの距離・推定姿勢・真の姿勢などが並ぶ](../../../../assets/try/navigation/manager-sim.png)
 
 **地図の上の空いている所をクリックし、そのままロボットに向かせたい方向へドラッグして離す**と、そこがゴールになります。
 ロボットが動き出し、右上の状態が次のように変わっていきます。
@@ -182,4 +224,4 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8005/api/cancel
 - 画面の地図の上でドラッグするとゴールを出せます。状態は `planning` → `following` → `succeeded` と進みます。
 - ゴールや経路は HTTP で 1 回呼び、位置や速度はトピックで流し続けます。
 
-次は [2. 自分の地図で走る](/ja/exercises/navigation/own-map/) です。
+次は [5. 自分の地図で走る](/ja/try/own-map/) です。

@@ -4,10 +4,10 @@ description: mapper_gmapping を起動し、ロボットを部屋じゅう走ら
 sidebar:
   order: 2
 prev:
-  link: /ja/exercises/slam/simulator/
+  link: /ja/try/drive/
   label: 1. ロボットを動かす
 next:
-  link: /ja/exercises/slam/check/
+  link: /ja/try/check-map/
   label: 3. 地図と位置を確かめる
 ---
 
@@ -21,7 +21,7 @@ import { Aside } from '@astrojs/starlight/components';
 SLAM の地図は、mapper_gmapping が動き始めたときのオドメトリを出発点にするので、まっさらな状態から始めるために、一度止めて起動し直します。
 
 1. ターミナル 2 の teleop_twist、ターミナル 1 の mobile_sim の順に、Ctrl+C で止めます。
-2. ターミナル 1 で `juiz run mobile_sim-<版>.juizapp`、ターミナル 2 で `juiz run teleop_twist-<版>.juizapp` を、もう一度実行します。
+2. ターミナル 1 で `juiz run mobile_sim-0.3.5.juizapp`、ターミナル 2 で `juiz run teleop_twist-0.1.0.juizapp` を、もう一度実行します。
 3. ブラウザの mobile_sim と teleop_twist の画面を再読み込みします。ロボットは最初の位置に戻っています。
 
 ここからは、mapper_gmapping を起動するまでロボットを動かさないでください。
@@ -31,7 +31,7 @@ SLAM の地図は、mapper_gmapping が動き始めたときのオドメトリ�
 ターミナル 3 で mapper_gmapping を起動します。
 
 ```sh
-juiz run mapper_gmapping-<版>.juizapp
+juiz run mapper_gmapping-0.4.2.juizapp
 ```
 
 mapper_gmapping も mobile_sim に依存すると宣言しているので、teleop_twist と同じように、動いている mobile_sim を探してつなぎます。
@@ -47,7 +47,7 @@ mapper_gmapping の画面にも「操作(mobile_sim)」のパッドがありま�
 
 teleop_twist の画面からロボットを動かし、部屋じゅうを走らせます。走るにつれて、mapper_gmapping の画面の地図が育っていきます。
 
-![mapper_gmapping の画面。部屋を一周したあとの地図に、壁・柱・円い障害物が写り、オレンジの線で推定した軌跡が描かれている](../../../../../assets/exercises/slam/mapper.png)
+![mapper_gmapping の画面。部屋を一周したあとの地図に、壁・柱・円い障害物が写り、オレンジの線で推定した軌跡が描かれている](../../../../assets/try/slam/mapper.png)
 
 画面の見方は次のとおりです。
 
@@ -75,7 +75,7 @@ teleop_twist の画面からロボットを動かし、部屋じゅうを走ら�
 ## 地図を保存する
 
 地図ができたら、画面の「保存先」を確かめて(既定は `map`)、「地図を保存」を押します。
-mapper_gmapping を起動したディレクトリ(作業用のディレクトリ `slam_exercise`)に、次の 2 つのファイルができます。
+mapper_gmapping を起動したディレクトリ(作業用のディレクトリ `try_juiz`)に、次の 2 つのファイルができます。
 
 | ファイル | 中身 |
 | --- | --- |
@@ -114,4 +114,4 @@ mobile_sim は 1 周期(20 Hz)の中で、ロボットを進め、オドメト�
 - ゆっくり走らせ、出発点に戻ってループを閉じると、きれいな地図ができます。
 - 「地図を保存」で、ROS の map_server と同じ形式(YAML + PNG)で保存できます。
 
-次は [3. 地図と位置を確かめる](/ja/exercises/slam/check/) です。3 つのアプリは動かしたままにしておいてください。
+次は [3. 地図と位置を確かめる](/ja/try/check-map/) です。3 つのアプリは動かしたままにしておいてください。

@@ -12,6 +12,25 @@ export default defineConfig({
 		'/en/concepts/overview': '/concepts/overview/',
 		'/tutorial/quic-broker': '/tutorial/ipc-broker/',
 		'/ja/tutorial/quic-broker': '/ja/tutorial/ipc-broker/',
+		// 「演習」は「使ってみる」(/try/)にまとめた
+		'/exercises': '/try/',
+		'/exercises/slam': '/try/',
+		'/exercises/slam/simulator': '/try/drive/',
+		'/exercises/slam/mapping': '/try/mapping/',
+		'/exercises/slam/check': '/try/check-map/',
+		'/exercises/navigation': '/try/navigation/',
+		'/exercises/navigation/stack': '/try/navigation/',
+		'/exercises/navigation/own-map': '/try/own-map/',
+		'/exercises/navigation/inside': '/try/inside/',
+		'/ja/exercises': '/ja/try/',
+		'/ja/exercises/slam': '/ja/try/',
+		'/ja/exercises/slam/simulator': '/ja/try/drive/',
+		'/ja/exercises/slam/mapping': '/ja/try/mapping/',
+		'/ja/exercises/slam/check': '/ja/try/check-map/',
+		'/ja/exercises/navigation': '/ja/try/navigation/',
+		'/ja/exercises/navigation/stack': '/ja/try/navigation/',
+		'/ja/exercises/navigation/own-map': '/ja/try/own-map/',
+		'/ja/exercises/navigation/inside': '/ja/try/inside/',
 	},
 	integrations: [
 		starlight({
@@ -56,6 +75,12 @@ export default defineConfig({
 					],
 				},
 				{
+					label: 'Try it',
+					translations: { ja: '使ってみる' },
+					// 配布されている .juizapp をつないで、手で動かす → 地図を作る → 自律移動までを 1 本道で
+					items: [{ autogenerate: { directory: 'try' } }],
+				},
+				{
 					label: 'Tutorial',
 					translations: { ja: 'チュートリアル' },
 					// 第 1・2・4・5・6 章は言語ごとのページに分かれるので、章ごとのグループにする
@@ -89,24 +114,6 @@ export default defineConfig({
 						},
 						'tutorial/ipc-broker',
 						'tutorial/datatype',
-					],
-				},
-				{
-					label: 'Exercises',
-					translations: { ja: '演習' },
-					// 第 1〜8 章とは別立て。演習ごとにグループにする
-					items: [
-						'exercises',
-						{
-							label: 'SLAM: building a map',
-							translations: { ja: 'SLAM: 地図を作る' },
-							items: ['exercises/slam', { autogenerate: { directory: 'exercises/slam' } }],
-						},
-						{
-							label: 'Autonomous navigation',
-							translations: { ja: '自律移動' },
-							items: ['exercises/navigation', { autogenerate: { directory: 'exercises/navigation' } }],
-						},
 					],
 				},
 				{

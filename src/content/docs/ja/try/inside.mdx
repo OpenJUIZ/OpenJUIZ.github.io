@@ -1,11 +1,11 @@
 ---
-title: 3. 中を見る
+title: 6. 自律移動の中を見る
 description: juiz コマンドと各アプリの画面で、木の形・トピックの中継・大域経路とロボットの大きさ・局所計画のパラメータ・自己位置推定を確かめ、わざと失敗させてみます。
 sidebar:
-  order: 3
+  order: 6
 prev:
-  link: /ja/exercises/navigation/own-map/
-  label: 2. 自分の地図で走る
+  link: /ja/try/own-map/
+  label: 5. 自分の地図で走る
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -28,7 +28,7 @@ juiz -s http://localhost:8006 container list
 - `ipc://localization_amcl/...` の中に、localization_amcl 自身の `amcl0`・`map`・`amcl_odom0` と、その下につないだ mobile_sim の `sim0`・`robot0` などが並んでいます。navigation_hub から見ると、mobile_sim は「副系の副系」です。
 - `ipc://planner_dijkstra/...` と `ipc://planner_dwa/...` は、navigation_hub の直接の副系です。
 
-[概要](/ja/exercises/navigation/) の図のとおり、navigation_hub を根にした 1 本の木になっていることがわかります。
+[概要](/ja/try/navigation/) の図のとおり、navigation_hub を根にした 1 本の木になっていることがわかります。
 
 ## トピックの中継を見る
 
@@ -59,7 +59,7 @@ juiz -s http://localhost:8006 process list
 
 planner_dijkstra の画面([http://localhost:8003/](http://localhost:8003/))を開き、navigation_manager の画面からゴールを出してみましょう。
 
-![planner_dijkstra の画面。左に、壁や柱の周りが濃い灰色と薄い灰色の帯で囲まれた地図と、扉の真ん中を通る青い経路、右に目標・地図の操作と、経路の長さやロボットの大きさなどの結果が並ぶ](../../../../../assets/exercises/navigation/planner.png)
+![planner_dijkstra の画面。左に、壁や柱の周りが濃い灰色と薄い灰色の帯で囲まれた地図と、扉の真ん中を通る青い経路、右に目標・地図の操作と、経路の長さやロボットの大きさなどの結果が並ぶ](../../../../assets/try/navigation/planner.png)
 
 planner_dijkstra は、地図の障害物をロボットの大きさだけ膨らませた地図(コストマップ)の上で、ダイクストラ法で経路を求めます。画面の「膨らませた地図を表示」に印が付いている(既定)と、その地図が描かれます。
 
@@ -93,7 +93,7 @@ juiz -s http://localhost:8003 container-process call -p "http://localhost:8003/c
 
 planner_dwa の画面([http://localhost:8004/](http://localhost:8004/))を開き、navigation_manager の画面からゴールを出してみましょう。
 
-![planner_dwa の画面。左に青い大域経路と、ロボットから扇形に広がる灰色の候補の軌道、緑の選んだ軌道、赤い scan の点、右にパラメータのスライダーと状態が並ぶ](../../../../../assets/exercises/navigation/dwa.png)
+![planner_dwa の画面。左に青い大域経路と、ロボットから扇形に広がる灰色の候補の軌道、緑の選んだ軌道、赤い scan の点、右にパラメータのスライダーと状態が並ぶ](../../../../assets/try/navigation/dwa.png)
 
 DWA は、ロボットが今の速度から出せる範囲で速度の組(前進の速さと旋回の速さ)をたくさん試し、それぞれで少し先(`sim_time` 秒)までの軌道を描いてみます。
 その中から、ぶつからず、大域経路に近く、ゴールに近づくものを選びます。
@@ -162,4 +162,4 @@ localization_amcl の画面([http://localhost:8002/](http://localhost:8002/))で
 - DWA は候補の軌道を試して速度を選びます。パラメータは画面や `dwa_set_params` で変えられます。
 - planner_dijkstra は障害物をロボットの大きさだけ膨らませた地図の上で経路を求めるので、経路は壁や扉の角から離れます。膨らませ方は `planner_set_inflation` で変えられます。
 
-これで自律移動の演習はおしまいです。[演習の一覧](/ja/exercises/) に戻るか、各アプリのリポジトリで中の作りを読んでみてください。
+これで一巡りはおしまいです。各アプリのリポジトリ(リンクは [概要と準備](/ja/try/) の表)で中の作りを読んでみるか、[チュートリアル](/ja/tutorial/) で自分の Process を書いてみてください。

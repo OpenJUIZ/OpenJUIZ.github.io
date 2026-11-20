@@ -1,49 +1,93 @@
 ---
-title: 1. Running the stack
-description: Start the six apps in order with navigation-manager stack, give a goal on the screen, and let the robot drive there by itself.
+title: 4. Autonomous navigation
+description: Start the localization, path planning and local planning apps as one stack with navigation-manager stack, give a goal on the screen, and let the robot drive there by itself.
 sidebar:
-  order: 1
+  order: 4
 prev:
-  link: /exercises/navigation/
-  label: Overview and setup
+  link: /try/check-map/
+  label: 3. Checking the map and the position
 next:
-  link: /exercises/navigation/own-map/
-  label: 2. Driving on your own map
+  link: /try/own-map/
+  label: 5. Driving on your own map
 ---
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-First, run the stack on the simulator's own map.
+From here on, you try **autonomous navigation**: you give a goal on the map, and the robot decides its own way and drives there.
+First run the stack on the simulator's own map; on the next page you switch to the map you built on page 2.
+
+<Aside type="caution" title="Stop the apps of pages 1–3">
+teleop_twist uses port 8002, the same as localization_amcl here. If teleop_twist, mapper_gmapping or mobile_sim is still running, the ports or IPC names clash and the stack does not start. Stop them with Ctrl+C in terminals 3, 2 and 1, in that order.
+</Aside>
+
+## The apps
+
+| App | Role | Screen |
+| --- | --- | --- |
+| [mobile_sim](https://github.com/OpenJUIZ/mobile_sim) | The mobile robot simulator, the same one as on pages 1–3 | http://localhost:8000/ |
+| [localization_amcl](https://github.com/OpenJUIZ/localization_amcl) | Estimates the robot's position from the map, scans and odometry with AMCL (a particle filter) | http://localhost:8002/ |
+| [planner_dijkstra](https://github.com/OpenJUIZ/planner_dijkstra) | Finds the route from the current position to the goal on the map (the global path) with Dijkstra's algorithm | http://localhost:8003/ |
+| [planner_dwa](https://github.com/OpenJUIZ/planner_dwa) | Computes velocity commands that follow the global path while avoiding obstacles in front of the robot, with DWA (Dynamic Window Approach) | http://localhost:8004/ |
+| navigation_hub ([navigation_manager](https://github.com/OpenJUIZ/navigation_manager)) | Puts the four apps above into one tree and relays topics | http://localhost:8006/ |
+| navigation_manager (same repository) | Takes a goal, has a path planned and followed, and decides when the robot has arrived. You give goals on its screen | http://localhost:8005/ |
+
+The first five are the `.juizapp` packages you downloaded in [Overview and setup](/try/). navigation_manager is a Python program that calls each app over HTTP from outside juiz; you installed it with pip in the setup.
+
+The screens of these apps are in Japanese. These pages give the English meaning of the labels you need.
+
+## How they fit together
+
+navigation_hub is the root, and the other four apps form one tree under it.
+
+```text
+navigation_hub (8006) ─┬─ localization_amcl (8002) ── mobile_sim (8000)
+                       ├─ planner_dijkstra (8003)
+                       └─ planner_dwa (8004)
+
+navigation_manager (8005) ── HTTP ──▶ each app
+```
+
+While the robot heads for a goal, two kinds of exchange run at the same time.
+
+- **Topics** (streamed periodically): the scans `scan` and odometry `odom` of mobile_sim, the position `amcl_pose` estimated by localization_amcl, and the velocity commands `cmd_vel` of planner_dwa. navigation_hub receives them and publishes them again for the other apps.
+- **HTTP calls** (called once, when needed): navigation_manager passes the goal to planner_dijkstra to get a global path, and passes that path to planner_dwa. Distributing maps and canceling also go this way.
+
+<Aside type="note" title="Why a root is needed">
+In juiz (as of 0.2.5), topics travel along the tree of Systems (the subsystem links).
+If every app had only mobile_sim as its subsystem, the `amcl_pose` of localization_amcl would not reach planner_dijkstra or planner_dwa ([juiz#449](https://github.com/OpenJUIZ/juiz/issues/449)).
+So the apps form one tree with navigation_hub as the root, and the root relays the topics. The start order is fixed too, so here you use a command that starts the whole stack.
+</Aside>
+
 
 ## Starting the stack
 
-In terminal 1, pass the five `.juizapp` packages to `navigation-manager stack` (replace `<version>` with the versions you downloaded). The order does not matter.
+In terminal 1, pass the five `.juizapp` packages you downloaded to `navigation-manager stack`. The order does not matter.
 
 <Tabs syncKey="platform">
 <TabItem label="Linux">
 
 ```sh
-navigation-manager stack mobile_sim-<version>.juizapp \
-    localization_amcl-<version>.juizapp planner_dijkstra-<version>.juizapp \
-    planner_dwa-<version>.juizapp navigation_hub-<version>.juizapp
+navigation-manager stack mobile_sim-0.3.5.juizapp \
+    localization_amcl-0.1.3.juizapp planner_dijkstra-0.2.2.juizapp \
+    planner_dwa-0.1.2.juizapp navigation_hub-0.3.4.juizapp
 ```
 
 </TabItem>
 <TabItem label="macOS">
 
 ```sh
-navigation-manager stack mobile_sim-<version>.juizapp \
-    localization_amcl-<version>.juizapp planner_dijkstra-<version>.juizapp \
-    planner_dwa-<version>.juizapp navigation_hub-<version>.juizapp
+navigation-manager stack mobile_sim-0.3.5.juizapp \
+    localization_amcl-0.1.3.juizapp planner_dijkstra-0.2.2.juizapp \
+    planner_dwa-0.1.2.juizapp navigation_hub-0.3.4.juizapp
 ```
 
 </TabItem>
 <TabItem label="Windows">
 
 ```powershell
-navigation-manager stack mobile_sim-<version>.juizapp `
-    localization_amcl-<version>.juizapp planner_dijkstra-<version>.juizapp `
-    planner_dwa-<version>.juizapp navigation_hub-<version>.juizapp
+navigation-manager stack mobile_sim-0.3.5.juizapp `
+    localization_amcl-0.1.3.juizapp planner_dijkstra-0.2.2.juizapp `
+    planner_dwa-0.1.2.juizapp navigation_hub-0.3.4.juizapp
 ```
 
 </TabItem>
@@ -95,7 +139,7 @@ The log of each app goes to a temporary directory, printed as `logs:` in the fir
 
 Open http://localhost:8005/ in a browser. This is the screen of navigation_manager.
 
-![The navigation_manager screen. On the left, the room map with the robot, particles, the orange global path, the purple local plan and the red goal; on the right, the state "following" and the distance to the goal, the estimated pose, the true pose and more](../../../../assets/exercises/navigation/manager-sim.png)
+![The navigation_manager screen. On the left, the room map with the robot, particles, the orange global path, the purple local plan and the red goal; on the right, the state "following" and the distance to the goal, the estimated pose, the true pose and more](../../../assets/try/navigation/manager-sim.png)
 
 **Click a free spot on the map, drag towards the direction the robot should face, and release.** That becomes the goal.
 The robot starts moving, and the state at the top right changes as follows.
@@ -184,4 +228,4 @@ Press Ctrl+C in terminal 1, and all the apps stop in the reverse order of starti
 - Dragging on the map gives a goal. The state goes `planning` → `following` → `succeeded`.
 - Goals and paths are called once over HTTP; positions and velocities are streamed on topics.
 
-Next is [2. Driving on your own map](/exercises/navigation/own-map/).
+Next is [5. Driving on your own map](/try/own-map/).

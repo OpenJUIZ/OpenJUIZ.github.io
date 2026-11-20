@@ -4,10 +4,10 @@ description: Start the simulator with mobile_sim and drive the robot from teleop
 sidebar:
   order: 1
 prev:
-  link: /exercises/slam/
+  link: /try/
   label: Overview and setup
 next:
-  link: /exercises/slam/mapping/
+  link: /try/mapping/
   label: 2. Building the map
 ---
 
@@ -17,23 +17,23 @@ First, start the simulator and drive the robot by hand.
 
 ## Start the simulator
 
-Start mobile_sim in terminal 1 (replace `<version>` with the version of the file you downloaded).
+Start mobile_sim in terminal 1.
 
 ```sh
-juiz run mobile_sim-<version>.juizapp
+juiz run mobile_sim-0.3.5.juizapp
 ```
 
 `juiz run` checks and extracts the package, then starts juiz with the configuration file inside.
 Open http://localhost:8000/ in a browser to see the simulator.
 
-![The mobile_sim screen. On the left, the map of a 10 m square room and the robot; on the right, a control pad and a status panel](../../../../assets/exercises/slam/sim.png)
+![The mobile_sim screen. On the left, the map of a 10 m square room and the robot; on the right, a control pad and a status panel](../../../assets/try/slam/sim.png)
 
 - White is the floor; black is walls and pillars. A wall in the middle splits the room in two, with a doorway between them.
 - The green circle is the robot `robot0`. It carries a LiDAR `lidar0` that measures the distance to the surrounding walls (check "LiDAR の光線を描く", *draw LiDAR rays*, to see them).
 - The brown dotted circle is where the **odometry** (the position computed from wheel rotation) thinks the robot is. It overlaps the true position now, but drifts away as the robot moves.
 
 <Aside type="caution" title="Do not use the pad on this screen">
-The mobile_sim screen also has key controls and a control pad, but in this exercise you drive from teleop_twist, introduced next.
+The mobile_sim screen also has key controls and a control pad, but here you drive from teleop_twist, introduced next.
 Commands from both would conflict, so do not press keys on the mobile_sim screen (watching it is fine).
 </Aside>
 
@@ -42,7 +42,7 @@ Commands from both would conflict, so do not press keys on the mobile_sim screen
 Start teleop_twist in terminal 2.
 
 ```sh
-juiz run teleop_twist-<version>.juizapp
+juiz run teleop_twist-0.1.0.juizapp
 ```
 
 teleop_twist declares that it depends on mobile_sim, so `juiz run` looks for the running mobile_sim by the IPC name `mobile_sim`, checks its version, and connects.
@@ -50,7 +50,7 @@ If mobile_sim is not running, it stops here with an error.
 
 Open http://localhost:8002/ in a browser.
 
-![The teleop_twist screen. On the left, a round control pad and a stop button; on the right, the speed scale, the velocity being published, the gamepad status, and the list of controls](../../../../assets/exercises/slam/teleop.png)
+![The teleop_twist screen. On the left, a round control pad and a stop button; on the right, the speed scale, the velocity being published, the gamepad status, and the list of controls](../../../assets/try/slam/teleop.png)
 
 ## Drive with a keyboard or a gamepad
 
@@ -124,4 +124,4 @@ A real robot cannot know its true position; it only has the drifting odometry. S
 - teleop_twist publishes a velocity `Twist2D` on the topic `cmd_vel`, and mobile_sim subscribes to it to move the robot.
 - The robot's true position is a ContainerPose seen from `world`, and its odometry is one seen from `odom0`. The odometry drifts as the robot moves.
 
-Next is [2. Building the map](/exercises/slam/mapping/). Keep mobile_sim and teleop_twist running.
+Next is [2. Building the map](/try/mapping/). Keep mobile_sim and teleop_twist running.

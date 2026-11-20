@@ -1,0 +1,220 @@
+---
+title: Try it
+description: Without writing any code, connect published juiz apps (.juizapp) to drive a robot in a simulator, build a map, and let the robot navigate on that map by itself. This page introduces the apps and the setup.
+sidebar:
+  order: 0
+  label: Overview and setup
+next:
+  link: /try/drive/
+  label: 1. Driving the robot
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Here you combine apps built with juiz to drive a mobile robot in a simulator.
+You do not write or build any code. You download published `.juizapp` packages and start them with `juiz run`.
+
+1. Drive the robot with a keyboard or a gamepad,
+2. build a map of the room from its LiDAR and odometry with **SLAM** (Simultaneous Localization and Mapping: estimating the robot's own position and building a map at the same time),
+3. and finally let the robot drive itself to a goal on that map (**autonomous navigation**).
+
+While the [tutorial](/tutorial/) teaches the features of juiz one at a time, this section lets you run finished apps and see how the whole system fits together. You can start before finishing the tutorial.
+
+<Aside type="tip" title="What you will see">
+- Separately distributed juiz apps becoming one robot system, connected by topics and IDs
+- Odometry (the position computed from wheel rotation) drifting more and more, and SLAM and localization correcting it by matching against the map
+- Coordinate frames (Transformations) forming a single tree across separate apps
+- What is streamed on topics (sensor readings, velocity commands) and what is called over HTTP (goals, paths, maps)
+</Aside>
+
+## The walkthrough
+
+| Page | What you do | Apps |
+| --- | --- | --- |
+| [1. Driving the robot](/try/drive/) | Start the simulator and drive the robot with a keyboard or a gamepad | mobile_sim, teleop_twist |
+| [2. Building the map](/try/mapping/) | Drive all over the room, build a map with SLAM, and save it | the two above, mapper_gmapping |
+| [3. Checking the map and the position](/try/check-map/) | Compare the map and the true position, the odometry and the SLAM estimate | the same |
+| [4. Autonomous navigation](/try/navigation/) | Combine localization, path planning and local planning, and give a goal on the screen | mobile_sim, localization_amcl, planner_dijkstra, planner_dwa, navigation_hub, navigation_manager |
+| [5. Driving on your own map](/try/own-map/) | Distribute the map from page 2 and navigate on it | the same |
+| [6. Looking inside navigation](/try/inside/) | Look at the shape of the tree, the topic relays, the global path and the local plan | the same |
+
+## The apps
+
+All of them are published by OpenJUIZ. All but navigation_manager are `.juizapp` packages.
+
+| App | Role | Screen |
+| --- | --- | --- |
+| mobile_sim | A simulator of a mobile robot on a plane. Publishes LiDAR scans and odometry | http://localhost:8000/ |
+| teleop_twist | Reads a keyboard or a gamepad in the browser and publishes velocity commands | http://localhost:8002/ |
+| mapper_gmapping | Estimates a map and the robot's position from scans and odometry with GMapping | http://localhost:8001/ |
+| localization_amcl | Estimates the robot's position on a map with AMCL (a particle filter) | http://localhost:8002/ |
+| planner_dijkstra | Finds the route to the goal (the global path) with Dijkstra's algorithm | http://localhost:8003/ |
+| planner_dwa | Computes velocity commands that follow the global path and avoid obstacles, with DWA | http://localhost:8004/ |
+| navigation_hub | Puts the navigation apps into one tree and relays topics | http://localhost:8006/ |
+| navigation_manager | Takes a goal, has a path planned and followed, and decides when the robot has arrived (Python, installed with pip) | http://localhost:8005/ |
+
+teleop_twist and localization_amcl both use port 8002, so you swap them between the first half (pages 1–3) and the second half (pages 4–6).
+
+The screens of these apps are in Japanese. These pages give the English meaning of the labels you need.
+
+## Setup
+
+<Steps>
+
+1. Install the `juiz` command and navigation_manager with pip.
+
+   ```sh
+   pip install juiz-cli==0.2.11 navigation-manager==0.3.4
+   ```
+
+   This gives you two commands, `juiz` and `navigation-manager`.
+   mapper_gmapping 0.4.2 and localization_amcl 0.1.3 are C++ apps whose packages say `juiz: "=0.2.11"`, so they start only with juiz 0.2.11. Use exactly these versions.
+
+2. Make a working directory. You start every app from this directory, and the map you build is saved here.
+
+   ```sh
+   mkdir try_juiz
+   cd try_juiz
+   ```
+
+3. Download the seven `.juizapp` packages into the working directory, either with the "Download" links in the table below or with the commands under it.
+
+   | App | Download | Published at |
+   | --- | --- | --- |
+   | mobile_sim | [mobile_sim-0.3.5.juizapp](https://github.com/OpenJUIZ/mobile_sim/releases/download/v0.3.5/mobile_sim-0.3.5.juizapp) | [Release v0.3.5](https://github.com/OpenJUIZ/mobile_sim/releases/tag/v0.3.5) · [repository](https://github.com/OpenJUIZ/mobile_sim) |
+   | teleop_twist | [teleop_twist-0.1.0.juizapp](https://github.com/OpenJUIZ/teleop_twist/releases/download/v0.1.0/teleop_twist-0.1.0.juizapp) | [Release v0.1.0](https://github.com/OpenJUIZ/teleop_twist/releases/tag/v0.1.0) · [repository](https://github.com/OpenJUIZ/teleop_twist) |
+   | mapper_gmapping | [mapper_gmapping-0.4.2.juizapp](https://github.com/OpenJUIZ/mapper_gmapping/releases/download/v0.4.2/mapper_gmapping-0.4.2.juizapp) | [Release v0.4.2](https://github.com/OpenJUIZ/mapper_gmapping/releases/tag/v0.4.2) · [repository](https://github.com/OpenJUIZ/mapper_gmapping) |
+   | localization_amcl | [localization_amcl-0.1.3.juizapp](https://github.com/OpenJUIZ/localization_amcl/releases/download/v0.1.3/localization_amcl-0.1.3.juizapp) | [Release v0.1.3](https://github.com/OpenJUIZ/localization_amcl/releases/tag/v0.1.3) · [repository](https://github.com/OpenJUIZ/localization_amcl) |
+   | planner_dijkstra | [planner_dijkstra-0.2.2.juizapp](https://github.com/OpenJUIZ/planner_dijkstra/releases/download/v0.2.2/planner_dijkstra-0.2.2.juizapp) | [Release v0.2.2](https://github.com/OpenJUIZ/planner_dijkstra/releases/tag/v0.2.2) · [repository](https://github.com/OpenJUIZ/planner_dijkstra) |
+   | planner_dwa | [planner_dwa-0.1.2.juizapp](https://github.com/OpenJUIZ/planner_dwa/releases/download/v0.1.2/planner_dwa-0.1.2.juizapp) | [Release v0.1.2](https://github.com/OpenJUIZ/planner_dwa/releases/tag/v0.1.2) · [repository](https://github.com/OpenJUIZ/planner_dwa) |
+   | navigation_hub | [navigation_hub-0.3.4.juizapp](https://github.com/OpenJUIZ/navigation_manager/releases/download/v0.3.4/navigation_hub-0.3.4.juizapp) | [Release v0.3.4](https://github.com/OpenJUIZ/navigation_manager/releases/tag/v0.3.4) · [repository](https://github.com/OpenJUIZ/navigation_manager) |
+
+   <Tabs syncKey="platform">
+   <TabItem label="Linux">
+
+   ```sh
+   for u in \
+       mobile_sim/releases/download/v0.3.5/mobile_sim-0.3.5.juizapp \
+       teleop_twist/releases/download/v0.1.0/teleop_twist-0.1.0.juizapp \
+       mapper_gmapping/releases/download/v0.4.2/mapper_gmapping-0.4.2.juizapp \
+       localization_amcl/releases/download/v0.1.3/localization_amcl-0.1.3.juizapp \
+       planner_dijkstra/releases/download/v0.2.2/planner_dijkstra-0.2.2.juizapp \
+       planner_dwa/releases/download/v0.1.2/planner_dwa-0.1.2.juizapp \
+       navigation_manager/releases/download/v0.3.4/navigation_hub-0.3.4.juizapp
+   do curl -fLO "https://github.com/OpenJUIZ/$u"; done
+   ```
+
+   </TabItem>
+   <TabItem label="macOS">
+
+   ```sh
+   for u in \
+       mobile_sim/releases/download/v0.3.5/mobile_sim-0.3.5.juizapp \
+       teleop_twist/releases/download/v0.1.0/teleop_twist-0.1.0.juizapp \
+       mapper_gmapping/releases/download/v0.4.2/mapper_gmapping-0.4.2.juizapp \
+       localization_amcl/releases/download/v0.1.3/localization_amcl-0.1.3.juizapp \
+       planner_dijkstra/releases/download/v0.2.2/planner_dijkstra-0.2.2.juizapp \
+       planner_dwa/releases/download/v0.1.2/planner_dwa-0.1.2.juizapp \
+       navigation_manager/releases/download/v0.3.4/navigation_hub-0.3.4.juizapp
+   do curl -fLO "https://github.com/OpenJUIZ/$u"; done
+   ```
+
+   </TabItem>
+   <TabItem label="Windows">
+
+   ```powershell
+   @(
+       'mobile_sim/releases/download/v0.3.5/mobile_sim-0.3.5.juizapp',
+       'teleop_twist/releases/download/v0.1.0/teleop_twist-0.1.0.juizapp',
+       'mapper_gmapping/releases/download/v0.4.2/mapper_gmapping-0.4.2.juizapp',
+       'localization_amcl/releases/download/v0.1.3/localization_amcl-0.1.3.juizapp',
+       'planner_dijkstra/releases/download/v0.2.2/planner_dijkstra-0.2.2.juizapp',
+       'planner_dwa/releases/download/v0.1.2/planner_dwa-0.1.2.juizapp',
+       'navigation_manager/releases/download/v0.3.4/navigation_hub-0.3.4.juizapp'
+   ) | ForEach-Object { Invoke-WebRequest "https://github.com/OpenJUIZ/$_" -OutFile ($_ -split '/')[-1] }
+   ```
+
+   </TabItem>
+   </Tabs>
+
+   Every package contains plugins for Linux (x86_64, arm64), macOS (Intel, Apple silicon), and Windows (x86_64).
+
+4. Check with SHA-256 that the downloaded files are not broken or replaced (see "Checking the SHA-256" below).
+
+</Steps>
+
+### Checking the SHA-256
+
+These are the SHA-256 hashes of the seven files. Save this content in the working directory as a file named `SHA256SUMS`.
+
+```text title="SHA256SUMS"
+a6aebb0aa9b1e625c95669fcc3c880816629f721e11e342e7ee3b44425c9efa7  mobile_sim-0.3.5.juizapp
+e58f32abaf0db9690d8b13cf42f43efdf6cc9b1831795a9d1704eadb136c88a5  teleop_twist-0.1.0.juizapp
+64b13b909f13e25fc637302bd9f136c8b5a66d7e5a9578682f5514166f0082e8  mapper_gmapping-0.4.2.juizapp
+f9ace568fe7d689f2d15e9ebdac59ceadd5565e9cdd5fba9cb6aa2e50f0bebbd  localization_amcl-0.1.3.juizapp
+0e8dcf40996579c27bab59c545c336b0cc5935e9a4143c986bc862e93ed7d59d  planner_dijkstra-0.2.2.juizapp
+f14a4d4a511ddae7520d0e361a34d1d9060b38bf87c08e7aaf3104584c4725fc  planner_dwa-0.1.2.juizapp
+ae0c992f1ca0808e51df5dad3cd6df3396e8af4460b6debdc9f166ae86526327  navigation_hub-0.3.4.juizapp
+```
+
+Then check them with this command.
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+sha256sum -c SHA256SUMS
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+shasum -a 256 -c SHA256SUMS
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+Get-Content SHA256SUMS | ForEach-Object {
+    $hash, $file = $_ -split '\s+'
+    if ((Get-FileHash $file -Algorithm SHA256).Hash -eq $hash) { "${file}: OK" } else { "${file}: FAILED" }
+}
+```
+
+</TabItem>
+</Tabs>
+
+If all seven lines say `OK`, you are fine. Delete any file that says `FAILED` and download it again.
+
+<Aside type="note" title="Where these values come from">
+The Releases do not include a checksum file such as `SHA256SUMS`.
+The values above are the same SHA-256 that GitHub shows next to each file on the Release page (follow the "Release" links in the table).
+When you download a newer version, compare against the values on that version's Release page.
+
+`juiz run` also checks, when it unpacks a package, that the files inside match the SHA-256 listed in its `juizapp.yaml`. That only tells you the contents of the package are complete; whether the package itself has been replaced is what the check on this page tells you.
+</Aside>
+
+## Terminals
+
+You use up to four terminals. Open all of them in the working directory (if you installed with pip into a venv, activate the venv in every terminal).
+
+| Terminal | Pages 1–3 (building the map) | Pages 4–6 (navigation) |
+| --- | --- | --- |
+| 1 | mobile_sim | the stack (`navigation-manager stack`) |
+| 2 | teleop_twist | looking inside with the `juiz` command and others |
+| 3 | mapper_gmapping | not used |
+| 4 | looking inside with the `juiz` command | not used |
+
+<Aside type="note" title="Chapters worth reading">
+You can follow along just by typing the commands, but these chapters help you understand what is going on.
+
+- [Chapter 4, Connecting Processes in separate processes](/tutorial/multi-process/): topics, subsystems and IDs
+- [Chapter 5, Connecting several libraries in one juiz](/tutorial/connect/): Execution Contexts
+- [Chapter 8, Data types](/tutorial/datatype/): types such as `Twist2D`
+- [Guide: Transformations](/guides/transformations/): Anchors and Transforms
+- [Guide: App packages (.juizapp)](/guides/app-package/): `juiz run` and `depends`
+</Aside>
+
+When you are ready, go on to [1. Driving the robot](/try/drive/).
