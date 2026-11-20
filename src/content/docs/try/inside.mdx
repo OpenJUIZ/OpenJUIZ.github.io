@@ -1,11 +1,11 @@
 ---
-title: 3. Looking inside
+title: 6. Looking inside navigation
 description: Use the juiz command and the screens of the apps to look at the shape of the tree, the topic relays, the global path and the size of the robot, the parameters of the local planner and localization, and make things fail on purpose.
 sidebar:
-  order: 3
+  order: 6
 prev:
-  link: /exercises/navigation/own-map/
-  label: 2. Driving on your own map
+  link: /try/own-map/
+  label: 5. Driving on your own map
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -28,7 +28,7 @@ juiz -s http://localhost:8006 container list
 - Under `ipc://localization_amcl/...` you see localization_amcl's own `amcl0`, `map` and `amcl_odom0`, and also `sim0`, `robot0` and others of mobile_sim connected below it. Seen from navigation_hub, mobile_sim is "a subsystem of a subsystem".
 - `ipc://planner_dijkstra/...` and `ipc://planner_dwa/...` are direct subsystems of navigation_hub.
 
-As in the figure in the [overview](/exercises/navigation/), it is one tree with navigation_hub as the root.
+As in the figure in the [overview](/try/navigation/), it is one tree with navigation_hub as the root.
 
 ## The topic relays
 
@@ -59,7 +59,7 @@ Through the relays at the root, apps on different branches are connected by topi
 
 Open the planner_dijkstra screen (http://localhost:8003/) and give a goal on the navigation_manager screen.
 
-![The planner_dijkstra screen. On the left, a map where walls and pillars are surrounded by dark gray and light gray bands, and a blue path through the middle of the doorway; on the right, controls for the goal and the map, and results such as the path length and the size of the robot](../../../../assets/exercises/navigation/planner.png)
+![The planner_dijkstra screen. On the left, a map where walls and pillars are surrounded by dark gray and light gray bands, and a blue path through the middle of the doorway; on the right, controls for the goal and the map, and results such as the path length and the size of the robot](../../../assets/try/navigation/planner.png)
 
 planner_dijkstra finds the path with Dijkstra's algorithm on a map whose obstacles are inflated by the size of the robot (a costmap). While 膨らませた地図を表示 (show the inflated map) is checked (the default), the screen draws that map.
 
@@ -93,7 +93,7 @@ Values given as `null` are kept. The settings after the change come back as the 
 
 Open the planner_dwa screen (http://localhost:8004/) and give a goal on the navigation_manager screen.
 
-![The planner_dwa screen. On the left, the blue global path, gray candidate trajectories fanning out from the robot, the green chosen trajectory and red scan points; on the right, parameter sliders and the state](../../../../assets/exercises/navigation/dwa.png)
+![The planner_dwa screen. On the left, the blue global path, gray candidate trajectories fanning out from the robot, the green chosen trajectory and red scan points; on the right, parameter sliders and the state](../../../assets/try/navigation/dwa.png)
 
 DWA tries many velocity pairs (forward speed and turning speed) within what the robot can reach from its current velocity, and draws the trajectory of each a little ahead (`sim_time` seconds).
 Among them it picks one that does not collide, stays close to the global path and gets closer to the goal.
@@ -162,4 +162,4 @@ To recover, press 初期位置を真の姿勢に (set the initial pose to the tr
 - DWA tries candidate trajectories and picks a velocity. You can change its parameters on the screen or with `dwa_set_params`.
 - planner_dijkstra plans on a map whose obstacles are inflated by the size of the robot, so paths keep away from walls and the corners of the doorway. You can change how much with `planner_set_inflation`.
 
-This is the end of the autonomous navigation exercise. Go back to the [list of exercises](/exercises/), or read how the apps are built in their repositories.
+This is the end of the walkthrough. Read how the apps are built in their repositories (linked from the table in [Overview and setup](/try/)), or write your own Process in the [tutorial](/tutorial/).

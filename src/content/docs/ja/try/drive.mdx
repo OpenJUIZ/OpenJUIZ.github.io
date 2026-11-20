@@ -4,10 +4,10 @@ description: mobile_sim でシミュレータを起動し、teleop_twist から�
 sidebar:
   order: 1
 prev:
-  link: /ja/exercises/slam/
+  link: /ja/try/
   label: 概要と準備
 next:
-  link: /ja/exercises/slam/mapping/
+  link: /ja/try/mapping/
   label: 2. 地図を作る
 ---
 
@@ -17,23 +17,23 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## シミュレータを起動する
 
-ターミナル 1 で mobile_sim を起動します(`<版>` は取ってきたファイルの版に読み替えてください)。
+ターミナル 1 で mobile_sim を起動します。
 
 ```sh
-juiz run mobile_sim-<版>.juizapp
+juiz run mobile_sim-0.3.5.juizapp
 ```
 
 `juiz run` はパッケージを確かめて展開し、中の設定ファイルで juiz を起動します。
 ブラウザで http://localhost:8000/ を開くと、シミュレータの画面が出ます。
 
-![mobile_sim の画面。左に 10 m 四方の部屋の地図とロボット、右に操作パッドと状態の欄が並ぶ](../../../../../assets/exercises/slam/sim.png)
+![mobile_sim の画面。左に 10 m 四方の部屋の地図とロボット、右に操作パッドと状態の欄が並ぶ](../../../../assets/try/slam/sim.png)
 
 - 白い所が床、黒い所が壁や柱です。部屋は真ん中の壁で 2 つに分かれていて、出入口でつながっています。
 - 緑の丸がロボット `robot0` です。ロボットには LiDAR `lidar0` が載っていて、周りの壁までの距離を測っています(「LiDAR の光線を描く」で見られます)。
 - 茶色の点線の丸は、**オドメトリ**(車輪の回転から求めた位置)が思っているロボットの位置です。今は真の位置と重なっていますが、走るとずれていきます。
 
 <Aside type="caution" title="この画面の操作パッドは使いません">
-mobile_sim の画面にもキー操作と操作パッドがありますが、この演習では次の teleop_twist から動かします。
+mobile_sim の画面にもキー操作と操作パッドがありますが、ここでは次の teleop_twist から動かします。
 両方から同時に指令を出すとぶつかるので、mobile_sim の画面ではキーを押さないようにしてください(画面を見るのはかまいません)。
 </Aside>
 
@@ -42,7 +42,7 @@ mobile_sim の画面にもキー操作と操作パッドがありますが、こ
 ターミナル 2 で teleop_twist を起動します。
 
 ```sh
-juiz run teleop_twist-<版>.juizapp
+juiz run teleop_twist-0.1.0.juizapp
 ```
 
 teleop_twist は mobile_sim に依存すると宣言しているので、`juiz run` は動いている mobile_sim を IPC の名前 `mobile_sim` で探し、版を確かめてからつなぎます。
@@ -50,7 +50,7 @@ mobile_sim が動いていないと、ここでエラーになって起動しま
 
 ブラウザで http://localhost:8002/ を開きます。
 
-![teleop_twist の画面。左に丸い操作パッドと停止ボタン、右に速度の倍率・出している速度・ゲームパッドの状態・操作の一覧が並ぶ](../../../../../assets/exercises/slam/teleop.png)
+![teleop_twist の画面。左に丸い操作パッドと停止ボタン、右に速度の倍率・出している速度・ゲームパッドの状態・操作の一覧が並ぶ](../../../../assets/try/slam/teleop.png)
 
 ## キーボードかゲームパッドで動かす
 
@@ -124,4 +124,4 @@ juiz anchor tree odom0
 - teleop_twist は速度 `Twist2D` をトピック `cmd_vel` に出し、mobile_sim がそれを購読してロボットを動かします。
 - ロボットの真の位置は `world` から、オドメトリは `odom0` から見た ContainerPose として読めます。オドメトリは走るほどずれていきます。
 
-次は [2. 地図を作る](/ja/exercises/slam/mapping/) です。mobile_sim と teleop_twist は動かしたままにしておいてください。
+次は [2. 地図を作る](/ja/try/mapping/) です。mobile_sim と teleop_twist は動かしたままにしておいてください。

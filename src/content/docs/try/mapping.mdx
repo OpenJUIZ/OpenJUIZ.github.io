@@ -4,10 +4,10 @@ description: Start mapper_gmapping, drive the robot all around the room to build
 sidebar:
   order: 2
 prev:
-  link: /exercises/slam/simulator/
+  link: /try/drive/
   label: 1. Driving the robot
 next:
-  link: /exercises/slam/check/
+  link: /try/check-map/
   label: 3. Checking the map and the position
 ---
 
@@ -21,7 +21,7 @@ Because you drove the robot on the previous page, the odometry has already drift
 The SLAM map starts from the odometry at the moment mapper_gmapping starts working, so stop and restart the apps to begin from a clean state.
 
 1. Press Ctrl+C to stop teleop_twist in terminal 2, then mobile_sim in terminal 1.
-2. Run `juiz run mobile_sim-<version>.juizapp` in terminal 1 and `juiz run teleop_twist-<version>.juizapp` in terminal 2 again.
+2. Run `juiz run mobile_sim-0.3.5.juizapp` in terminal 1 and `juiz run teleop_twist-0.1.0.juizapp` in terminal 2 again.
 3. Reload the mobile_sim and teleop_twist screens in the browser. The robot is back at its initial position.
 
 From here on, do not move the robot until you have started mapper_gmapping.
@@ -31,7 +31,7 @@ From here on, do not move the robot until you have started mapper_gmapping.
 Start mapper_gmapping in terminal 3.
 
 ```sh
-juiz run mapper_gmapping-<version>.juizapp
+juiz run mapper_gmapping-0.4.2.juizapp
 ```
 
 mapper_gmapping also declares that it depends on mobile_sim, so like teleop_twist, it finds the running mobile_sim and connects.
@@ -47,7 +47,7 @@ The mapper_gmapping screen also has a pad, "操作(mobile_sim)" (*control mobile
 
 Drive the robot all around the room from the teleop_twist screen. As it moves, the map on the mapper_gmapping screen grows.
 
-![The mapper_gmapping screen. After one lap of the room, the map shows the walls, the pillars, and the round obstacle, with the estimated path drawn as an orange line](../../../../assets/exercises/slam/mapper.png)
+![The mapper_gmapping screen. After one lap of the room, the map shows the walls, the pillars, and the round obstacle, with the estimated path drawn as an orange line](../../../assets/try/slam/mapper.png)
 
 How to read the screen:
 
@@ -75,7 +75,7 @@ If walls get blurry or doubled, press "地図を捨てて最初から" (*discard
 ## Save the map
 
 When the map is done, check the "保存先" (*save to*) field on the screen (the default is `map`) and press "地図を保存" (*save map*).
-Two files appear in the directory where you started mapper_gmapping (the working directory `slam_exercise`).
+Two files appear in the directory where you started mapper_gmapping (the working directory `try_juiz`).
 
 | File | Contents |
 | --- | --- |
@@ -114,4 +114,4 @@ Odometry and scans of the same time arrive together, so mapper_gmapping can pile
 - Drive slowly, and come back to the start to close the loop for a clean map.
 - "地図を保存" (*save map*) saves the map in the same format as ROS map_server (YAML + PNG).
 
-Next is [3. Checking the map and the position](/exercises/slam/check/). Keep all three apps running.
+Next is [3. Checking the map and the position](/try/check-map/). Keep all three apps running.
