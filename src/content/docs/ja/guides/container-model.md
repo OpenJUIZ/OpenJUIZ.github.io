@@ -1,6 +1,6 @@
 ---
 title: 3D モデル
-description: Container に 3D モデルのファイル(.glb・.stl・手書きの SDF)を付け、API・CLI・pyjuiz で取り出し、管理画面の 3D 表示で位置姿勢のとおりに見ます。
+description: Container に 3D モデルのファイル(.glb・.stl・手書きの SDF)を付け、API・CLI・pyjuiz で取り出し、管理画面の 3D 表示で位置姿勢のとおりに見ます。URDF・SDF の取り込みと実行中の差し替えもできます。
 sidebar:
   order: 11.5
 ---
@@ -337,11 +337,83 @@ for c in system.containers():           # ContainerProxy からも
 
 モデルのファイルは、パッケージのディレクトリに置けば [`juiz pack`](/ja/guides/app-package/) でそのまま入ります。pack のときに、entry の設定ファイルの `model.path` が**パッケージの中を指していること**(`..` で外に出ない、絶対パスでない)と、そのファイルが pack に入ることを確かめ、起動時と同じ検査も通します。`juiz run` は展開した先の設定ファイルから読むので、相対パスはそのまま解決されます。
 
+## ロボットの記述を取り込む: juiz import
+
+URDF や、複数の link と joint を持つ SDF から、Container と Transform とモデルをそろえた設定ファイルを書き出します(juiz 0.3.1 から)。System は起動しません。
+
+```sh
+juiz import urdf arm.urdf -o arm.conf
+# wrote: arm.conf (2 model file(s), 0 mesh copy(ies))
+juiz -f arm.conf
+```
+
+```yaml
+# arm.conf (抜粋)
+containers:
+  - type_name: static_anchor
+    name: "base_link"
+    model:
+      path: "models/arm/base_link.sdf"
+  - type_name: frame
+    name: "upper_arm"
+    model:
+      path: "models/arm/upper_arm.sdf"
+transforms:
+  # joint "shoulder": revolute, axis [0, 1, 0], limit [-1.57, 1.57]
+  - source: "base_link"
+    destination: "upper_arm"
+    translation: {x: 0, y: 0, z: 0.02}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+```
+
+| ロボットの記述 | 設定ファイル |
+|---|---|
+| link | Container。型は組み込みの `frame`(プラグインの要らない、座標系だけの Container)。根の link は `static_anchor` |
+| joint | Transform(parent → child)。値は**関節の値が 0 のときの位置**。種類・軸・範囲は上のコメントに残す |
+| visual | `model:`。メッシュ 1 つならそのファイルを指し、基本形や複数の visual は link ごとの SDF を書き出して指す |
+
+- 関節を動かすときは、Transform の値を書き換えます([Transformations](/ja/guides/transformations/) の `set_pose`・`set_transform` など)。juiz は関節の種類・軸・範囲を持ちません。
+- 動かしたい link は、取り込んだ後で `type_name` を自分の Container の型に書き換えてかまいません(Transform と model はそのまま使えます)。`frame` には ContainerProcess を付けられません。
+- `package://` は `--package-path <パッケージ>=<ディレクトリ>`・`ROS_PACKAGE_PATH`・`AMENT_PREFIX_PATH` から、`model://` は `--model-path`・`GZ_SIM_RESOURCE_PATH` などから探します。
+- `--anchor <名前>` で Anchor を足してその下に根の link を付けます。`--namespace <ns>` で全部の Container にネームスペースを付けます。
+- `--copy-meshes` でメッシュを `models/<ロボット>/meshes/` に写すと、設定ファイルとモデルが 1 つのディレクトリにそろい、そのまま [.juizapp](/ja/guides/app-package/) にできます。
+- 書き出す先にファイルがあれば何も書かずにエラーです(`--force` で上書き)。xacro は先に `xacro robot.urdf.xacro > robot.urdf` で URDF にしてください。
+- .dae・.obj のメッシュは指せますが、管理画面では表示しません(.glb に変換してください)。`<collision>`・`<inertial>`・`<sensor>`・`<plugin>` などは読みません。
+
+## 実行中に差し替える
+
+把持で形が変わるときなど、実行中に Container のモデルを差し替えられます(juiz 0.3.1 から)。送るのはファイルの中身で、パスは送れません。差し替えると SHA-256 が変わり、管理画面の 3D 表示は次の更新で新しいモデルを取り直します。
+
+```sh
+juiz container set-model gripper0 models/gripper_closed.glb
+juiz container set-model camera0 models/camera.stl --scale 0.001 --color "#333333"
+juiz container set-model gripper0 --clear      # モデルを外す
+```
+
+```python
+# pyjuiz のクライアントから
+system.set_model('gripper0', open('gripper_closed.glb', 'rb').read())
+system.clear_model('gripper0')
+
+# Python の ContainerProcess から
+import juiz
+
+@juiz.juiz_container_process(container_type='gripper')
+def close(container) -> dict:
+    return juiz.set_model(container, CLOSED_GLB, format='glb')   # 差し替えた後のモデル情報
+```
+
+- Rust の ContainerProcess からは `container.set_model(&data, "glb", &Value::Null)`・`clear_model()` です。C++・Haskell・Rust の C ABI プラグインからはまだ差し替えられません。
+- HTTP は `PATCH /api/container/set_model?identifier=…` に `{"model": {"data": "<base64>", "format": "glb", ...}}` を送ります。`scale`・`origin`・`up_axis`・`color`・`file_name` は設定ファイルの `model:` と同じです。`null` を送ると外します。
+- 値が正しくないときは `ContainerModelInvalidError`(HTTP では 400)で、今のモデルは変わりません。
+- 差し替えたモデルはメモリに持ち、System を止めると残りません(設定ファイルは書き換えません)。外した後は、設定ファイルや型の既定のモデルにも戻りません。
+- サブシステムの Container も、親の System から差し替えられます。readonly の ContainerProcess からは差し替えられません。
+
 ## エラー
 
 | エラー | いつ |
 |---|---|
-| `ContainerModelInvalidError` | `model` のキーの型・値の誤り、上限超え、形式の確かめに合わない、API の `container/create` に `model` |
+| `ContainerModelInvalidError` | `model` のキーの型・値の誤り、上限超え、形式の確かめに合わない、API の `container/create` に `model`、`container/set_model` の値の誤り |
 | `ContainerModelFileNotFoundError` | `path` のファイルが無い・開けない(起動時、取り出し時) |
 | `ContainerHasNoModelError` | モデルの無い Container に `container/model` |
 
@@ -351,8 +423,9 @@ HTTP では `ContainerModelFileNotFoundError` と `ContainerHasNoModelError` が
 
 - 1 つの Container に複数のモデル(見た目用・当たり判定用など)。
 - 複数のファイルからなるモデル(外部ファイルを参照する .gltf、SDF の `<mesh>`)の表示。
-- 実行中のモデルの差し替えや、API からのモデルの指定。
-- URDF や、関節を持つ SDF の取り込み(link を Container、joint を Transform にする変換)。
+- 差し替えたモデルを System を止めた後まで残すこと、ファイルのパスでの差し替え。
+- C++・Haskell・Rust の C ABI プラグインの ContainerProcess からの差し替え。
+- 関節の種類・軸・範囲を juiz が持つこと(取り込みではコメントに残すだけです)。
 
 ## サンプル
 

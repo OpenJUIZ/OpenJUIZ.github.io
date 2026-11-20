@@ -337,11 +337,83 @@ With [Transforms across Systems](/guides/transformations/#transforms-across-syst
 
 Put the model files in the package directory and [`juiz pack`](/guides/app-package/) includes them as they are. While packing, it checks that each `model.path` in the entry configuration file **points inside the package** (no `..` out of it, no absolute path) and that the file is packed, and runs the same checks as at startup. `juiz run` reads the configuration file from where the package was unpacked, so relative paths resolve as they are.
 
+## Importing a robot description: juiz import
+
+From a URDF, or an SDF with several links and joints, juiz writes a configuration file with the Containers, Transforms and models (from juiz 0.3.1). It does not start a System.
+
+```sh
+juiz import urdf arm.urdf -o arm.conf
+# wrote: arm.conf (2 model file(s), 0 mesh copy(ies))
+juiz -f arm.conf
+```
+
+```yaml
+# arm.conf (excerpt)
+containers:
+  - type_name: static_anchor
+    name: "base_link"
+    model:
+      path: "models/arm/base_link.sdf"
+  - type_name: frame
+    name: "upper_arm"
+    model:
+      path: "models/arm/upper_arm.sdf"
+transforms:
+  # joint "shoulder": revolute, axis [0, 1, 0], limit [-1.57, 1.57]
+  - source: "base_link"
+    destination: "upper_arm"
+    translation: {x: 0, y: 0, z: 0.02}
+    rotation: {x: 0, y: 0, z: 0, w: 1}
+```
+
+| Robot description | Configuration file |
+|---|---|
+| link | A Container of the built-in type `frame` (a coordinate frame only; no plugin needed). The root link is a `static_anchor` |
+| joint | A Transform (parent → child) with the **pose at joint value 0**. The kind, axis and limits are kept in the comment above it |
+| visual | `model:`. A single mesh points to that file; primitives or several visuals are written to one SDF per link |
+
+- To move a joint, rewrite the Transform's value (`set_pose`, `set_transform` and so on in [Transformations](/guides/transformations/)). juiz does not keep the joint kind, axis or limits.
+- After importing, you may change the `type_name` of a link you want to drive to your own Container type (the Transforms and model still work). A `frame` cannot have ContainerProcesses.
+- `package://` is looked up with `--package-path <package>=<dir>`, `ROS_PACKAGE_PATH` and `AMENT_PREFIX_PATH`; `model://` with `--model-path`, `GZ_SIM_RESOURCE_PATH` and similar.
+- `--anchor <name>` adds an Anchor with the root link under it. `--namespace <ns>` puts all Containers in a namespace.
+- `--copy-meshes` copies the meshes to `models/<robot>/meshes/`, so the configuration file and the models are in one directory and can go into a [.juizapp](/guides/app-package/) as they are.
+- If any output file exists, nothing is written and it is an error (`--force` overwrites). Run xacro first: `xacro robot.urdf.xacro > robot.urdf`.
+- .dae and .obj meshes can be referenced but the web UI does not show them (convert them to .glb). `<collision>`, `<inertial>`, `<sensor>`, `<plugin>` and the like are not read.
+
+## Replacing a model at run time
+
+You can replace a Container's model while juiz runs, for example when a gripper changes shape (from juiz 0.3.1). You send the file's contents, not a path. The SHA-256 changes, and the web UI's 3D view fetches the new model on its next update.
+
+```sh
+juiz container set-model gripper0 models/gripper_closed.glb
+juiz container set-model camera0 models/camera.stl --scale 0.001 --color "#333333"
+juiz container set-model gripper0 --clear      # remove the model
+```
+
+```python
+# From a pyjuiz client
+system.set_model('gripper0', open('gripper_closed.glb', 'rb').read())
+system.clear_model('gripper0')
+
+# From a Python ContainerProcess
+import juiz
+
+@juiz.juiz_container_process(container_type='gripper')
+def close(container) -> dict:
+    return juiz.set_model(container, CLOSED_GLB, format='glb')   # the new model info
+```
+
+- From a Rust ContainerProcess, use `container.set_model(&data, "glb", &Value::Null)` and `clear_model()`. C++, Haskell and Rust C ABI plugins cannot replace models yet.
+- Over HTTP, send `{"model": {"data": "<base64>", "format": "glb", ...}}` to `PATCH /api/container/set_model?identifier=…`. `scale`, `origin`, `up_axis`, `color` and `file_name` are the same as in the configuration file's `model:`. Sending `null` removes the model.
+- A wrong value gives `ContainerModelInvalidError` (400 over HTTP), and the current model stays.
+- A replaced model lives in memory and is gone when the System stops (the configuration file is not changed). After removing it, the Container does not go back to the configuration file's or the type's default model.
+- Containers of a subsystem can be replaced through the parent System. A readonly ContainerProcess cannot replace models.
+
 ## Errors
 
 | Error | When |
 |---|---|
-| `ContainerModelInvalidError` | Wrong type or value of a `model` key, over the size limit, the format check fails, or `model` given to the `container/create` API |
+| `ContainerModelInvalidError` | Wrong type or value of a `model` key, over the size limit, the format check fails, `model` given to the `container/create` API, or a wrong value for `container/set_model` |
 | `ContainerModelFileNotFoundError` | The `path` file is missing or cannot be opened (at startup or when fetched) |
 | `ContainerHasNoModelError` | `container/model` on a Container without a model |
 
@@ -351,8 +423,9 @@ Over HTTP, `ContainerModelFileNotFoundError` and `ContainerHasNoModelError` are 
 
 - Several models per Container (one for display, one for collision, and so on).
 - Showing models made of several files (a .gltf that references external files, SDF `<mesh>`).
-- Replacing a model at run time, or setting a model through the API.
-- Importing URDF or SDF with joints (turning links into Containers and joints into Transforms).
+- Keeping a replaced model after the System stops, or replacing a model by file path.
+- Replacing a model from a ContainerProcess of a C++, Haskell or Rust C ABI plugin.
+- Keeping joint kinds, axes and limits in juiz (an import only keeps them as comments).
 
 ## Samples
 
