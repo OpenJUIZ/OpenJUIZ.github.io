@@ -42,6 +42,7 @@ The UI labels are in Japanese, with the English names used in the API and on thi
 |---|---|
 | 系 | System |
 | 副系 | Subsystem (juiz in another process) |
+| 親系 | Master system (juiz that has this System as its subsystem) |
 | 処理 | Process |
 | 容器 | Container |
 | 容器処理 | ContainerProcess |
@@ -108,6 +109,8 @@ For example, start listener on port 8000 and talker on port 8001 (with the same 
 - A connection is listed under the System of the Process that sends the value. A connection seen from both Systems is shown only once.
 
 Subsystems registered through brokers other than HTTP, such as the IPC broker ([Chapter 7](/tutorial/ipc-broker/)) and the QUIC broker, are shown the same way.
+
+From juiz 0.3.0, the web UI follows every connected juiz no matter which way the parent/child link points. In the example above, opening `/ui/` of talker on port 8001 also shows listener, as 親系 (Master system). For a base and its apps started with `juiz run` (for example mobile_sim with mapper_gmapping and teleop_twist), the base's `/ui/` shows all the apps too. Even when the juiz are connected in a loop, each one is shown only once.
 
 ## Settings
 

@@ -41,7 +41,7 @@ mkdir juiz_tutorial
 cd juiz_tutorial
 python3 -m venv .venv
 source .venv/bin/activate
-pip install juiz-cli==0.2.11
+pip install juiz-cli==0.3.0
 ```
 
 </TabItem>
@@ -52,7 +52,7 @@ mkdir juiz_tutorial
 cd juiz_tutorial
 python3 -m venv .venv
 source .venv/bin/activate
-pip install juiz-cli==0.2.11
+pip install juiz-cli==0.3.0
 ```
 
 </TabItem>
@@ -63,7 +63,7 @@ mkdir juiz_tutorial
 cd juiz_tutorial
 python -m venv .venv
 .venv\Scripts\activate
-pip install juiz-cli==0.2.11
+pip install juiz-cli==0.3.0
 ```
 
 </TabItem>
@@ -71,13 +71,13 @@ pip install juiz-cli==0.2.11
 
 ```sh
 juiz --version
-# => juiz 0.2.11
+# => juiz 0.3.0
 ```
 
 以降の手順は、この venv を有効にしたターミナルで実行してください。新しいターミナルを開いたら、`juiz_tutorial` で `source .venv/bin/activate`(Windows では `.venv\Scripts\activate`)を実行します。
 
 <Aside type="note" title="cargo で入れた juiz を使うとき">
-`cargo install juiz_app` で入れた `juiz` コマンドを使う場合は、`pip install juiz-cli==0.2.11` を飛ばしてください。このあとの `pip install -e .` で、Process を書くための pyjuiz だけが venv に入ります。
+`cargo install juiz_app` で入れた `juiz` コマンドを使う場合は、`pip install juiz-cli==0.3.0` を飛ばしてください。このあとの `pip install -e .` で、Process を書くための pyjuiz だけが venv に入ります。
 `juiz-cli` も入れると `juiz` コマンドが 2 つになり、どちらが動くかが PATH の順番で決まってしまいます。
 </Aside>
 
@@ -98,7 +98,7 @@ juiz pkg create my_juiz -b python -t process
 作ると、次に打つコマンドが表示されます(venv は上で作ったので、ここに表示される `python3 -m venv .venv` は飛ばしてかまいません)。
 
 ```text
-Created my_juiz (python, process) in ./my_juiz  [pyjuiz ==0.2.11]
+Created my_juiz (python, process) in ./my_juiz  [pyjuiz ==0.3.0]
 
 Next steps:
   cd my_juiz
@@ -264,7 +264,7 @@ description = "my_juiz: a juiz component"
 requires-python = ">=3.10"
 dependencies = [
     # Same version as the juiz that made this skeleton (juiz --version)
-    "pyjuiz==0.2.11",
+    "pyjuiz==0.3.0",
 ]
 
 [build-system]

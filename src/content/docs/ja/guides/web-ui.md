@@ -42,6 +42,7 @@ juiz -f increment_process.conf -d
 |---|---|
 | 系 | System |
 | 副系 | Subsystem(別プロセスの juiz) |
+| 親系 | Master system(この系をサブシステムにしている juiz) |
 | 処理 | Process |
 | 容器 | Container |
 | 容器処理 | ContainerProcess |
@@ -108,6 +109,8 @@ juiz に接続できなくなると、上部の状態が「未接続」になり
 - 接続は、出す側の処理がいる系の下に出ます。両方の系から見える接続も 1 本にまとめます。
 
 IPC ブローカー([第7章](/ja/tutorial/ipc-broker/))や QUIC ブローカーなど、HTTP 以外のブローカーで登録した副系も、同じように表示されます。
+
+juiz 0.3.0 からは、親子の向きに関係なく、つながっている juiz を全部たどって表示します。上の例で 8001 番の talker の `/ui/` を開いても、listener が「親系」として同じように出ます。`juiz run` で起動した基礎(例: mobile_sim)とアプリ(例: mapper_gmapping、teleop_twist)も、基礎の `/ui/` からアプリまで全部見えます。輪のようにつながっていても、同じ juiz は 1 度だけ出ます。
 
 ## 設定
 
