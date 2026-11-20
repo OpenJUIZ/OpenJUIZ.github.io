@@ -20,19 +20,25 @@ import { Aside } from '@astrojs/starlight/components';
 前のページでロボットを走らせた分、オドメトリはもう部屋の座標系 `world` からずれています。
 SLAM の地図は、mapper_gmapping が動き始めたときのオドメトリを出発点にするので、まっさらな状態から始めるために、一度止めて起動し直します。
 
-1. ターミナル 2 の teleop_twist、ターミナル 1 の mobile_sim の順に、Ctrl+C で止めます。
-2. ターミナル 1 で `juiz run mobile_sim-0.3.5.juizapp`、ターミナル 2 で `juiz run teleop_twist-0.1.0.juizapp` を、もう一度実行します。
+1. teleop_twist の窓、mobile_sim の窓の順に、窓を閉じるか Ctrl+C を押して止めます。
+2. `mobile_sim-0.3.6.juizapp`、`teleop_twist-0.1.1.juizapp` の順に、もう一度ダブルクリックします。どちらも前のページと同じ表示が出れば OK です。
 3. ブラウザの mobile_sim と teleop_twist の画面を再読み込みします。ロボットは最初の位置に戻っています。
 
 ここからは、mapper_gmapping を起動するまでロボットを動かさないでください。
 
 ## mapper_gmapping を起動する
 
-ターミナル 3 で mapper_gmapping を起動します。
+`mapper_gmapping-0.4.3.juizapp` をダブルクリックします。次のように出て止まれば OK です。
 
-```sh
-juiz run mapper_gmapping-0.4.2.juizapp
+```text
+Running mapper_gmapping 0.4.3 from …
+Close this window or press Ctrl+C to stop.
+juiz 管理画面: http://localhost:8001/ui/
+HTTP broker: http://127.0.0.1:8001/
+IPC broker: ipc://mapper_gmapping
 ```
+
+`error: mapper_gmapping 0.4.3 requires juiz =0.3.0, ...` と出たら、juiz の版が違います。[概要と準備](/ja/try/#使うアプリと準備) の手順 1 の版で入れ直してください。ほかの NG の見分け方は [うまく起動しなかったとき](/ja/try/#うまく起動しなかったときng) にあります。
 
 mapper_gmapping も mobile_sim に依存すると宣言しているので、teleop_twist と同じように、動いている mobile_sim を探してつなぎます。
 つながると、mobile_sim のトピック `scan`(LiDAR のスキャン)と `odom`(オドメトリ)を購読し始めます。
@@ -74,8 +80,8 @@ teleop_twist の画面からロボットを動かし、部屋じゅうを走ら�
 
 ## 地図を保存する
 
-地図ができたら、画面の「保存先」を確かめて(既定は `map`)、「地図を保存」を押します。
-mapper_gmapping を起動したディレクトリ(作業用のディレクトリ `try_juiz`)に、次の 2 つのファイルができます。
+地図ができたら、画面の右の「地図」の欄で「名前」を確かめて(既定は `map`)、「地図をダウンロード(YAML + PNG の zip)」を押します。
+ブラウザのダウンロード先に `map.zip` ができるので、中の 2 つのファイルを `try_juiz` に取り出します。
 
 | ファイル | 中身 |
 | --- | --- |
@@ -92,8 +98,11 @@ negate: 0
 ```
 
 これは ROS の map_server と同じ形式で、mobile_sim が読む地図とも同じ形式です。
-保存先にディレクトリを付けるとき(`maps/room` など)は、そのディレクトリを先に作っておいてください。
-「PNG をダウンロード」を押すと、画像だけをブラウザで保存することもできます。
+
+<Aside type="note" title="mapper の側に保存する">
+「mapper の側に保存」を押すと、mapper_gmapping が動いている機械の、mapper_gmapping のカレントディレクトリからの相対パス(「名前」の値)に 2 つのファイルを書きます。
+書いた場所は、ボタンの下に絶対パスで出ます。ダブルクリックで起動したときのカレントディレクトリは OS によって違い、ホームのフォルダになることもあるので、その場合は `try_juiz` に移してください。
+</Aside>
 
 ## 何が起きているか
 
@@ -112,6 +121,6 @@ mobile_sim は 1 周期(20 Hz)の中で、ロボットを進め、オドメト�
 
 - mapper_gmapping は mobile_sim のトピック `scan` と `odom` を購読して、地図と自己位置を推定します。
 - ゆっくり走らせ、出発点に戻ってループを閉じると、きれいな地図ができます。
-- 「地図を保存」で、ROS の map_server と同じ形式(YAML + PNG)で保存できます。
+- 「地図をダウンロード」で、ROS の map_server と同じ形式(YAML + PNG)で保存できます。
 
 次は [3. 地図と位置を確かめる](/ja/try/check-map/) です。3 つのアプリは動かしたままにしておいてください。

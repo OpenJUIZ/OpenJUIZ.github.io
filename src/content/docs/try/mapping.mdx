@@ -20,19 +20,25 @@ Now that the robot moves, connect the SLAM app mapper_gmapping and build a map.
 Because you drove the robot on the previous page, the odometry has already drifted from the room's frame `world`.
 The SLAM map starts from the odometry at the moment mapper_gmapping starts working, so stop and restart the apps to begin from a clean state.
 
-1. Press Ctrl+C to stop teleop_twist in terminal 2, then mobile_sim in terminal 1.
-2. Run `juiz run mobile_sim-0.3.5.juizapp` in terminal 1 and `juiz run teleop_twist-0.1.0.juizapp` in terminal 2 again.
+1. Stop the teleop_twist window, then the mobile_sim window, by closing each window or pressing Ctrl+C in it.
+2. Double-click `mobile_sim-0.3.6.juizapp`, then `teleop_twist-0.1.1.juizapp`, again. Both are OK when they print the same as on the previous page.
 3. Reload the mobile_sim and teleop_twist screens in the browser. The robot is back at its initial position.
 
 From here on, do not move the robot until you have started mapper_gmapping.
 
 ## Start mapper_gmapping
 
-Start mapper_gmapping in terminal 3.
+Double-click `mapper_gmapping-0.4.3.juizapp`. It is OK when it shows the following.
 
-```sh
-juiz run mapper_gmapping-0.4.2.juizapp
+```text
+Running mapper_gmapping 0.4.3 from …
+Close this window or press Ctrl+C to stop.
+juiz 管理画面: http://localhost:8001/ui/
+HTTP broker: http://127.0.0.1:8001/
+IPC broker: ipc://mapper_gmapping
 ```
+
+If it says `error: mapper_gmapping 0.4.3 requires juiz =0.3.0, ...`, your juiz has a different version. Reinstall with the version in step 1 of [Overview and setup](/try/#apps-and-setup). [When it does not start](/try/#when-it-does-not-start-ng) covers the other NG cases.
 
 mapper_gmapping also declares that it depends on mobile_sim, so like teleop_twist, it finds the running mobile_sim and connects.
 Once connected, it subscribes to the mobile_sim topics `scan` (LiDAR scans) and `odom` (odometry).
@@ -74,8 +80,8 @@ If walls get blurry or doubled, press "地図を捨てて最初から" (*discard
 
 ## Save the map
 
-When the map is done, check the "保存先" (*save to*) field on the screen (the default is `map`) and press "地図を保存" (*save map*).
-Two files appear in the directory where you started mapper_gmapping (the working directory `try_juiz`).
+When the map is done, check the "名前" (*name*) field in the "地図" (*map*) panel on the right (the default is `map`) and press "地図をダウンロード(YAML + PNG の zip)" (*download the map as a zip of YAML + PNG*).
+Your browser saves `map.zip` in its download folder. Extract the two files in it into `try_juiz`.
 
 | File | Contents |
 | --- | --- |
@@ -92,8 +98,10 @@ negate: 0
 ```
 
 This is the same format as ROS map_server, and the same format mobile_sim reads its maps in.
-If you add a directory to the save path (such as `maps/room`), create that directory first.
-You can also save just the image from the browser with "PNG をダウンロード" (*download PNG*).
+<Aside type="note" title="Saving on the mapper side">
+"mapper の側に保存" (*save on the mapper side*) writes the two files to the path in "名前", relative to the current directory of mapper_gmapping on the machine it runs on.
+The absolute path it wrote appears under the button. The current directory of an app started with a double-click differs between operating systems and can be your home folder; in that case move the files into `try_juiz`.
+</Aside>
 
 ## What is going on
 
@@ -112,6 +120,6 @@ Odometry and scans of the same time arrive together, so mapper_gmapping can pile
 
 - mapper_gmapping subscribes to the mobile_sim topics `scan` and `odom` and estimates the map and its own position.
 - Drive slowly, and come back to the start to close the loop for a clean map.
-- "地図を保存" (*save map*) saves the map in the same format as ROS map_server (YAML + PNG).
+- "地図をダウンロード" (*download the map*) saves the map in the same format as ROS map_server (YAML + PNG).
 
 Next is [3. Checking the map and the position](/try/check-map/). Keep all three apps running.

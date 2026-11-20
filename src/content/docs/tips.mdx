@@ -1,0 +1,110 @@
+---
+title: Tips
+description: How-tos for tasks around juiz that are not about using juiz itself, such as checking the SHA-256 of a downloaded file.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+This page collects how-tos for tasks that come up when you use juiz but are not about juiz itself.
+
+## Checking a SHA-256
+
+A SHA-256 is a 64-digit hexadecimal value computed from the contents of a file. If the contents differ by even one byte, the value is completely different.
+When the value the publisher shows matches the value you compute from your file, you know the download was not broken on the way or replaced with something else.
+
+In the app list of [Try it](/try/#apps-and-setup), each file has a small `SHA-256: …` under it. That is the publisher's value.
+
+### Checking one file
+
+Open a terminal in the folder with the downloaded file and run the following. Replace `mobile_sim-0.3.6.juizapp` and the value with those of the file you check.
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+echo "fd2fb57c16789ce6802acd7acc55747e6404e68161b60f8a6b18433330dc914d  mobile_sim-0.3.6.juizapp" | sha256sum -c
+```
+
+```text
+mobile_sim-0.3.6.juizapp: OK
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+echo "fd2fb57c16789ce6802acd7acc55747e6404e68161b60f8a6b18433330dc914d  mobile_sim-0.3.6.juizapp" | shasum -a 256 -c
+```
+
+```text
+mobile_sim-0.3.6.juizapp: OK
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+Run this in PowerShell.
+
+```powershell
+(Get-FileHash mobile_sim-0.3.6.juizapp).Hash -eq 'fd2fb57c16789ce6802acd7acc55747e6404e68161b60f8a6b18433330dc914d'
+```
+
+```text
+True
+```
+
+`Get-FileHash` computes SHA-256 by default and prints it in upper case. `-eq` ignores case, so you can compare directly.
+
+</TabItem>
+</Tabs>
+
+If it says `OK` (`True` on Windows), you are fine. To compare the values by eye, `sha256sum <file>` (`shasum -a 256 <file>` on macOS, `Get-FileHash <file>` on Windows) prints just the value.
+
+### Checking several files at once
+
+To check several files, make a file named `SHA256SUMS` with one value and file name per line (two spaces between them).
+
+```text title="SHA256SUMS"
+fd2fb57c16789ce6802acd7acc55747e6404e68161b60f8a6b18433330dc914d  mobile_sim-0.3.6.juizapp
+cbbce7bfe3e891e54cb86c5c2460ecf2f433de4bced81c73987010088d0ab862  teleop_twist-0.1.1.juizapp
+```
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+sha256sum -c SHA256SUMS
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+shasum -a 256 -c SHA256SUMS
+```
+
+</TabItem>
+<TabItem label="Windows">
+
+```powershell
+Get-Content SHA256SUMS | ForEach-Object {
+    $hash, $file = $_ -split '\s+'
+    if ((Get-FileHash $file -Algorithm SHA256).Hash -eq $hash) { "${file}: OK" } else { "${file}: FAILED" }
+}
+```
+
+</TabItem>
+</Tabs>
+
+### When it does not match
+
+Do not use a file that says `FAILED` (`False` on Windows). Delete it and download it again.
+If it still does not match, check whether the publisher has released a newer version (a different version has a different value). If it still does not match, do not use it, and tell the publisher.
+
+<Aside type="note" title="Where the values come from">
+The Releases of the OpenJUIZ apps do not include a checksum file such as `SHA256SUMS`.
+The values in the Try it list are the same SHA-256 that GitHub shows next to each file on the Release page. When you download a newer version, compare against the values on that version's Release page.
+
+`juiz run` also checks, when it unpacks a `.juizapp`, that the files inside match the SHA-256 listed in its `juizapp.yaml`.
+That only tells you the contents of the package are complete; whether the package itself has been replaced is what the check on this page tells you.
+</Aside>

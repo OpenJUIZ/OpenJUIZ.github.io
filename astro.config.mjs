@@ -47,6 +47,7 @@ export default defineConfig({
 				root: { label: 'English', lang: 'en' },
 				ja: { label: '日本語', lang: 'ja' },
 			},
+			customCss: ['./src/styles/custom.css'],
 			components: {
 				// スマホ幅でもヘッダー右上に言語の切り替えを出す(site#72)
 				Header: './src/components/Header.astro',
@@ -126,6 +127,8 @@ export default defineConfig({
 					translations: { ja: 'ガイド' },
 					items: [{ autogenerate: { directory: 'guides' } }],
 				},
+				// juiz の使い方そのものではない、まわりの作業(SHA-256 の照合など)
+				'tips',
 				{
 					label: 'Links',
 					translations: { ja: 'リンク' },

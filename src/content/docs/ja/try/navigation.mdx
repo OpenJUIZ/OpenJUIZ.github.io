@@ -17,7 +17,7 @@ import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 まずはシミュレータが持っている地図のまま一式を動かし、次のページで 2 で作った自分の地図に替えます。
 
 <Aside type="caution" title="1〜3 のアプリは止めておく">
-teleop_twist は、ここで使う localization_amcl と同じ 8002 番を使います。teleop_twist・mapper_gmapping・mobile_sim が動いたままだと、ポートや IPC の名前がぶつかって一式が起動しません。ターミナル 3・2・1 の順に Ctrl+C で止めておいてください。
+teleop_twist は、ここで使う localization_amcl と同じ 8002 番を使います。teleop_twist・mapper_gmapping・mobile_sim が動いたままだと、ポートや IPC の名前がぶつかって一式が起動しません。mapper_gmapping・teleop_twist・mobile_sim の順に、窓を閉じて止めておいてください。
 </Aside>
 
 ## 使うアプリ
@@ -31,7 +31,7 @@ teleop_twist は、ここで使う localization_amcl と同じ 8002 番を使い
 | navigation_hub([navigation_manager](https://github.com/OpenJUIZ/navigation_manager)) | 上の 4 つを 1 本の木にまとめ、トピックを中継する | http://localhost:8006/ |
 | navigation_manager(同じリポジトリ) | ゴールを受けて計画させ、追わせ、着いたかを判断する。画面からゴールを出す | http://localhost:8005/ |
 
-はじめの 5 つは [概要と準備](/ja/try/) でダウンロードした `.juizapp` です。navigation_manager は juiz の外から各アプリを HTTP で呼ぶ Python のプログラムで、準備で pip で入れました。
+はじめの 5 つは [概要と準備](/ja/try/) でダウンロードした `.juizapp` です。ここでは、ダブルクリックではなく、5 つをまとめて決まった順に起動するコマンドを使います(下の「なぜ根が要るのか」)。navigation_manager は juiz の外から各アプリを HTTP で呼ぶ Python のプログラムで、準備で pip で入れました。
 
 ## 全体の構成
 
@@ -59,33 +59,33 @@ juiz(0.2.5 時点)では、トピックは System の木(副系のつながり)�
 
 ## 一式を起動する
 
-ターミナル 1 で、ダウンロードした 5 つの `.juizapp` を `navigation-manager stack` に渡します。並べる順は問いません。
+`try_juiz` でターミナルを開き(venv に入れた場合は有効にして)、ダウンロードした 5 つの `.juizapp` を `navigation-manager stack` に渡します。このターミナルをターミナル 1 と呼びます。並べる順は問いません。
 
 <Tabs syncKey="platform">
 <TabItem label="Linux">
 
 ```sh
-navigation-manager stack mobile_sim-0.3.5.juizapp \
-    localization_amcl-0.1.3.juizapp planner_dijkstra-0.2.2.juizapp \
-    planner_dwa-0.1.2.juizapp navigation_hub-0.3.4.juizapp
+navigation-manager stack mobile_sim-0.3.6.juizapp \
+    localization_amcl-0.1.4.juizapp planner_dijkstra-0.2.3.juizapp \
+    planner_dwa-0.1.3.juizapp navigation_hub-0.3.5.juizapp
 ```
 
 </TabItem>
 <TabItem label="macOS">
 
 ```sh
-navigation-manager stack mobile_sim-0.3.5.juizapp \
-    localization_amcl-0.1.3.juizapp planner_dijkstra-0.2.2.juizapp \
-    planner_dwa-0.1.2.juizapp navigation_hub-0.3.4.juizapp
+navigation-manager stack mobile_sim-0.3.6.juizapp \
+    localization_amcl-0.1.4.juizapp planner_dijkstra-0.2.3.juizapp \
+    planner_dwa-0.1.3.juizapp navigation_hub-0.3.5.juizapp
 ```
 
 </TabItem>
 <TabItem label="Windows">
 
 ```powershell
-navigation-manager stack mobile_sim-0.3.5.juizapp `
-    localization_amcl-0.1.3.juizapp planner_dijkstra-0.2.2.juizapp `
-    planner_dwa-0.1.2.juizapp navigation_hub-0.3.4.juizapp
+navigation-manager stack mobile_sim-0.3.6.juizapp `
+    localization_amcl-0.1.4.juizapp planner_dijkstra-0.2.3.juizapp `
+    planner_dwa-0.1.3.juizapp navigation_hub-0.3.5.juizapp
 ```
 
 </TabItem>

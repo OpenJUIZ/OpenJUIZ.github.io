@@ -17,13 +17,20 @@ import { Aside } from '@astrojs/starlight/components';
 
 ## シミュレータを起動する
 
-ターミナル 1 で mobile_sim を起動します。
+`try_juiz` の `mobile_sim-0.3.6.juizapp` をダブルクリックします。
+新しい窓が開き、次のように出て止まれば OK です(見分け方は [アプリの起動のしかた](/ja/try/#アプリの起動のしかた))。
 
-```sh
-juiz run mobile_sim-0.3.5.juizapp
+```text
+Running mobile_sim 0.3.6 from …
+Close this window or press Ctrl+C to stop.
+juiz 管理画面: http://localhost:8000/ui/
+IPC broker: ipc://mobile_sim
+HTTP broker: http://127.0.0.1:8000/
 ```
 
-`juiz run` はパッケージを確かめて展開し、中の設定ファイルで juiz を起動します。
+`error:` の行と `Press Enter to close.` が出たときは [うまく起動しなかったとき](/ja/try/#うまく起動しなかったときng) を、窓が開かないときは [インストール: .juizapp をダブルクリックで開けるようにする](/ja/getting-started/install/#juizapp-をダブルクリックで開けるようにする) を見てください。
+
+窓の中で動いている `juiz run` は、パッケージを確かめて展開し、中の設定ファイルで juiz を起動します。
 ブラウザで http://localhost:8000/ を開くと、シミュレータの画面が出ます。
 
 ![mobile_sim の画面。左に 10 m 四方の部屋の地図とロボット、右に操作パッドと状態の欄が並ぶ](../../../../assets/try/slam/sim.png)
@@ -39,14 +46,18 @@ mobile_sim の画面にもキー操作と操作パッドがありますが、こ
 
 ## teleop_twist を起動する
 
-ターミナル 2 で teleop_twist を起動します。
+mobile_sim の窓は開いたままにして、`teleop_twist-0.1.1.juizapp` をダブルクリックします。次のように出て止まれば OK です。
 
-```sh
-juiz run teleop_twist-0.1.0.juizapp
+```text
+Running teleop_twist 0.1.1 from …
+Close this window or press Ctrl+C to stop.
+juiz 管理画面: http://localhost:8002/ui/
+HTTP broker: http://127.0.0.1:8002/
+IPC broker: ipc://teleop_twist-1234
 ```
 
 teleop_twist は mobile_sim に依存すると宣言しているので、`juiz run` は動いている mobile_sim を IPC の名前 `mobile_sim` で探し、版を確かめてからつなぎます。
-mobile_sim が動いていないと、ここでエラーになって起動しません。
+mobile_sim が動いていないと、`teleop_twist depends on mobile_sim ... but it is not running` と番号つきの選択が出ます。mobile_sim を起動してから `2) retry` を選んでください。
 
 ブラウザで http://localhost:8002/ を開きます。
 
@@ -76,7 +87,7 @@ teleop_twist は、入力から速度 `juiz_std.geometry.Twist2D` を作り、�
 mobile_sim のロボットの ContainerProcess `robot_set_velocity0` がこのトピックを購読していて、受け取った速度でロボットを動かします。
 
 別々のアプリなのにつながっているのは、teleop_twist の juiz が mobile_sim の juiz を**副系**(subsystem)として IPC でつないでいるからです。
-ターミナル 4 で、teleop_twist(8002 番)から見えるコンテナを並べてみましょう。
+ターミナルを開いて(venv に入れた場合は有効にして)、teleop_twist(8002 番)から見えるコンテナを並べてみましょう。
 
 ```sh
 juiz -s http://localhost:8002 container list
@@ -92,7 +103,7 @@ juiz -s http://localhost:8002 container list
 ## ロボットの位置を読む
 
 mobile_sim は、ロボットの位置を [座標系(Transformations)](/ja/guides/transformations/) の ContainerPose として持っています。
-ターミナル 4 で、座標系の木を見てみましょう(`-s` を付けないと、8000 番の mobile_sim に聞きます)。
+同じターミナルで、座標系の木を見てみましょう(`-s` を付けないと、8000 番の mobile_sim に聞きます)。
 
 ```sh
 juiz anchor tree world
@@ -120,7 +131,7 @@ juiz anchor tree odom0
 
 ## まとめ
 
-- `juiz run` だけで、別々に配布されたアプリを起動してつなげられます。依存するアプリ(ここでは mobile_sim)を先に起動します。
+- `.juizapp` をダブルクリックするだけで、別々に配布されたアプリを起動してつなげられます。依存するアプリ(ここでは mobile_sim)を先に起動します。
 - teleop_twist は速度 `Twist2D` をトピック `cmd_vel` に出し、mobile_sim がそれを購読してロボットを動かします。
 - ロボットの真の位置は `world` から、オドメトリは `odom0` から見た ContainerPose として読めます。オドメトリは走るほどずれていきます。
 
