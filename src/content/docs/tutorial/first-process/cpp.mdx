@@ -41,9 +41,9 @@ Check the version of `juiz`, then extract libjuiz_sdk of the same version into `
 
 ```sh
 juiz --version
-# => juiz 0.3.1
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.1
-ls ~/.juiz/sdk/0.3.1
+# => juiz 0.3.2
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.2
+ls ~/.juiz/sdk/0.3.2
 # => cjuiz  cppjuiz  lib  ...
 ```
 
@@ -52,9 +52,9 @@ ls ~/.juiz/sdk/0.3.1
 
 ```sh
 juiz --version
-# => juiz 0.3.1
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.1
-ls ~/.juiz/sdk/0.3.1
+# => juiz 0.3.2
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.2
+ls ~/.juiz/sdk/0.3.2
 # => cjuiz  cppjuiz  lib  ...
 ```
 
@@ -65,9 +65,9 @@ Run these in PowerShell.
 
 ```powershell
 juiz --version
-# => juiz 0.3.1
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.3.1
-ls $env:USERPROFILE\.juiz\sdk\0.3.1
+# => juiz 0.3.2
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.3.2
+ls $env:USERPROFILE\.juiz\sdk\0.3.2
 # => bin  cjuiz  cppjuiz  lib  ...
 ```
 
@@ -95,12 +95,12 @@ juiz pkg create my_juiz -b cpp -t process
 When it is created, the next commands to run are shown (you installed libjuiz_sdk in "Before you start", so you can skip the `curl ... install-juiz-sdk.sh` shown here).
 
 ```text
-Created my_juiz (cpp, process) in ./my_juiz  [libjuiz_sdk 0.3.1]
+Created my_juiz (cpp, process) in ./my_juiz  [libjuiz_sdk 0.3.2]
 
 Next steps:
   cd my_juiz
-  # once: put libjuiz_sdk 0.3.1 in ~/.juiz/sdk/0.3.1
-  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.1
+  # once: put libjuiz_sdk 0.3.2 in ~/.juiz/sdk/0.3.2
+  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.2
   scripts/dev.sh                  # build and put the plugin and libjuiz_sdk in app/plugins/<target>/
   juiz -f app/app.conf -d         # start (keep it running)
   ...
@@ -333,7 +333,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(JUIZ_VERSION "0.3.1")
+set(JUIZ_VERSION "0.3.2")
 if(WIN32)
   file(TO_CMAKE_PATH "$ENV{USERPROFILE}/.juiz/sdk/${JUIZ_VERSION}" JUIZ_SDK_DEFAULT_DIR)
 else()
