@@ -49,13 +49,13 @@ Check the version of `juiz`, then extract libjuiz_sdk of the same version into `
 
 ```sh
 juiz --version
-# => juiz 0.3.1
+# => juiz 0.3.2
 ghc --version
 # => The Glorious Glasgow Haskell Compilation System, version 9.6.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.1
-ls ~/.juiz/sdk/0.3.1/lib
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.2
+ls ~/.juiz/sdk/0.3.2/lib
 # => libjuiz_sdk.so  ...
-git clone --depth 1 --branch v0.3.1 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.1
+git clone --depth 1 --branch v0.3.2 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.2
 ```
 
 </TabItem>
@@ -63,13 +63,13 @@ git clone --depth 1 --branch v0.3.1 https://github.com/OpenJUIZ/juiz.git ~/juiz-
 
 ```sh
 juiz --version
-# => juiz 0.3.1
+# => juiz 0.3.2
 ghc --version
 # => The Glorious Glasgow Haskell Compilation System, version 9.6.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.1
-ls ~/.juiz/sdk/0.3.1/lib
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.2
+ls ~/.juiz/sdk/0.3.2/lib
 # => libjuiz_sdk.dylib  ...
-git clone --depth 1 --branch v0.3.1 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.1
+git clone --depth 1 --branch v0.3.2 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.2
 ```
 
 </TabItem>
@@ -96,14 +96,14 @@ juiz pkg create my_juiz -b haskell -t process
 When it is created, the next commands to run are shown (you prepared the hsjuiz source and libjuiz_sdk in "Before you start", so you can skip the `git clone` and `curl` shown here).
 
 ```text
-Created my_juiz (haskell, process) in ./my_juiz  [hsjuiz 0.3.1]
+Created my_juiz (haskell, process) in ./my_juiz  [hsjuiz 0.3.2]
 
 Next steps:
   cd my_juiz
-  # once: get hsjuiz 0.3.1 (the juiz source) in /home/me/juiz-0.3.1/bindings/hsjuiz
-  git clone --depth 1 --branch v0.3.1 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.1
-  # once: put libjuiz_sdk 0.3.1 in /home/me/.juiz/sdk/0.3.1
-  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.1
+  # once: get hsjuiz 0.3.2 (the juiz source) in /home/me/juiz-0.3.2/bindings/hsjuiz
+  git clone --depth 1 --branch v0.3.2 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.2
+  # once: put libjuiz_sdk 0.3.2 in /home/me/.juiz/sdk/0.3.2
+  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.2
   scripts/dev.sh                  # build and put the plugin in app/plugins/<target>/
   juiz -f app/app.conf -d         # start (keep it running)
   ...
@@ -319,13 +319,13 @@ Besides the Process code, the skeleton contains files for building and starting 
 `cabal.project` says where hsjuiz, built together with the project, and libjuiz_sdk are.
 
 ```txt title="cabal.project"
-packages: . /home/me/juiz-0.3.1/bindings/hsjuiz
+packages: . /home/me/juiz-0.3.2/bindings/hsjuiz
 
 active-repositories: :none
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.3.1/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.3.1/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.3.2/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.3.2/lib
 ```
 
 The comments are left out. `/home/me` is your own home directory, written when the skeleton was created.

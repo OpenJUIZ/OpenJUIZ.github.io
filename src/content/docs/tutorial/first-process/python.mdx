@@ -41,7 +41,7 @@ mkdir juiz_tutorial
 cd juiz_tutorial
 python3 -m venv .venv
 source .venv/bin/activate
-pip install juiz-cli==0.3.1
+pip install juiz-cli==0.3.2
 ```
 
 </TabItem>
@@ -52,7 +52,7 @@ mkdir juiz_tutorial
 cd juiz_tutorial
 python3 -m venv .venv
 source .venv/bin/activate
-pip install juiz-cli==0.3.1
+pip install juiz-cli==0.3.2
 ```
 
 </TabItem>
@@ -63,7 +63,7 @@ mkdir juiz_tutorial
 cd juiz_tutorial
 python -m venv .venv
 .venv\Scripts\activate
-pip install juiz-cli==0.3.1
+pip install juiz-cli==0.3.2
 ```
 
 </TabItem>
@@ -71,13 +71,13 @@ pip install juiz-cli==0.3.1
 
 ```sh
 juiz --version
-# => juiz 0.3.1
+# => juiz 0.3.2
 ```
 
 Run the following steps in a terminal where this venv is active. When you open a new terminal, run `source .venv/bin/activate` (`.venv\Scripts\activate` on Windows) in `juiz_tutorial`.
 
 <Aside type="note" title="If you use juiz installed with cargo">
-If you use the `juiz` command installed with `cargo install juiz_app`, skip `pip install juiz-cli==0.3.1`. The `pip install -e .` below installs only pyjuiz, the package for writing Processes, into the venv.
+If you use the `juiz` command installed with `cargo install juiz_app`, skip `pip install juiz-cli==0.3.2`. The `pip install -e .` below installs only pyjuiz, the package for writing Processes, into the venv.
 Installing `juiz-cli` as well gives you two `juiz` commands, and which one runs depends on the order in PATH.
 </Aside>
 
@@ -98,7 +98,7 @@ juiz pkg create my_juiz -b python -t process
 When it is created, the next commands to run are shown (you already made the venv above, so you can skip the `python3 -m venv .venv` shown here).
 
 ```text
-Created my_juiz (python, process) in ./my_juiz  [pyjuiz ==0.3.1]
+Created my_juiz (python, process) in ./my_juiz  [pyjuiz ==0.3.2]
 
 Next steps:
   cd my_juiz
@@ -264,7 +264,7 @@ description = "my_juiz: a juiz component"
 requires-python = ">=3.10"
 dependencies = [
     # Same version as the juiz that made this skeleton (juiz --version)
-    "pyjuiz==0.3.1",
+    "pyjuiz==0.3.2",
 ]
 
 [build-system]
