@@ -1,0 +1,424 @@
+---
+title: "1. Your first Process (Zig)"
+description: Create a Zig skeleton with juiz pkg create, build and run its Process that adds two numbers, and call it from outside.
+sidebar:
+  order: 5
+  label: Zig
+prev:
+  link: /tutorial/first-process/
+  label: "1. Your first Process"
+next:
+  link: /tutorial/container/zig/
+  label: "2. Keeping state (Zig)"
+---
+
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
+
+In this chapter you create a Zig project skeleton with `juiz pkg create`, then build and run the Process in it, which adds two numbers and returns the sum.
+You first read the Process code, which is the heart of the project, then run it and call it from a browser and from a terminal. Finally you read the other files in the skeleton.
+
+<Aside type="tip" title="What you will learn">
+- How to create a Zig project skeleton for writing Processes with `juiz pkg create`
+- How to read the skeleton (`build.zig`, `build.zig.zon`, `src/my_juiz.zig`, `app/app.conf` and `scripts/`)
+- A Process is an idempotent function that takes arguments and returns a result
+- A Process has a "type name" and an "instance name"
+- How to call a Process from outside and get the result back (call)
+</Aside>
+
+<Aside type="caution" title="Available from the version after juiz 0.3.2">
+Zig comes in the version after juiz 0.3.2. The version number is decided when it is released.
+To try it before the release, get the `juiz` command and zigjuiz from the juiz main branch as in [Trying it before the release](/getting-started/packages/#trying-it-before-the-release) in Language packages.
+Then add `--zigjuiz-dir ~/juiz-main/bindings/zigjuiz` to `juiz pkg create` in this chapter (`scripts/dev.sh` then does not get zigjuiz from Releases).
+</Aside>
+
+<Aside type="note" title="On Windows">
+The Zig tutorial is written for Linux and macOS. The Zig skeleton of `juiz pkg create` does not build on Windows yet ([issue #588](https://github.com/OpenJUIZ/juiz/issues/588)).
+zigjuiz itself works on Windows. For how to write it there, see the "Windows" tab of [Zig in Language packages](/getting-started/packages/#zig).
+</Aside>
+
+## Before you start
+
+Prepare the following (Linux or macOS).
+
+- The `juiz` command, installed either with pip or with cargo as described in [Installation](/getting-started/install/)
+- Zig 0.17.x, from [ziglang.org](https://ziglang.org/download/). zigjuiz supports only one Zig version, and the build stops on any other ([Supported Zig version](/getting-started/packages/#supported-zig-version))
+- libjuiz_sdk at the same version as `juiz`
+
+A Zig Process is written with zigjuiz (the Zig library of juiz) and built by linking it to libjuiz_sdk (the shared library of functions that pass values to and from juiz).
+The skeleton's `scripts/dev.sh` adds zigjuiz from juiz's GitHub Releases with `zig fetch` the first time it builds. Here you only prepare libjuiz_sdk.
+
+Check the versions of `juiz` and Zig, then install libjuiz_sdk of the same version into `~/.juiz/sdk/<version>` with `juiz sdk install`.
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --version
+# => juiz <version>
+zig version
+# => 0.17.1
+juiz sdk install
+ls "$(juiz sdk path)/lib"
+# => libjuiz_sdk.so  ...
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --version
+# => juiz <version>
+zig version
+# => 0.17.1
+juiz sdk install
+ls "$(juiz sdk path)/lib"
+# => libjuiz_sdk.dylib  ...
+```
+
+</TabItem>
+</Tabs>
+
+Any 0.17 release of Zig is fine, even if the patch version differs. If you installed Zig with `pip install ziglang==0.17.1`, type `python3 -m ziglang` instead of `zig`, and run `scripts/dev.sh` in this chapter as `ZIG="python3 -m ziglang" scripts/dev.sh`.
+
+## Create the skeleton
+
+In a working directory, run:
+
+```sh
+juiz pkg create my_juiz -b zig -t process
+```
+
+| Part | Meaning |
+| --- | --- |
+| `my_juiz` | The project name. A directory with this name is created, and it also prefixes the type names. It must start with a lowercase letter and use only lowercase letters, digits and `_` (up to 32 characters for Zig) |
+| `-b zig` | The language (`rust` / `python` / `cpp` / `haskell` / `zig`) |
+| `-t process` | What kind of types to put in. `process` puts in just one Process. Without it a Container is added too, but this chapter starts with a Process only |
+
+It prints the commands to run next.
+
+```text
+Created my_juiz (zig, process) in ./my_juiz  [zigjuiz <version>]
+
+Next steps:
+  cd my_juiz
+  scripts/dev.sh                  # build and put the plugin and libjuiz_sdk in app/plugins/<target>/
+  juiz -f app/app.conf -d         # start (keep it running)
+  ...
+```
+
+Run all the following commands in `my_juiz`.
+
+```sh
+cd my_juiz
+```
+
+## The shape of the project
+
+The skeleton has these files.
+
+<FileTree>
+- my_juiz/
+  - build.zig build settings
+  - build.zig.zon Zig package information (the dependency on zigjuiz)
+  - src/
+    - my_juiz.zig the Process code
+  - app/
+    - app.conf the start-up configuration file
+    - juizapp.yaml information for the distribution package (.juizapp)
+  - scripts/
+    - dev.sh build and put the plugin in app/plugins/
+    - pack.sh make the distribution package
+  - README.md how to use this skeleton
+  - .gitignore
+</FileTree>
+
+In juiz, a Process is built as a shared library (`.so` or `.dylib`), and the `juiz` command loads it as a plugin.
+In the skeleton, the types written in `src/my_juiz.zig` go into one shared library, which is loaded and started as written in `app/app.conf`.
+Start with the Process code, which is the heart of the development.
+
+## The Process code: src/my_juiz.zig
+
+```zig title="src/my_juiz.zig"
+const std = @import("std");
+const juiz = @import("juiz");
+
+/// Returns a + b.
+fn my_juiz_add(args: struct { a: i64 = 0, b: i64 = 0 }) !i64 {
+    return std.math.add(i64, args.a, args.b); // error.Overflow becomes an error of the call
+}
+
+comptime {
+    juiz.exportComponent(.{
+        .type_name = "my_juiz",
+        .description = "my_juiz: a juiz component.",
+        .parts = .{
+            juiz.processPart(my_juiz_add, .{
+                .type_name = "my_juiz_add",
+                .description = "Returns a + b.",
+                .args = .{ .a = "first value", .b = "second value" },
+            }),
+        },
+    });
+}
+```
+
+The comment at the top of the file is left out.
+
+| Part | Meaning |
+| --- | --- |
+| `@import("juiz")` | Loads zigjuiz |
+| `fn my_juiz_add(args: struct { a: i64 = 0, b: i64 = 0 }) !i64` | The body of the Process. It takes its arguments as **one struct**. The name, type and default value of each field become the name, type and default value of an argument of the Process. Arguments you leave out when calling take their default values |
+| `std.math.add(...)` | Returns `a + b`. If the result does not fit in `i64`, it returns `error.Overflow`. The `!` of the return type `!i64` means "may return an error" |
+| `comptime { juiz.exportComponent(...) }` | Publishes the function so that `juiz` can load it. At compile time, zigjuiz makes the C functions that juiz looks for |
+| `.type_name = "my_juiz"` | The name of this library (Component) |
+| `juiz.processPart(my_juiz_add, .{ ... })` | Lists the function as a Process. The `.type_name` string becomes the Process's **type name**, and `.args` holds the descriptions of the arguments |
+
+Write a description in `.args` for every argument, with the same names as the struct fields. A missing description, or a name that is not an argument, is a compile error.
+
+A Zig error returned by the function becomes an error of the juiz call. juiz does not crash.
+However, **a panic cannot be caught and takes juiz down with it**. Return errors for failures (use functions that return errors, like `std.math.add`).
+
+The skeleton is written in the form of a **Component**, which bundles several types into one library.
+This chapter has only one Process, but in chapter 2 you add a Container to the same file. Components are covered in detail in chapter 6.
+
+## A Process is an idempotent function
+
+`my_juiz_add` only takes arguments and returns a result.
+It does not read or write any outside state, so the same arguments always give the same result (it is idempotent).
+Thanks to this, Processes are easy to test, and they behave the same when you connect them or move them to another machine later.
+
+## Build it
+
+Build with `scripts/dev.sh`. On the first run it first adds zigjuiz to `build.zig.zon` (you need a network connection).
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+scripts/dev.sh
+# => adding zigjuiz <version> to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v<version>/zigjuiz-<version>.tar.gz
+#    app/plugins/x86_64-unknown-linux-gnu/libjuiz_sdk.so
+#    app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+scripts/dev.sh
+# => adding zigjuiz <version> to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v<version>/zigjuiz-<version>.tar.gz
+#    app/plugins/aarch64-apple-darwin/libjuiz_sdk.dylib
+#    app/plugins/aarch64-apple-darwin/libmy_juiz.dylib
+```
+
+On an Intel Mac, `aarch64-apple-darwin` becomes `x86_64-apple-darwin`.
+
+</TabItem>
+</Tabs>
+
+`scripts/dev.sh` builds with `zig build` and copies the shared library and libjuiz_sdk into `app/plugins/<target>/`.
+`<target>` is a name such as `x86_64-unknown-linux-gnu` that says which CPU and OS it is for. `juiz pkg target` prints it.
+The first build also compiles parts of Zig's standard library, so it takes a little while. After that, only what changed is rebuilt.
+
+If libjuiz_sdk is not found, the build stops and tells you to run `juiz sdk install`. `scripts/dev.sh` also stops if Zig is not 0.17.
+
+## Run it
+
+Start `juiz`, passing the configuration file `app/app.conf` with `-f`.
+
+```sh
+juiz -f app/app.conf -d
+```
+
+| Option | Meaning |
+| --- | --- |
+| `-f <file>` | Read the configuration file, load the plugins and create the instances written in it |
+| `-d` | Keep running (stop with Ctrl+C) |
+
+On start-up it prints `juiz 管理画面: http://localhost:8000/ui/` (the address of the web UI). The HTTP broker is listening on port 8000.
+
+## Call it from a browser
+
+Leave `juiz` running and open the web UI at `http://localhost:8000/ui/` in a browser. You see a screen like this.
+
+![The web UI. my_juiz_add0 under "処理 Process" on the left, and an ellipse for my_juiz_add0 in the diagram in the middle](../../../../assets/tutorial-web-ui/first-process-top.png)
+
+The UI labels are in Japanese, with the English names used on this site shown in small type next to them. The screen has three parts.
+
+- **The list on the left**: what is running. Under "処理 Process" (Process) you see the instance `my_juiz_add0` next to its type name `my_juiz_add`.
+- **The diagram in the middle**: a diagram of the system. A Process is drawn as an ellipse; the large text is the instance name and the small text is the type name.
+- **The panel on the right**: the properties (details) of what you select. It is empty because nothing is selected yet.
+
+Click `my_juiz_add0` in the list or in the diagram, and its details appear in the right panel.
+Scroll the right panel down to the heading "呼び出す" (Call), where you find input fields for the arguments `a` and `b`.
+Enter `1` for `a` and `2` for `b`, then press the "呼び出す" (Call) button. If `3` appears under "結果" (Result), it worked.
+
+![Close-up of the right panel: the argument table (a and b, type Int, default 0), the call form with a=1 and b=2, and the result 3](../../../../assets/tutorial-web-ui/first-process-call.png)
+
+Look at the rest of the panel as well.
+
+- The "引数" (Arguments) table lists each argument's name, type and default value (既定値). The default is what is used for an argument you leave out when calling, and it is what you wrote in the struct field (`= 0`). ("拘束値", the bound value, is covered in chapter 3.)
+- "既定値に戻す" (Reset to defaults) puts the default values (`0`) back in the fields. "JSON で編集" (Edit as JSON) lets you write all the arguments as JSON.
+- "基本" (Basics) near the top shows the type name and the identifier (ID) of this Process.
+
+Change the values and call it a few times. With the same arguments, you always get the same result.
+See the [Web UI guide](/guides/web-ui/) for more on the web UI.
+
+## Call it from a terminal
+
+Whatever you did in the browser, you can also do from a terminal. Leave `juiz` running, open another terminal, go to `my_juiz` and call the Process.
+First, list the running Processes.
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add"]
+```
+
+The URL shown is the **ID** of this Process.
+`http://127.0.0.1:8000` is where the Process lives (the broker), and the part after `process/` is "instance name`::`type name".
+With [namespaces](/guides/namespace/), a namespace such as `robot1/` comes before the instance name. Without them, it looks as above.
+
+Call the Process with this ID and arguments (call). Arguments are passed as JSON.
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add" '{"a": 1, "b": 2}' -p
+# => CapsulePtr((value:Value(3), option: []))
+```
+
+You passed `1` and `2` and got `3` back. `-p` prints the result.
+Arguments you leave out take their default values (`0` for both `a` and `b`). Passing `'{"a": 5}'` returns `5`.
+Check that calling it again with the same arguments always gives the same result.
+
+Also check that adding to the largest `i64` gives an error.
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add" '{"a": 9223372036854775807, "b": 1}' -p
+# => Error: ...
+#    ... Zig plugin function (process(my_juiz_add)) failed (return_value=-1101): my_juiz_add returned error.Overflow ...
+```
+
+The `error.Overflow` returned by the function comes back as an error of the call. `juiz` keeps running, so you can go on calling it.
+
+Both the `juiz` command and the web UI just call the same API over HTTP.
+That means any program that speaks HTTP, in any language, can call a Process and get the result back.
+This is **call**, the way of using juiz like a server and client.
+
+## Read the other files in the skeleton
+
+Besides the Process code, the skeleton has files for building and starting.
+
+### Build settings: build.zig and build.zig.zon
+
+`build.zig` describes how to make the shared library.
+
+```zig title="build.zig"
+const std = @import("std");
+const zigjuiz = @import("zigjuiz");
+
+pub fn build(b: *std.Build) void {
+    const juiz = zigjuiz.init(b, .{
+        .target = b.standardTargetOptions(.{}),
+        // --release builds with ReleaseSafe (keeps the safety checks such as out-of-bounds access)
+        .optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseSafe }),
+    });
+    const lib = juiz.addPlugin(.{
+        .name = "my_juiz",
+        .root_source_file = b.path("src/my_juiz.zig"),
+    });
+    // zig-out/plugins/: the plugin and libjuiz_sdk side by side, with the rpath $ORIGIN (@loader_path on macOS)
+    juiz.installBundle(lib, .{});
+}
+```
+
+The comment at the top is left out.
+
+| Part | Meaning |
+| --- | --- |
+| `@import("zigjuiz")` | Loads the build functions of zigjuiz, added to `build.zig.zon` |
+| `zigjuiz.init(b, ...)` | Call it only once in a `build.zig`. It looks for libjuiz_sdk (by default where `juiz sdk path` says), and if it is missing, stops the build and tells you to run `juiz sdk install` |
+| `.preferred_optimize_mode = .ReleaseSafe` | Keeps safety checks such as out-of-bounds access with `--release`. A failed check is a panic, so you notice the bug |
+| `juiz.addPlugin(.{ .name = "my_juiz", ... })` | Makes one shared library. From the name `my_juiz` you get `libmy_juiz.so` on Linux and `libmy_juiz.dylib` on macOS. It lets `src/my_juiz.zig` use zigjuiz with `@import("juiz")` |
+| `juiz.installBundle(lib, .{})` | Puts the library and libjuiz_sdk side by side in `zig-out/plugins/`. The rpath is only the library's own directory (`$ORIGIN`, `@loader_path` on macOS), so it can go into a `.juizapp` as is |
+
+`build.zig.zon` is the Zig package information. The first time `scripts/dev.sh` runs, the dependency on zigjuiz is added to `dependencies`.
+
+```zig title="build.zig.zon (after running scripts/dev.sh once)"
+.{
+    .name = .my_juiz,
+    .version = "0.1.0",
+    .fingerprint = 0x...,
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{
+        .zigjuiz = .{
+            .url = "https://github.com/OpenJUIZ/juiz/releases/download/v<version>/zigjuiz-<version>.tar.gz",
+            .hash = "zigjuiz-<version>-...",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
+```
+
+| Part | Meaning |
+| --- | --- |
+| `.name`, `.version` | The name and version of this package. Keep `.version` the same as `version` in `app/juizapp.yaml` |
+| `.fingerprint` | A random number that identifies this package. Keep it when you copy the project |
+| `.zigjuiz` in `.dependencies` | The URL of the zigjuiz archive and a hash computed from its contents. `zig fetch --save` writes them |
+
+**Use zigjuiz and libjuiz_sdk of the same version as `juiz --version` prints.** With a different version, `juiz` may not load the plugin.
+When you update `juiz`, run `juiz sdk install` with the new version and add zigjuiz again with `zig fetch --save=zigjuiz <URL of the new version>` (a dependency with the same name is replaced).
+
+### The start-up configuration file: app/app.conf
+
+This is the configuration file you passed to `juiz -f` (the comment at the top is left out).
+
+```yaml title="app/app.conf"
+"name": "my_juiz"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"plugins":
+  "components":
+    "my_juiz":
+      "language": "zig"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+```
+
+Configuration files are written in YAML. Roughly, this one says:
+
+- `option`: start the HTTP broker on port 8000
+- `plugins`: **load** the library of the Component `my_juiz` from `plugins/{target}` as a Zig plugin. `{target}` is replaced with the target name of the machine you run on, so `app/plugins/<target>/libmy_juiz.so` that `scripts/dev.sh` put there is loaded (the path is relative to `app/`, the directory of the configuration file)
+- `processes`: **create an instance** named `my_juiz_add0` from the loaded type `my_juiz_add`
+
+Note that "loading" and "creating an instance" are separate.
+When it loads a library, juiz learns the **types** of Processes (how to make them). Writing them in `processes` creates named **instances** from those types.
+In the ID you used to call it, `my_juiz_add0` is the instance name and `my_juiz_add` is the type name.
+You can also make many instances with different names from the same type (covered in chapter 3).
+
+### scripts and app/juizapp.yaml
+
+`scripts/dev.sh` is the build script you used above. With `--target <target>` it also builds for another CPU or OS (Zig can build for other machines from one machine).
+`scripts/pack.sh` and `app/juizapp.yaml` are for bundling what you made into a single `.juizapp` file to distribute (it runs with just `juiz run`). The tutorial does not use them. See [App packages (.juizapp)](/guides/app-package/) for how to use them.
+
+## Try it yourself
+
+- Change `src/my_juiz.zig` to return the product instead of the sum (`std.math.mul(i64, args.a, args.b)`). Rebuild with `scripts/dev.sh` and restart `juiz`, and `{"a": 3, "b": 4}` should return `12`.
+- Remove the description of `.b` from `.args` and run `scripts/dev.sh`. An argument without a description is a compile error.
+- Run `juiz pkg add process my_juiz_sub` to add a Process `my_juiz_sub` to `src/my_juiz.zig` and `app/app.conf` (its body is the same `a + b` as `my_juiz_add`). Change the new function to `std.math.sub`, rebuild and call it. `juiz process list` shows two Processes.
+
+## Summary
+
+- `juiz pkg create <name> -b zig` makes a project skeleton that builds, starts and can be called as is. `scripts/dev.sh` adds zigjuiz of the same version as `juiz`, and `juiz sdk install` installs libjuiz_sdk.
+- A Zig Process is built into a shared library with zigjuiz's `addPlugin`, and `juiz` loads it as a plugin. In the skeleton, `scripts/dev.sh` builds it and puts it in `app/plugins/<target>/`.
+- A Process is an idempotent function that only takes arguments and returns a result. In Zig, it takes its arguments as one struct and is published with a type name and descriptions through `processPart` of `juiz.exportComponent`. Failures are returned as Zig errors.
+- juiz loads a library to learn the **types** of Processes, and creates named **instances** from them as written in the configuration file.
+- A running Process has an ID shaped like a URL, and you can call it from outside with that ID and arguments (call).
+
+In the next chapter, you add a counter Container to this project and learn how to write building blocks with state. Go on to [Keeping state: Container and ContainerProcess (Zig)](/tutorial/container/zig/).

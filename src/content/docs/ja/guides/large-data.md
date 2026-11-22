@@ -9,7 +9,7 @@ juiz の Process は、ブローカーを通して別のプロセスや別のマ
 このページでは、4 種類のブローカー(HTTP・QUIC・Zenoh・IPC)の使い分けと、カメラ画像のような大きなデータを速く渡す方法を説明します。
 
 :::caution[juiz 0.0.26 以降が必要です]
-IPC ブローカー、QUIC ブローカーでの画像の生バイト転送、共有メモリ、pyjuiz の `IpcProxy`、C++・Haskell の画像の引数と戻り値は juiz 0.0.26 から使えます。
+IPC ブローカー、QUIC ブローカーでの画像の生バイト転送、共有メモリ、pyjuiz の `IpcProxy`、C++・Haskell の画像の引数と戻り値は juiz 0.0.26 から使えます(Zig は 0.3.2 の次の版から)。
 0.0.26 の QUIC ブローカーは、それより前の版の QUIC ブローカーとはつながりません(通信の形式を変えたため)。QUIC でつなぐ juiz は、すべて 0.0.26 以降にそろえてください。
 :::
 
@@ -253,6 +253,18 @@ invert img = img { imageData = BS.map (255 -) (imageData img) }   -- 8 bit の�
 ```
 
 `Image` は引数と戻り値の型そのものとしてだけ使えます。辞書やリストの中(`[Image]` など)には入れられません。
+
+Zig(juiz 0.3.2 の次の版から)は、引数の struct のフィールドや戻り値を `juiz.Image` にします。`width`・`height`・`format`(`.rgb8`・`.l8` など)・`stride`・`data` を持ちます。
+
+```zig
+fn invert(ctx: juiz.Context, args: struct { img: juiz.Image }) !juiz.Image {
+    const buf = try ctx.allocator.dupe(u8, args.img.data);
+    for (buf) |*b| b.* = 255 - b.*;   // 8 bit の形式のとき
+    return juiz.Image.init(args.img.width, args.img.height, args.img.format, buf);
+}
+```
+
+受け取った画像は呼び出しごとのメモリに複製したもので、呼び出しが終わると消えます。Container に取っておくときは `img.clone(allocator)` で複製します。返すときは `.bgr8`・`.bgra8` も使えます(juiz が RGB に並べ替えます)。
 
 ## 速さの目安
 

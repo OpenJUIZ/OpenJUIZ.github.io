@@ -1,0 +1,242 @@
+---
+title: "2. 状態を持つ(Zig)"
+description: 第 1 章の雛形に juiz pkg add container でカウンタの Container と ContainerProcess を足し、状態の扱い方を学びます。
+sidebar:
+  order: 5
+  label: Zig
+prev:
+  link: /ja/tutorial/first-process/zig/
+  label: "1. はじめての Process(Zig)"
+next:
+  link: /ja/tutorial/config-file/
+  label: "3. 設定ファイルでまとめて起動する(全言語共通)"
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+第 1 章の Process は、同じ引数を渡せばいつも同じ結果を返す冪等な関数でした。
+しかし、ロボットや IoT の部品を作っていると、カウンタの値やモータの現在位置、カメラの接続のように「覚えておきたいもの」が必ず出てきます。
+この章では、整数を 1 つ覚えておくカウンタを、第 1 章で作ったプロジェクト `my_juiz` に足していきます。
+
+<Aside type="tip" title="この章で学ぶこと">
+- 状態は **Container** に置き、Process には持たせないこと
+- 状態に触れるのは、Container に結びついた **ContainerProcess** だけであること
+- 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられること
+- `juiz pkg add container` で、プロジェクトに Container と ContainerProcess を足す方法
+</Aside>
+
+## Container を足す
+
+第 1 章のプロジェクト `my_juiz` で、次のコマンドを打ちます。`juiz` を起動したままなら、Ctrl+C で止めておいてください。
+
+```sh
+juiz pkg add container counter
+```
+
+```text
+Added container counter to my_juiz (zig): counter, counter_increment, counter_get
+Edited src/my_juiz.zig, app/app.conf
+
+Next steps:
+  scripts/dev.sh                  # rebuild the plugin
+  juiz -f app/app.conf -d         # restart juiz
+  ...
+```
+
+`juiz pkg add container <名前>` は、次の 3 つの型を足します。
+
+| 役割 | 型名 | 内容 |
+| --- | --- | --- |
+| Container | `counter` | カウンタの値を 1 つ持つ。作るときに初期値 `initial_value` を受け取る |
+| ContainerProcess | `counter_increment` | Container の値に `step` を足して、足した後の値を返す |
+| ContainerProcess | `counter_get` | Container の値をそのまま返す |
+
+書き換わるのは `src/my_juiz.zig` と `app/app.conf` の 2 つだけで、新しいファイルは増えません。
+足された型も、第 1 章の Process と同じ 1 つのライブラリ(Component)に入ります。`build.zig` を直す必要もありません。
+
+足されたところを順に読んでいきます。
+
+## Container: 状態を入れておく
+
+Container は、状態そのものです。値を入れておく入れ物と、それを作る関数だけが書かれています。
+
+```zig title="src/my_juiz.zig(足された部分)"
+/// State of the container `counter`.
+const CounterState = struct {
+    value: i64,
+};
+
+/// Makes the state of a container `counter`. initial_value comes from the entry of the container in app.conf
+fn counter_create(args: struct { initial_value: i64 = 0 }) CounterState {
+    return .{ .value = args.initial_value };
+}
+```
+
+| 部分 | 意味 |
+| --- | --- |
+| `const CounterState = struct { value: i64 }` | 状態の型です。整数を 1 つ持つ、ふつうの Zig の struct です |
+| `fn counter_create(args: struct { initial_value: i64 = 0 }) CounterState` | Container を作る関数です。引数の書き方は Process と同じで、`initial_value` は設定ファイルから渡せます(第 3 章)。返した値を zigjuiz が juiz の側に写して、Container の状態にします |
+
+Container には、値を変えたり読んだりする処理は書いていません。Container は「何を覚えておくか」だけを表します。
+
+Container の型名(`counter`)は、ファイルの末尾の `juiz.exportComponent` で付けます(下の「[型の一覧](#型の一覧)」)。
+
+## ContainerProcess: 状態を変える・読む
+
+状態を変えたり読んだりする処理は、ContainerProcess に書きます。
+ContainerProcess は、**最初の引数 `self` で Container の状態を受け取る** Process です。
+
+### counter_increment: 値を足す
+
+```zig title="src/my_juiz.zig(足された部分)"
+/// Adds step to the value and returns it.
+fn counter_increment(self: *CounterState, args: struct { step: i64 = 1 }) !i64 {
+    self.value = try std.math.add(i64, self.value, args.step);
+    return self.value;
+}
+```
+
+| 部分 | 意味 |
+| --- | --- |
+| `self: *CounterState` | Container の状態へのポインタです。`self.value` を書き換えると、Container の値が変わります |
+| `args: struct { step: i64 = 1 }` | 2 番目の引数は、第 1 章の Process と同じく、呼び出すときに渡す引数です。既定値は 1 です |
+| `try std.math.add(...)` | 値に `step` を足します。`i64` に収まらなければ、`try` でそのエラーを返します(値は書き換わりません) |
+
+### counter_get: 値を読む
+
+```zig title="src/my_juiz.zig(足された部分)"
+/// Returns the value. It takes the state as *const, so it is readonly.
+fn counter_get(self: *const CounterState) i64 {
+    return self.value;
+}
+```
+
+`counter_get` は Container 以外の引数を持たず、値を返すだけです。
+`self` を `*const CounterState`(書き換えられないポインタ)で受けているので、この ContainerProcess は値を読むだけで書き換えません。こうした「読むだけ」の ContainerProcess を **readonly** と呼びます。
+Zig では、`self` の型が `*const` かどうかで、zigjuiz が自動で readonly にします。
+juiz は、同じ Container の readonly の ContainerProcess どうしを、並行に動かすことがあります。
+
+こうして、状態(Container)と振る舞い(ContainerProcess)を別々に書きます。
+状態を変えたり読んだりできるのは、その Container に結びついた ContainerProcess だけです。
+「この値はどこで書き換わるのか」を知りたいときは、ContainerProcess を見ればよいことになります。
+
+### 型の一覧
+
+ファイルの末尾の `juiz.exportComponent` にも、足した型が書き足されています。
+
+```zig title="src/my_juiz.zig" ins={7-22}
+        .parts = .{
+            juiz.processPart(my_juiz_add, .{
+                .type_name = "my_juiz_add",
+                .description = "Returns a + b.",
+                .args = .{ .a = "first value", .b = "second value" },
+            }),
+            juiz.containerPart(counter_create, .{
+                .type_name = "counter",
+                .description = "Holds an integer value.",
+                .args = .{ .initial_value = "initial value" },
+            }),
+            juiz.containerProcessPart(counter_increment, .{
+                .type_name = "counter_increment",
+                .container_type = "counter",
+                .description = "Adds step to the value and returns it.",
+                .args = .{ .step = "value to add" },
+            }),
+            juiz.containerProcessPart(counter_get, .{
+                .type_name = "counter_get",
+                .container_type = "counter",
+                .description = "Returns the value.",
+            }),
+        },
+```
+
+| 部分 | 意味 |
+| --- | --- |
+| `juiz.containerPart(counter_create, .{ .type_name = "counter", ... })` | Container を作る関数を並べます。`.type_name` の文字列が Container の**型名**になります |
+| `juiz.containerProcessPart(counter_increment, .{ ... })` | ContainerProcess を並べます。`.type_name` が型名、`.container_type` が結びつける Container の型名です |
+
+ContainerProcess の `self` の型が、`.container_type` の Container の状態の型(ここでは `CounterState`)と違うと、コンパイルエラーになります。
+
+## 設定ファイルに足されたもの
+
+`app/app.conf` の末尾には、`containers` が足されています。
+
+```yaml title="app/app.conf" ins={4-12}
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 0
+    "processes":
+      - "type_name": "counter_increment"
+        "name": "counter_increment0"
+      - "type_name": "counter_get"
+        "name": "counter_get0"
+```
+
+- 型 `counter` から、Container のインスタンス `counter0` を 1 つ作る。`initial_value` に 0 を渡す
+- `counter0` に結びつけて、`counter_increment` のインスタンス `counter_increment0` と、`counter_get` のインスタンス `counter_get0` を作る
+
+「1 つの Container に、2 つの ContainerProcess がぶら下がっている」という形です。設定ファイルの書き方は、次の第 3 章で詳しく扱います。
+
+## ビルドして動かす
+
+第 1 章と同じように、ビルドして起動します。
+
+```sh
+scripts/dev.sh
+juiz -f app/app.conf -d
+```
+
+## 外から呼び出す
+
+`juiz` を起動したまま、別のターミナルを開きます。まず、動いている Container と ContainerProcess の一覧を見ます(表示される順番は実行ごとに変わることがあります)。
+
+```sh
+juiz container list
+# => ["http://127.0.0.1:8000/container/counter0::counter"]
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0", "http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0"]
+```
+
+ContainerProcess の ID は「インスタンス名`::`型名`:`Container のインスタンス名」の形をしていて、どの Container に結びついているかが ID からわかります。
+
+`counter_get` で今の値を見てから、`counter_increment` を同じ引数で 2 回呼び出し、もう一度 `counter_get` で値を見てみましょう。
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0" '{"step": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0" '{"step": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+同じ `{"step": 5}` を渡しているのに、1 回目と 2 回目で結果が違います。
+第 1 章の Process と違って、ContainerProcess の結果は引数だけでなく Container の状態にも左右されるからです。
+
+そして、`counter_increment` が変えた値を、別の ContainerProcess である `counter_get` が読めています。2 つの ContainerProcess は、同じ Container を共有しています。
+
+`'{}'` のように `step` を省くと、既定値の 1 が足されます。
+管理画面(`http://localhost:8000/ui/`)からも、第 1 章と同じように ContainerProcess を呼び出せます。
+
+## やってみよう
+
+- `counter_increment` に負の数(`{"step": -3}` など)を渡して、値が減ることを確かめてみましょう。
+- `juiz` を Ctrl+C で止めてから起動し直し、`counter_get` を呼び出してみましょう。値は最初に戻っています。状態は、動いている Container の中にだけあることがわかります。
+- `counter_get` の中で `self.value = 0;` と書いてビルドしてみましょう。`self` が `*const` なので、書き換えはコンパイルエラーになります。readonly の約束を、コンパイラが守ってくれます。
+- 値を 0 に戻す ContainerProcess `counter_reset` を、自分で書き足してみましょう。`counter_increment` をまねて関数を書き(引数は `self: *CounterState` だけにして、`self.value = 0;` にして `0` を返す)、`.parts` に `juiz.containerProcessPart` を足し、`app/app.conf` の `counter0` の `processes` に `counter_reset0` のインスタンスを足します。
+
+## まとめ
+
+- `juiz pkg add container <名前>` で、Container と、それを読み書きする ContainerProcess をプロジェクトに足せます。書き換わるのはソースと `app/app.conf` だけです。
+- 状態は Container に置きます。Container には「何を覚えておくか」(状態の struct と、それを作る関数)だけを書き、処理は書きません。
+- 状態を読み書きするのは、Container に結びついた ContainerProcess だけです。ContainerProcess は最初の引数 `self` で状態を受け取ります。`*const` で受けると readonly になります。
+- 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられます。それらは同じ状態を共有します。
+- ContainerProcess の結果は、引数だけでなく Container の状態にも左右されます。冪等な Process と、状態を扱う ContainerProcess を分けておくことで、状態がどこで変わるのかがはっきりします。
+
+次の章では、`app/app.conf` の書き方を学び、書き換えてインスタンスを増やしたり、初期値を渡したりします。[設定ファイルでまとめて起動する](/ja/tutorial/config-file/) に進みましょう。

@@ -292,3 +292,116 @@ See the [hsjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsju
 <Aside type="note">
 For 0.2.5 and earlier, which are not on Hackage, get the juiz source at the tag of the same version (`git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.4`) and add its `bindings/hsjuiz` to `packages:` in `cabal.project` (`packages: . /home/me/juiz-0.2.4/bindings/hsjuiz`). The [tutorial](/tutorial/first-process/haskell/) uses this way.
 </Aside>
+
+## Zig
+
+Write components with [zigjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/zigjuiz) (`@import("juiz")`). You need Zig 0.17.x (Linux, macOS and Windows).
+zigjuiz makes the C functions that juiz looks for from your Zig functions at comptime, so the result is a shared library linked to libjuiz_sdk, like C++ and Haskell.
+
+<Aside type="caution" title="Available from the version after juiz 0.3.2">
+Zig comes in the version after juiz 0.3.2. The version number is decided when it is released.
+To try it before the release, get the `juiz` command and zigjuiz from the juiz main branch as in [Trying it before the release](#trying-it-before-the-release) below.
+</Aside>
+
+### Supported Zig version
+
+Zig is before 1.0, and its standard library and `build.zig` API change with each version. zigjuiz supports **only one Zig version** and stops the build on any other version.
+The versions match as follows.
+
+| juiz and zigjuiz | Zig |
+| --- | --- |
+| The version after 0.3.2 and later (the first version that ships zigjuiz) | 0.17.x |
+
+Install Zig from [ziglang.org](https://ziglang.org/download/). `pip install ziglang==0.17.1` also works; then run `python3 -m ziglang` instead of `zig` (the skeleton's `scripts/dev.sh` runs as `ZIG="python3 -m ziglang" scripts/dev.sh`).
+
+### Getting zigjuiz and libjuiz_sdk
+
+zigjuiz is in juiz's [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) as an archive per version, `zigjuiz-<version>.tar.gz`.
+Add the same version as `juiz` to your project (the directory with `build.zig.zon`) with `zig fetch --save`.
+Install libjuiz_sdk with `juiz sdk install` (it installs the same version as `juiz` into `~/.juiz/sdk/<version>`; `juiz sdk path` prints where).
+
+```sh
+juiz --version      # e.g. juiz <version>
+juiz sdk install
+zig fetch --save https://github.com/OpenJUIZ/juiz/releases/download/v<version>/zigjuiz-<version>.tar.gz
+```
+
+This writes `.zigjuiz = .{ .url = "...", .hash = "..." }` into `dependencies` of `build.zig.zon`. When you update juiz, run `zig fetch --save` again with the URL of the new version.
+In a skeleton made with [`juiz pkg create <name> -b zig`](/guides/pkg/), `scripts/dev.sh` does this on its first run, so you do not have to.
+
+In `build.zig`, call `zigjuiz.init` once and `addPlugin` for each plugin. zigjuiz finds libjuiz_sdk, links it and sets the rpath.
+
+```zig title="build.zig"
+const std = @import("std");
+const zigjuiz = @import("zigjuiz");
+
+pub fn build(b: *std.Build) void {
+    const juiz = zigjuiz.init(b, .{
+        .target = b.standardTargetOptions(.{}),
+        .optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseSafe }),
+    });
+    const lib = juiz.addPlugin(.{
+        .name = "increment_process_zig", // lib<name>.so; the same as the name in the conf
+        .root_source_file = b.path("src/increment_process_zig.zig"),
+    });
+    b.installArtifact(lib);
+}
+```
+
+`zig build --release` makes `libincrement_process_zig.so` (`.dylib` on macOS) in `zig-out/lib`.
+If you call `juiz.installBundle(lib, .{})` instead of `b.installArtifact(lib)`, the plugin and libjuiz_sdk are put side by side in `zig-out/plugins/`, ready to go into a `.juizapp`.
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+The library is `lib<name>.so`. libjuiz_sdk is found at `juiz sdk path`, and the rpath has that directory and the plugin's own directory (`$ORIGIN`).
+
+</TabItem>
+<TabItem label="macOS">
+
+The library is `lib<name>.dylib`. The target is `aarch64-macos` on Apple silicon and `x86_64-macos` on Intel. The rpath has the plugin's own directory (`@loader_path`) and the libjuiz_sdk directory.
+
+</TabItem>
+<TabItem label="Windows">
+
+Run the same commands as on Linux and macOS in PowerShell. The library is `<name>.dll` without `lib`, and it goes to **`zig-out/bin`** (juiz does not use `<name>.lib` in `zig-out/lib`). Write the directory of the DLL in `path` of the configuration file.
+Windows has no rpath, so zigjuiz copies `juiz_sdk.dll` to `zig-out/bin` during `zig build`.
+It builds for Zig's default `x86_64-windows-gnu` and links `juiz_sdk.dll.lib` of libjuiz_sdk as is (no renamed copy like Haskell's is needed).
+
+The skeleton of `juiz pkg create -b zig` does not build on Windows yet ([issue #588](https://github.com/OpenJUIZ/juiz/issues/588)). On Windows, write the `build.zig` above yourself.
+
+</TabItem>
+</Tabs>
+
+If libjuiz_sdk is somewhere else, pass `zig build -Djuiz-sdk=<extracted directory>`.
+Zig can also build for other OSes and CPUs from one machine (`juiz sdk install --target <target>` and `-Dtarget`). For the details, the types you can use and how to return errors, see the [zigjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/zigjuiz).
+
+### Trying it before the release
+
+Until the first version that ships zigjuiz is released, get the `juiz` command and zigjuiz from the juiz main branch. The example repository [juiz_examples_zig](https://github.com/OpenJUIZ/juiz_examples_zig) is also pinned to a commit on juiz main for now.
+libjuiz_sdk can stay the released version (0.3.2) that `juiz sdk install` installs.
+
+```sh
+cargo install juiz_app --git https://github.com/OpenJUIZ/juiz --rev 5700911b1017e4e63f933e90a966c9352e9ece31 --locked
+juiz sdk install
+git clone https://github.com/OpenJUIZ/juiz.git ~/juiz-main
+git -C ~/juiz-main checkout 5700911b1017e4e63f933e90a966c9352e9ece31
+```
+
+`cargo install` needs the Rust toolchain (and the Python development files on Linux: `sudo apt install python3-dev` on Ubuntu).
+In your project, point to the zigjuiz of that source with `.path` in `build.zig.zon` instead of the Releases archive.
+Zig does not take an absolute path in `.path`, so write it relative to the project directory.
+
+```zig title="build.zig.zon (excerpt)"
+.dependencies = .{
+    .zigjuiz = .{ .path = "../juiz-main/bindings/zigjuiz" },
+},
+```
+
+The zigjuiz in the source reads the C header of the same source (`bindings/cjuiz/include`) with a relative path, so adding it with `zig fetch --save=zigjuiz <source>/bindings/zigjuiz` does not build. Use `.path`.
+
+When you create a skeleton, give the zigjuiz source with `--zigjuiz-dir`. `build.zig.zon` then points there with a relative path, and `scripts/dev.sh` does not get zigjuiz from Releases.
+
+```sh
+juiz pkg create my_juiz -b zig --zigjuiz-dir ~/juiz-main/bindings/zigjuiz
+```

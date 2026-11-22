@@ -123,6 +123,35 @@ juizContainer 'create 'manifest
 The arguments of `containerManifest` become the arguments of the function that creates the Container (it receives the values written under `containers` in the configuration file). Keep values you rewrite in an `IORef`.
 
 </TabItem>
+<TabItem label="Zig">
+
+```zig
+// example_container_state.zig: the state type (both the Container and the ContainerProcess libraries @import it)
+pub const Counter = struct {
+    value: i64,
+};
+```
+
+```zig
+// example_container_zig.zig
+const juiz = @import("juiz");
+const state = @import("example_container_state.zig");
+
+fn create(args: struct { value: i64 = 0 }) state.Counter {
+    return .{ .value = args.value };
+}
+
+comptime {
+    juiz.exportContainer(create, .{
+        .type_name = "example_container_zig",
+        .args = .{ .value = "initial value" },
+    });
+}
+```
+
+The function that makes the Container takes its arguments as one struct, like a Process (it gets the values written in `containers` of the configuration file). zigjuiz keeps the returned value as the state of the Container. If the state type has `pub fn deinit(self: *State) void`, it is called when the Container is removed.
+
+</TabItem>
 </Tabs>
 
 ## ContainerProcess
@@ -200,6 +229,32 @@ juizContainerProcess 'increment 'manifest
 
 The second argument of `containerProcessManifest` is the type name of the Container to bind to.
 Use the same type from the same module for the state in both the Container library and the ContainerProcess library (a different type causes an error). To put them in one library, use `juizComponent` ([tutorial chapter 6 (Haskell)](/tutorial/component/haskell/)).
+
+</TabItem>
+<TabItem label="Zig">
+
+```zig
+// example_container_zig_increment.zig
+const std = @import("std");
+const juiz = @import("juiz");
+const state = @import("example_container_state.zig");
+
+fn increment(self: *state.Counter, args: struct { arg1: i64 = 1 }) !i64 {
+    self.value = try std.math.add(i64, self.value, args.arg1);
+    return self.value;
+}
+
+comptime {
+    juiz.exportContainerProcess(increment, .{
+        .type_name = "example_container_zig_increment",
+        .container_type = "example_container_zig",
+        .args = .{ .arg1 = "value to be added" },
+    });
+}
+```
+
+The first argument `self` receives the state of the Container. `.container_type` is the type name of the Container to bind to. Taking `self` as `*const` makes the ContainerProcess readonly.
+Use the same type from the same file (`@import`) in the libraries of the Container and the ContainerProcess (if the types differ, the function is not called and -1104 is returned). To put them in one library, use `juiz.exportComponent` ([Tutorial chapter 6 (Zig)](/tutorial/component/zig/)).
 
 </TabItem>
 </Tabs>

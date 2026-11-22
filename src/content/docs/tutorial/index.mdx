@@ -15,11 +15,11 @@ Each chapter is built around running things yourself, so you can follow along wi
 
 <Steps>
 
-1. **[Your first Process](/tutorial/first-process/)** ([Rust](/tutorial/first-process/rust/), [Python](/tutorial/first-process/python/), [C++](/tutorial/first-process/cpp/), [Haskell](/tutorial/first-process/haskell/))
+1. **[Your first Process](/tutorial/first-process/)** ([Rust](/tutorial/first-process/rust/), [Python](/tutorial/first-process/python/), [C++](/tutorial/first-process/cpp/), [Haskell](/tutorial/first-process/haskell/), [Zig](/tutorial/first-process/zig/))
 
    Create a project skeleton with `juiz pkg create`, read the code of its Process that adds two numbers, run it, and call it from the web UI and from a terminal to get the result back. You learn how to read the skeleton, that a Process is an idempotent function, and how to use it with call.
 
-2. **[Keeping state: Container and ContainerProcess](/tutorial/container/)** ([Rust](/tutorial/container/rust/), [Python](/tutorial/container/python/), [C++](/tutorial/container/cpp/), [Haskell](/tutorial/container/haskell/))
+2. **[Keeping state: Container and ContainerProcess](/tutorial/container/)** ([Rust](/tutorial/container/rust/), [Python](/tutorial/container/python/), [C++](/tutorial/container/cpp/), [Haskell](/tutorial/container/haskell/), [Zig](/tutorial/container/zig/))
 
    Add a counter with `juiz pkg add container`, and learn a design where state lives in a Container and only ContainerProcesses touch it.
 
@@ -27,11 +27,11 @@ Each chapter is built around running things yourself, so you can follow along wi
 
    Read the skeleton's configuration file `app/app.conf` and edit it to add instances and pass initial values. You learn the difference between loading (plugins) and instantiating (processes / containers).
 
-4. **[Connecting Processes in separate processes: Topic](/tutorial/multi-process/)** ([Rust](/tutorial/multi-process/rust/), [Python](/tutorial/multi-process/python/), [C++](/tutorial/multi-process/cpp/), [Haskell](/tutorial/multi-process/haskell/))
+4. **[Connecting Processes in separate processes: Topic](/tutorial/multi-process/)** ([Rust](/tutorial/multi-process/rust/), [Python](/tutorial/multi-process/python/), [C++](/tutorial/multi-process/cpp/), [Haskell](/tutorial/multi-process/haskell/), [Zig](/tutorial/multi-process/zig/))
 
    Make two skeletons, talker and listener, with `juiz pkg create`, start them in separate juiz instances, and connect them with a command. Then make them connect just by starting, through a Topic (publish / subscribe). You learn connect, the other way to use a Process, and Execution Contexts.
 
-5. **[Connecting several libraries in one juiz: connect and Execution Context](/tutorial/connect/)** ([Rust](/tutorial/connect/rust/), [Python](/tutorial/connect/python/), [C++](/tutorial/connect/cpp/), [Haskell](/tutorial/connect/haskell/))
+5. **[Connecting several libraries in one juiz: connect and Execution Context](/tutorial/connect/)** ([Rust](/tutorial/connect/rust/), [Python](/tutorial/connect/python/), [C++](/tutorial/connect/cpp/), [Haskell](/tutorial/connect/haskell/), [Zig](/tutorial/connect/zig/))
 
    Load the two libraries from chapter 4 into one juiz and connect them with `connections` and an Execution Context in the configuration file. You learn Push and Pull, and the difference between call and running from an EC.
 
@@ -52,10 +52,10 @@ Each chapter is built around running things yourself, so you can follow along wi
 ## How to read each chapter
 
 - Each chapter starts with "What you will learn" and ends with a "Summary".
-- **Chapters 1, 2 and 4 to 6 have a separate page for each language.** You create your own project skeleton with `juiz pkg create`, and learn how to read `Cargo.toml` (Rust), `pyproject.toml` (Python), `CMakeLists.txt` (C++), or `cabal.project` and the `.cabal` file (Haskell), and the source with the types.
+- **Chapters 1, 2 and 4 to 6 have a separate page for each language.** You create your own project skeleton with `juiz pkg create`, and learn how to read `Cargo.toml` (Rust), `pyproject.toml` (Python), `CMakeLists.txt` (C++), `cabal.project` and the `.cabal` file (Haskell), or `build.zig` and `build.zig.zon` (Zig), and the source with the types.
 - Chapter 3 keeps using the project from chapters 1 and 2.
-- Chapters 4 and 5 make the talker and the listener from `juiz pkg create` skeletons, as in chapter 1. From chapter 6 on, you clone and use the example repositories ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp), [Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell)). Each chapter links to the corresponding files.
-- From chapter 3 on, code examples can be switched between Rust, Python, C++ and Haskell with tabs. The language you pick is kept on every other page.
+- Chapters 4 and 5 make the talker and the listener from `juiz pkg create` skeletons, as in chapter 1. From chapter 6 on, you clone and use the example repositories ([Rust](https://github.com/OpenJUIZ/juiz_examples_rust), [Python](https://github.com/OpenJUIZ/juiz_examples_python), [C++](https://github.com/OpenJUIZ/juiz_examples_cpp), [Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell), [Zig](https://github.com/OpenJUIZ/juiz_examples_zig)). Each chapter links to the corresponding files.
+- From chapter 3 on, code examples can be switched between Rust, Python, C++, Haskell and Zig with tabs. The language you pick is kept on every other page.
 - The meanings of terms such as Process, Container, call, execute, call_partial and p_apply are collected in the [Glossary](/concepts/glossary/).
 - If you already know what you want to do, you can also look it up in the [Guides](/guides/process/).
 - Separately from the tutorial, there is [Try it](/try/), where you run ready-made juiz apps to do robot-like things.
@@ -69,5 +69,6 @@ Install the `juiz` command by following [Installation](/getting-started/install/
 - If you use only Python, chapter 1 installs `juiz-cli` into a working venv, so you do not need to install it beforehand. No Rust toolchain is needed.
 - For C++, besides the `juiz` command (installed with either pip or cargo), you need CMake and a C++17 compiler. Chapter 1 sets up libjuiz_sdk.
 - For Haskell, besides the `juiz` command, you need GHC 9.6 or later and cabal (Linux or macOS). Chapter 1 sets up libjuiz_sdk and hsjuiz. Building the examples from chapter 6 on also uses Rust.
+- For Zig, besides the `juiz` command, you need Zig 0.17.x (Linux or macOS). Chapter 1 installs libjuiz_sdk with `juiz sdk install`, and the skeleton's script fetches zigjuiz. Building the examples from chapter 6 on also uses Rust. Zig is available from the version after juiz 0.3.2 (see "Zig" in [Language packages](/getting-started/packages/#zig)).
 
 When you are ready, move on to [Your first Process](/tutorial/first-process/).

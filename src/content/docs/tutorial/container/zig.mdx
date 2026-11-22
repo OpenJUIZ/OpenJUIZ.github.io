@@ -1,0 +1,242 @@
+---
+title: "2. Keeping state (Zig)"
+description: Add a counter Container and ContainerProcesses to the skeleton from chapter 1 with juiz pkg add container, and learn how to handle state.
+sidebar:
+  order: 5
+  label: Zig
+prev:
+  link: /tutorial/first-process/zig/
+  label: "1. Your first Process (Zig)"
+next:
+  link: /tutorial/config-file/
+  label: "3. Starting everything from a configuration file (all languages)"
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The Process in chapter 1 was an idempotent function that always returns the same result for the same arguments.
+But when you build parts for robots and IoT devices, you always end up with things you want to remember: a counter value, the current position of a motor, a connection to a camera.
+In this chapter you add a counter that remembers one integer to `my_juiz`, the project you made in chapter 1.
+
+<Aside type="tip" title="What you will learn">
+- State lives in a **Container**, never in a Process
+- Only the **ContainerProcesses** bound to a Container touch its state
+- One Container can have several ContainerProcesses with different roles
+- How to add a Container and ContainerProcesses to a project with `juiz pkg add container`
+</Aside>
+
+## Add a Container
+
+In `my_juiz`, the project from chapter 1, run the following command. If `juiz` is still running, stop it with Ctrl+C.
+
+```sh
+juiz pkg add container counter
+```
+
+```text
+Added container counter to my_juiz (zig): counter, counter_increment, counter_get
+Edited src/my_juiz.zig, app/app.conf
+
+Next steps:
+  scripts/dev.sh                  # rebuild the plugin
+  juiz -f app/app.conf -d         # restart juiz
+  ...
+```
+
+`juiz pkg add container <name>` adds these three types:
+
+| Role | Type name | What it does |
+| --- | --- | --- |
+| Container | `counter` | Holds one counter value. Takes the initial value `initial_value` when created |
+| ContainerProcess | `counter_increment` | Adds `step` to the Container's value and returns the new value |
+| ContainerProcess | `counter_get` | Returns the Container's value as is |
+
+Only `src/my_juiz.zig` and `app/app.conf` change, and no new files appear.
+The added types go into the same library (Component) as the Process from chapter 1. You do not need to touch `build.zig` either.
+
+Read the added parts in order.
+
+## Container: where the state lives
+
+A Container is the state itself. Only the holder for the value and the function that makes it are written.
+
+```zig title="src/my_juiz.zig (added)"
+/// State of the container `counter`.
+const CounterState = struct {
+    value: i64,
+};
+
+/// Makes the state of a container `counter`. initial_value comes from the entry of the container in app.conf
+fn counter_create(args: struct { initial_value: i64 = 0 }) CounterState {
+    return .{ .value = args.initial_value };
+}
+```
+
+| Part | Meaning |
+| --- | --- |
+| `const CounterState = struct { value: i64 }` | The state type. It is an ordinary Zig struct holding one integer |
+| `fn counter_create(args: struct { initial_value: i64 = 0 }) CounterState` | The function that makes the Container. Its arguments are written as for a Process, and you can pass `initial_value` from the configuration file (chapter 3). zigjuiz copies the returned value to the juiz side, and it becomes the state of the Container |
+
+The Container has no code that changes or reads the value. A Container only says "what to remember".
+
+The type name of the Container (`counter`) is given in `juiz.exportComponent` at the end of the file (see [The list of types](#the-list-of-types) below).
+
+## ContainerProcess: changing and reading the state
+
+Code that changes or reads the state goes in ContainerProcesses.
+A ContainerProcess is a Process that **takes the state of the Container as its first argument `self`**.
+
+### counter_increment: add to the value
+
+```zig title="src/my_juiz.zig (added)"
+/// Adds step to the value and returns it.
+fn counter_increment(self: *CounterState, args: struct { step: i64 = 1 }) !i64 {
+    self.value = try std.math.add(i64, self.value, args.step);
+    return self.value;
+}
+```
+
+| Part | Meaning |
+| --- | --- |
+| `self: *CounterState` | A pointer to the state of the Container. Changing `self.value` changes the Container's value |
+| `args: struct { step: i64 = 1 }` | The second argument is passed when calling, just like the Process in chapter 1. The default is 1 |
+| `try std.math.add(...)` | Adds `step` to the value. If the result does not fit in `i64`, `try` returns that error (and the value is not changed) |
+
+### counter_get: read the value
+
+```zig title="src/my_juiz.zig (added)"
+/// Returns the value. It takes the state as *const, so it is readonly.
+fn counter_get(self: *const CounterState) i64 {
+    return self.value;
+}
+```
+
+`counter_get` has no argument other than the Container and just returns the value.
+It takes `self` as `*const CounterState` (a pointer that cannot be written through), so this ContainerProcess only reads the value and never changes it. A ContainerProcess that only reads like this is called **readonly**.
+In Zig, zigjuiz makes it readonly automatically, depending on whether the type of `self` is `*const`.
+juiz may run readonly ContainerProcesses of the same Container in parallel.
+
+This is how you write the state (Container) and the behavior (ContainerProcesses) separately.
+Only the ContainerProcesses bound to a Container can change or read its state.
+When you want to know "where does this value change?", you only need to look at the ContainerProcesses.
+
+### The list of types
+
+`juiz.exportComponent` at the end of the file now also lists the added types.
+
+```zig title="src/my_juiz.zig" ins={7-22}
+        .parts = .{
+            juiz.processPart(my_juiz_add, .{
+                .type_name = "my_juiz_add",
+                .description = "Returns a + b.",
+                .args = .{ .a = "first value", .b = "second value" },
+            }),
+            juiz.containerPart(counter_create, .{
+                .type_name = "counter",
+                .description = "Holds an integer value.",
+                .args = .{ .initial_value = "initial value" },
+            }),
+            juiz.containerProcessPart(counter_increment, .{
+                .type_name = "counter_increment",
+                .container_type = "counter",
+                .description = "Adds step to the value and returns it.",
+                .args = .{ .step = "value to add" },
+            }),
+            juiz.containerProcessPart(counter_get, .{
+                .type_name = "counter_get",
+                .container_type = "counter",
+                .description = "Returns the value.",
+            }),
+        },
+```
+
+| Part | Meaning |
+| --- | --- |
+| `juiz.containerPart(counter_create, .{ .type_name = "counter", ... })` | Lists the function that makes a Container. The `.type_name` string becomes the **type name** of the Container |
+| `juiz.containerProcessPart(counter_increment, .{ ... })` | Lists a ContainerProcess. `.type_name` is its type name, and `.container_type` the type name of the Container to bind to |
+
+If the type of `self` of a ContainerProcess differs from the state type of the Container in `.container_type` (here `CounterState`), it is a compile error.
+
+## What was added to the configuration file
+
+`containers` has been added at the end of `app/app.conf`.
+
+```yaml title="app/app.conf" ins={4-12}
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 0
+    "processes":
+      - "type_name": "counter_increment"
+        "name": "counter_increment0"
+      - "type_name": "counter_get"
+        "name": "counter_get0"
+```
+
+- Create one Container instance, `counter0`, from the type `counter`, passing 0 as `initial_value`
+- Bound to `counter0`, create `counter_increment0`, an instance of `counter_increment`, and `counter_get0`, an instance of `counter_get`
+
+The shape is "two ContainerProcesses hanging from one Container". Chapter 3 covers how to write configuration files in detail.
+
+## Build and run
+
+Build and start it as in chapter 1.
+
+```sh
+scripts/dev.sh
+juiz -f app/app.conf -d
+```
+
+## Call it from outside
+
+Leave `juiz` running and open another terminal. First, list the running Containers and ContainerProcesses (the order may change from run to run).
+
+```sh
+juiz container list
+# => ["http://127.0.0.1:8000/container/counter0::counter"]
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0", "http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0"]
+```
+
+The ID of a ContainerProcess has the form "instance name`::`type name`:`Container instance name", so the ID tells you which Container it is bound to.
+
+Check the current value with `counter_get`, call `counter_increment` twice with the same argument, and look at the value with `counter_get` again.
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(0), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0" '{"step": 5}' -p
+# => CapsulePtr((value:Value(5), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_increment0::counter_increment:counter0" '{"step": 5}' -p
+# => CapsulePtr((value:Value(10), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/counter_get0::counter_get:counter0" '{}' -p
+# => CapsulePtr((value:Value(10), option: []))
+```
+
+You passed the same `{"step": 5}` twice, but the first and second results differ.
+Unlike the Process in chapter 1, a ContainerProcess's result depends not only on its arguments but also on the state of the Container.
+
+And `counter_get`, a different ContainerProcess, reads the value that `counter_increment` changed. The two ContainerProcesses share the same Container.
+
+If you leave out `step`, as in `'{}'`, its default value 1 is added.
+You can also call ContainerProcesses from the web UI (`http://localhost:8000/ui/`), as in chapter 1.
+
+## Try it yourself
+
+- Pass a negative number to `counter_increment` (such as `{"step": -3}`) and check that the value goes down.
+- Stop `juiz` with Ctrl+C, start it again, and call `counter_get`. The value is back to the start. The state lives only inside the running Container.
+- Write `self.value = 0;` inside `counter_get` and build. Since `self` is `*const`, the assignment is a compile error. The compiler keeps the readonly promise for you.
+- Write a ContainerProcess `counter_reset` that sets the value back to 0 yourself. Write the function modeled on `counter_increment` (take only `self: *CounterState`, do `self.value = 0;` and return `0`), add a `juiz.containerProcessPart` to `.parts`, and add an instance `counter_reset0` to the `processes` of `counter0` in `app/app.conf`.
+
+## Summary
+
+- `juiz pkg add container <name>` adds a Container and the ContainerProcesses that read and write it to a project. Only the source and `app/app.conf` change.
+- State lives in a Container. A Container only says "what to remember" (the state struct and the function that makes it) and has no processing code.
+- Only the ContainerProcesses bound to a Container read and write its state. A ContainerProcess takes the state as its first argument `self`. Taking it as `*const` makes it readonly.
+- One Container can have several ContainerProcesses with different roles. They share the same state.
+- A ContainerProcess's result depends on the Container's state as well as its arguments. Keeping idempotent Processes and state-handling ContainerProcesses apart makes it clear where state changes.
+
+In the next chapter you learn how to write `app/app.conf`, and edit it to add instances and pass initial values. Move on to [Starting everything from a configuration file](/tutorial/config-file/).

@@ -35,6 +35,7 @@ import { Aside, CardGrid, LinkCard } from '@astrojs/starlight/components';
 	<LinkCard title="Python" href="/ja/tutorial/first-process/python/" description="pyproject.toml の雛形を作り、venv に pyjuiz を入れて .py ファイルをそのまま読み込ませます。" />
 	<LinkCard title="C++" href="/ja/tutorial/first-process/cpp/" description="CMake のプロジェクトの雛形を作り、libjuiz_sdk にリンクしてビルドします。" />
 	<LinkCard title="Haskell" href="/ja/tutorial/first-process/haskell/" description="cabal のプロジェクトの雛形を作り、foreign-library として共有ライブラリにビルドします。" />
+	<LinkCard title="Zig" href="/ja/tutorial/first-process/zig/" description="build.zig と build.zig.zon の雛形を作り、zigjuiz で共有ライブラリにビルドします(Linux・macOS)。" />
 </CardGrid>
 
 ここで作るプロジェクト `my_juiz` は、第 2 章で `juiz pkg add` を使ってカウンタの Container を足し、第 3 章で起動の設定ファイル `app/app.conf` を書き換えて育てていきます。

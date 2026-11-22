@@ -44,7 +44,7 @@ The IPC broker is built into the `juiz` command, so there is nothing new to inst
 ## Preparation
 
 Use the `talker` and `listener` you made in chapter 4. Keep their configuration files in the Topic form from the end of chapter 4 (`publishes` and `mastersystem` in the talker, `subscribes` in the listener).
-For Rust, C++ and Haskell, use the plugins you built in chapter 4 as they are. You do not change the Process code in this chapter.
+For Rust, C++, Haskell and Zig, use the plugins you built in chapter 4 as they are. You do not change the Process code in this chapter.
 
 As in chapter 4, use three terminals, all opened in the directory that holds `talker` and `listener` (for Python, activate the venv in every terminal).
 
@@ -336,6 +336,62 @@ These are the two configuration files after the changes. Only `language` and `pa
   "components":
     "talker":
       "language": "haskell"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "talker_talk"
+    "name": "talker_talk0"
+    "publishes":
+      - "chatter"
+"ecs":
+  - "type_name": "main_loop_ec"
+    "name": "talker_ec"
+    "rate": 1.0
+    "bind":
+      - "type_name": "talker_talk"
+        "name": "talker_talk0"
+    "auto_start": true
+```
+
+</TabItem>
+<TabItem label="Zig">
+
+```yaml title="listener/app/app.conf"
+"name": "listener"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"brokers":
+  - "type_name": "ipc"
+    "name": "listener"
+"plugins":
+  "components":
+    "listener":
+      "language": "zig"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "listener_listen"
+    "name": "listener_listen0"
+    "subscribes":
+      "arg1": "chatter"
+```
+
+```yaml title="talker/app/app.conf"
+"name": "talker"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8001
+"mastersystem":
+  "broker_type": "ipc"
+  "broker_name": "listener"
+"brokers":
+  - "type_name": "ipc"
+    "name": "talker"
+"plugins":
+  "components":
+    "talker":
+      "language": "zig"
       "path": "plugins/{target}"
 "processes":
   - "type_name": "talker_talk"

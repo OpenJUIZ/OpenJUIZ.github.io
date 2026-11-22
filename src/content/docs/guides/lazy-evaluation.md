@@ -55,7 +55,7 @@ Conversion happens only where a value has to be read in the common format, and o
 
 | Where | Behavior |
 |---|---|
-| Passing to a Rust, C++ or Haskell Process | The receiver reads the common format, so the value is converted |
+| Passing to a Rust, C++, Haskell or Zig Process | The receiver reads the common format, so the value is converted |
 | Responses across brokers (HTTP, QUIC and so on, including the CLI's `call`) | Converted, returning the same JSON or image as before |
 | Publishing to a Topic | Converted and delivered as before |
 | Argument values in the profile and the web UI | Converted, showing the same values as before |
@@ -101,7 +101,7 @@ Return values of Rust and C++ Processes typed with [data types](/guides/datatype
 
 ## Not covered yet
 
-- Haskell
+- Haskell and Zig
 - Topics (values are converted even between Python Processes)
 - Across brokers or processes (always converted)
 

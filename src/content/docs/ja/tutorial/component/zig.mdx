@@ -1,0 +1,305 @@
+---
+title: "6. Component にまとめて配布する(Zig)"
+description: Process・Container・ContainerProcess を Zig で 1 つの Component にまとめ、設定ファイル 1 行で読み込みます。
+sidebar:
+  order: 5
+  label: Zig
+prev:
+  link: /ja/tutorial/connect/zig/
+  label: "5. 1 つの juiz で複数のライブラリをつなぐ(Zig)"
+next:
+  link: /ja/tutorial/ipc-broker/
+  label: "7. 通信方式を選ぶ: IPC ブローカー"
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+第 1〜3 章の雛形では、Process・Container・ContainerProcess を 1 つのソースに書いて 1 つのライブラリにし、`app/app.conf` の `plugins` の `components` に 1 行書いて読み込みました。第 4・5 章の talker と listener も、Process を 1 つだけ入れた同じ形のライブラリでした。
+一方、juiz には、1 つの型ごとに別々のファイル(ライブラリ)にして、`process_factories` に型を 1 つずつ並べて読み込む書き方もあります。サンプル集の talker と listener は、この形で書かれています。
+
+実際に「このカメラを動かす部品一式」を誰かに渡すときに、ファイルがばらばらだと不便です。
+この章では、雛形がとっていた形、つまり Process・Container・ContainerProcess を 1 つのライブラリにまとめた **Component** を、サンプル集の例で改めて読み、型ごとのファイルの書き方と比べます。
+
+<Aside type="tip" title="この章で学ぶこと">
+- Component は、複数の Process・Container・ContainerProcess を 1 つにまとめた**配布の単位**であること
+- Component の中の型は、これまでと同じ型名で、同じようにインスタンスを作れること
+- `plugins` の `components` には、型ではなく Component の名前を 1 つ書けばよいこと
+</Aside>
+
+## サンプルを用意する
+
+
+第 5 章までは、雛形から作った自分のプロジェクトを使いました。ここからは題材が増えるので、サンプル集をクローンしてビルドし、そのファイルを読みながら進めます。
+以降の章のコマンドは、すべてクローンしたリポジトリのルートで実行します。
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_zig.git
+cd juiz_examples_zig
+./build.sh
+```
+
+サンプル集の `build.sh` は、juiz のソースを取得して、その中の zigjuiz と libjuiz_sdk を使ってサンプルをビルドします(第 1 章のように `juiz sdk install` しておく必要はありません)。
+libjuiz_sdk をソースからビルドするときに Rust(stable)を使うので、入れておいてください。初回は少し時間がかかります。
+取得する juiz の版は `build.sh` の `JUIZ_GIT_REF` で決まります。いまは zigjuiz を初めて配る版の公開前なので、juiz の main のコミットに合わせてあり、`juiz` コマンドも同じコミットから入れます(サンプル集の [README](https://github.com/OpenJUIZ/juiz_examples_zig#readme))。
+`pip install ziglang==0.17.1` で入れた Zig を使うときは、`ZIG="python3 -m ziglang" ./build.sh` で実行します。
+
+各サンプルは共有ライブラリとして `build/plugins` にビルドされ、libjuiz_sdk も同じ場所に置かれます。ファイル名は OS によって違います。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+ls build/plugins/*.so
+# => build/plugins/libexample_component_zig.so  build/plugins/libjuiz_sdk.so  build/plugins/liblistener_zig.so  ...
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+ls build/plugins/*.dylib
+# => build/plugins/libexample_component_zig.dylib  build/plugins/libjuiz_sdk.dylib  build/plugins/liblistener_zig.dylib  ...
+```
+
+</TabItem>
+</Tabs>
+
+Component のサンプルも、このビルドで一緒にできあがります。
+
+この章で使う Component には、次のものが入っています。どれも、これまでの章で作ったものと同じ働きです。
+
+| 種類 | 働き |
+| --- | --- |
+| Process | 引数に 1 を足して返す(第 1 章の `my_juiz_add` と同じく、ふつうの Process) |
+| Container | 整数値を 1 つ持つ(第 2 章のカウンタと同じ) |
+| ContainerProcess | Container の値を読む・変える |
+
+## Component のコードを読む
+
+[`component/example_component_zig.zig`](https://github.com/OpenJUIZ/juiz_examples_zig/blob/main/component/example_component_zig.zig)
+
+```zig
+//! 1 つのライブラリに Process・Container・ContainerProcess をまとめた Component (example_component_zig)。
+//!
+//! 各要素の関数を単体のときと同じように書き、juiz.exportComponent の .parts に並べて公開する。
+//! Container と ContainerProcess が同じライブラリに入るので、状態の型を別のファイルに分けなくてよい。
+const std = @import("std");
+const juiz = @import("juiz");
+
+/// Process: arg1 に 1 を足して返す
+fn increment(args: struct { arg1: i64 = 1 }) !i64 {
+    return std.math.add(i64, args.arg1, 1);
+}
+
+/// Container の状態: 整数値を 1 つ保持する
+const ComponentContainer = struct {
+    value: i64,
+};
+
+fn createContainer(args: struct { value: i64 = 0 }) ComponentContainer {
+    return .{ .value = args.value };
+}
+
+/// ContainerProcess: Container の値を返す (readonly)
+fn containerGet(self: *const ComponentContainer) i64 {
+    return self.value;
+}
+
+/// ContainerProcess: Container の値に arg1 を足す
+fn containerIncrement(self: *ComponentContainer, args: struct { arg1: i64 = 1 }) !i64 {
+    self.value = try std.math.add(i64, self.value, args.arg1);
+    return self.value;
+}
+
+comptime {
+    juiz.exportComponent(.{
+        .type_name = "example_component_zig",
+        .description = "Zig component example.",
+        .parts = .{
+            juiz.processPart(increment, .{
+                .type_name = "example_component_zig_increment",
+                .description = "Adds 1 to arg1.",
+                .args = .{ .arg1 = "value to be incremented" },
+            }),
+            juiz.containerPart(createContainer, .{
+                .type_name = "example_component_zig_container",
+                .description = "Holds an integer value.",
+                .args = .{ .value = "initial value" },
+            }),
+            juiz.containerProcessPart(containerGet, .{
+                .type_name = "example_component_zig_container_get",
+                .container_type = "example_component_zig_container",
+                .description = "Returns the value of the container.",
+            }),
+            juiz.containerProcessPart(containerIncrement, .{
+                .type_name = "example_component_zig_container_increment",
+                .container_type = "example_component_zig_container",
+                .description = "Adds arg1 to the value of the container.",
+                .args = .{ .arg1 = "value to be added" },
+            }),
+        },
+    });
+}
+```
+
+書き方は、第 1・2 章の雛形の `src/my_juiz.zig` と同じです。サンプル集の talker・listener のように、型ごとに別のライブラリ(単体)にするときとは、公開のしかただけが違います。
+
+- 単体のときの `juiz.exportProcess`・`juiz.exportContainer`・`juiz.exportContainerProcess` の代わりに、最後の `juiz.exportComponent` で全部をまとめて公開します。
+- `.type_name` が Component の名前、`.parts` が中に入れる要素の一覧です。要素は `juiz.processPart`・`juiz.containerPart`・`juiz.containerProcessPart` に、関数と、単体のときと同じオプション(型名・説明・引数の説明)を組にして渡します。
+- ContainerProcess がどの Container に結びつくかは、単体のときと同じく `.container_type`(Container の型名)で決まります。
+- Container と ContainerProcess が同じライブラリに入るので、状態の型も同じファイルに書けます(単体のときは、両方のライブラリが同じファイルの型を `@import` します)。
+- 型名が Component の中で重なっている、`.container_type` が同じ Component の Container でない、`self` の型が Container の状態の型と違う、といった間違いは、コンパイルエラーになります。
+
+ビルドは [`build.zig`](https://github.com/OpenJUIZ/juiz_examples_zig/blob/main/build.zig) の `addPlugin` 1 つです(サンプル集では、全サンプルを表にして順に `addPlugin` しています)。
+
+```zig
+const lib = juiz.addPlugin(.{
+    .name = "example_component_zig",
+    .root_source_file = b.path("component/example_component_zig.zig"),
+});
+juiz.installBundle(lib, .{});
+```
+
+1 つの共有ライブラリができます。ファイル名は Linux では `build/plugins/libexample_component_zig.so`、macOS では `build/plugins/libexample_component_zig.dylib` です。
+
+サンプル集の talker・listener では型ごとに分かれていたものが、Component では 1 つのライブラリに入っています。
+それぞれの Process や ContainerProcess の中身は、これまでと変わりません。Process は冪等な関数のまま、状態に触れるのは ContainerProcess だけ、という考え方もそのままです。
+
+## 設定ファイルを読む
+
+[`example_component.conf`](https://github.com/OpenJUIZ/juiz_examples_zig/blob/main/example_component.conf)
+
+```yaml
+name: example_component
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  components:
+    example_component_zig:
+      language: "zig"
+      path: "./build/plugins"
+processes:
+  - type_name: example_component_zig_increment
+    name: proc0
+containers:
+  - type_name: example_component_zig_container
+    name: container0
+    value: 100
+    processes:
+      - type_name: example_component_zig_container_increment
+        name: increment0
+      - type_name: example_component_zig_container_get
+        name: get0
+```
+
+サンプル集の設定ファイル `talker_listener.conf`(talker と listener を型ごとのファイルから読み込んでつなぐもの)と比べてみましょう。
+
+### plugins: Component を 1 つ書く
+
+```yaml
+plugins:
+  components:
+    example_component_zig:
+      language: "zig"
+      path: "./build/plugins"
+```
+
+`talker_listener.conf` では、`process_factories` に型を 1 つずつ書いています(Container なら `container_factories` に書き、ContainerProcess も Container の下に 1 つずつ書きます)。
+Component では、第 3 章の `app/app.conf` と同じく、`components` に **Component の名前を 1 つ**書くだけです。キーの名前から読み込むファイルが決まるのは、型ごとのときと同じです。
+
+Component 名 `example_component_zig` なら、`./build/plugins` の中の `libexample_component_zig.so`(macOS では `libexample_component_zig.dylib`)が読み込まれます。設定ファイルには拡張子を書かないので、同じ設定ファイルがどの OS でも使えます。
+
+この 1 行で、Component の中にある Process・Container・ContainerProcess の型が、すべて読み込まれます。
+
+### processes と containers: いつもどおり作る
+
+`processes` と `containers` の書き方は、第 3 章とまったく同じです。`type_name` に Component の中の型名を書き、`name` にインスタンスの名前を書きます。
+Container の初期値を渡せるのも同じです。
+
+型がどのファイルから来たのかは、インスタンスを作る側には関係ありません。
+Component は「型をまとめて配る」ためのもので、作ったインスタンスは、別々のファイルから読み込んだときと同じように動きます。
+
+## 動かす
+
+設定ファイルを `-f` で渡して起動します。
+
+```sh
+juiz -f example_component.conf -d
+```
+
+## 外から呼び出す
+
+`juiz` を起動したまま別のターミナルを開き、一覧を見てみます。
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/proc0::example_component_zig_increment"]
+juiz container list
+# => ["http://127.0.0.1:8000/container/container0::example_component_zig_container"]
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/get0::example_component_zig_container_get:container0", "http://127.0.0.1:8000/container_process/increment0::example_component_zig_container_increment:container0"]
+```
+
+1 つのファイルから読み込んだ型で、Process・Container・ContainerProcess のインスタンスがそろってできています。ID の形も、これまでの章とまったく同じです。
+それぞれを呼び出してみましょう。
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/proc0::example_component_zig_increment" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_zig_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(100), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_component_zig_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(105), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_zig_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(105), option: []))
+```
+
+Process は引数に 1 を足して返し、ContainerProcess は Container の値を変えたり読んだりします。
+呼び出す側から見ると、サンプル集の talker・listener のように型ごとのファイルから読み込んだものと区別がつきません。
+
+## Component は配布の単位
+
+ここまでで見たように、Component にまとめても、Process や Container の働きや使い方は何も変わりません。変わるのは**ファイルの束ね方**だけです。
+
+- **作る人**は、関連する Process・Container・ContainerProcess を 1 つのプロジェクトで書き、1 つのライブラリとして配れます。たとえばカメラなら、カメラを開いて持っておく Container、画像を読む ContainerProcess、画像を変換する Process を 1 つの Component にできます。
+- **使う人**は、`plugins` の `components` に 1 行書くだけで、中の型を全部使えるようになります。どの型を何個作るかは、これまでどおり `processes` と `containers` で自由に決められます。
+
+<Aside type="tip" title="雛形を配布する">
+第 1〜3 章で作った `my_juiz` も 1 つの Component です。雛形の `scripts/pack.sh`(Windows は `scripts\pack.ps1`)を実行すると、Component のライブラリと `app/app.conf` を `.juizapp` というファイル 1 つにまとめられ、受け取った人は `juiz run` だけで動かせます。詳しくは [雛形から始める(juiz pkg)の「配布する」](/ja/guides/pkg/#配布する) と [アプリの配布(.juizapp)](/ja/guides/app-package/) を見てください。
+</Aside>
+
+つまり、Process・Container・ContainerProcess が「動かすときの単位」であるのに対して、Component は「配るときの単位」です。
+
+## やってみよう
+
+- `processes` に `example_component_zig_increment`のインスタンスをもう 1 つ書き足してみましょう。Component から読み込んだ型からも、第 3 章と同じように、いくつでもインスタンスを作れます。
+- `containers` にもう 1 つ Container(たとえば `container1`)と、それに結びつく ContainerProcess を書き足してみましょう。`container0` と `container1` は別々の値を持ちます。
+- 第 5 章の `connections` と `ecs` を書き足して、1 つ目の Process の出力を、書き足した 2 つ目の Process の `arg1` につないでみましょう。Component から読み込んだ型かどうかに関係なく、同じようにつなげます。`plugins` には `components` と `process_factories` を並べて書けるので、サンプル集の talker のような別ファイルの Process とつなぐこともできます。
+- 設定ファイルを使わずに、コマンドラインから Component を読み込むこともできます。`-1` を付けると、Component の中のすべての型から、インスタンスを 1 つずつ作ります(名前は雛形の `app/app.conf` と同じく「型名 + `0`」になります)。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --component ./build/plugins/libexample_component_zig.so -l zig -1 -d
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --component ./build/plugins/libexample_component_zig.dylib -l zig -1 -d
+```
+
+</TabItem>
+</Tabs>
+
+## まとめ
+
+- Component は、複数の Process・Container・ContainerProcess を 1 つのライブラリにまとめたものです。
+- 設定ファイルでは、`plugins` の `components` に Component の名前を 1 つ書くだけで、中の型がすべて読み込まれます。
+- インスタンスの作り方、ID、呼び出し方、つなぎ方は、別々のファイルから読み込んだときと同じです。Component は動かし方を変えるものではなく、**配布の単位**です。
+
+次の章では、juiz どうしをつなぐ通信方式を選びます。[通信方式を選ぶ: IPC ブローカー](/ja/tutorial/ipc-broker/) に進みましょう。

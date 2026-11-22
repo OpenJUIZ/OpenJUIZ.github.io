@@ -1,0 +1,305 @@
+---
+title: "6. Packaging as a Component (Zig)"
+description: Bundle Processes, Containers and ContainerProcesses written in Zig into one Component and load it with one line of configuration.
+sidebar:
+  order: 5
+  label: Zig
+prev:
+  link: /tutorial/connect/zig/
+  label: "5. Connecting several libraries in one juiz (Zig)"
+next:
+  link: /tutorial/ipc-broker/
+  label: "7. Choosing a transport: the IPC broker"
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+In the skeleton of chapters 1 to 3, you wrote the Process, Container and ContainerProcesses in one source, built them into one library, and loaded it with one line under `components` in `plugins` of `app/app.conf`. The talker and listener of chapters 4 and 5 were libraries of the same form, each holding a single Process.
+juiz also lets you write one file (library) per type and load them by listing the types one by one under `process_factories`. The talker and listener in the example repository are written that way.
+
+When you want to hand someone "the full set of parts for this camera", scattered files are inconvenient.
+In this chapter you take another look at the form the skeleton used, the **Component**, which bundles Processes, Containers and ContainerProcesses into one library, using the example repository, and compare it with one file per type.
+
+<Aside type="tip" title="What you will learn">
+- A Component is the **unit of distribution** that bundles several Processes, Containers and ContainerProcesses
+- Types inside a Component keep their type names, and you create instances from them the same way as before
+- `components` in `plugins` takes a single Component name instead of each type
+</Aside>
+
+## Prepare the samples
+
+
+Up to chapter 5 you used your own project made from the skeleton. From here on there are more building blocks, so clone and build the example repository and read its files as you go.
+Run all commands in the following chapters from the root of the cloned repository.
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_zig.git
+cd juiz_examples_zig
+./build.sh
+```
+
+The `build.sh` of the examples gets the juiz source and builds the examples with zigjuiz and libjuiz_sdk from it (you do not need to run `juiz sdk install` as in chapter 1).
+It builds libjuiz_sdk from source with Rust (stable), so install that too. The first run takes a while.
+The juiz version it gets is set by `JUIZ_GIT_REF` in `build.sh`. Until the first version that ships zigjuiz is released, it follows a commit on the main branch of juiz, and you install the `juiz` command from the same commit (see the [README](https://github.com/OpenJUIZ/juiz_examples_zig#readme) of the examples).
+If you use Zig installed with `pip install ziglang==0.17.1`, run `ZIG="python3 -m ziglang" ./build.sh`.
+
+Each example is built as a shared library in `build/plugins`, and libjuiz_sdk is placed there too. The file names depend on the OS.
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+ls build/plugins/*.so
+# => build/plugins/libexample_component_zig.so  build/plugins/libjuiz_sdk.so  build/plugins/liblistener_zig.so  ...
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+ls build/plugins/*.dylib
+# => build/plugins/libexample_component_zig.dylib  build/plugins/libjuiz_sdk.dylib  build/plugins/liblistener_zig.dylib  ...
+```
+
+</TabItem>
+</Tabs>
+
+The Component example is built along with the rest.
+
+The Component used in this chapter contains the following. Each works the same as what you built in the earlier chapters.
+
+| Kind | What it does |
+| --- | --- |
+| Process | Adds 1 to its argument and returns it (an ordinary Process, like `my_juiz_add` in chapter 1) |
+| Container | Holds one integer (same as the counter in chapter 2) |
+| ContainerProcess | Reads or changes the Container's value |
+
+## Read the Component code
+
+[`component/example_component_zig.zig`](https://github.com/OpenJUIZ/juiz_examples_zig/blob/main/component/example_component_zig.zig)
+
+```zig
+//! A Component that bundles a Process, a Container and ContainerProcesses in one library (example_component_zig).
+//!
+//! Write each element's function as for a single element, and expose them all by listing them in .parts of juiz.exportComponent.
+//! The Container and the ContainerProcesses are in the same library, so the state type need not be in a separate file.
+const std = @import("std");
+const juiz = @import("juiz");
+
+/// Process: returns arg1 plus 1
+fn increment(args: struct { arg1: i64 = 1 }) !i64 {
+    return std.math.add(i64, args.arg1, 1);
+}
+
+/// State of the Container: holds one integer value
+const ComponentContainer = struct {
+    value: i64,
+};
+
+fn createContainer(args: struct { value: i64 = 0 }) ComponentContainer {
+    return .{ .value = args.value };
+}
+
+/// ContainerProcess: returns the value of the Container (readonly)
+fn containerGet(self: *const ComponentContainer) i64 {
+    return self.value;
+}
+
+/// ContainerProcess: adds arg1 to the value of the Container
+fn containerIncrement(self: *ComponentContainer, args: struct { arg1: i64 = 1 }) !i64 {
+    self.value = try std.math.add(i64, self.value, args.arg1);
+    return self.value;
+}
+
+comptime {
+    juiz.exportComponent(.{
+        .type_name = "example_component_zig",
+        .description = "Zig component example.",
+        .parts = .{
+            juiz.processPart(increment, .{
+                .type_name = "example_component_zig_increment",
+                .description = "Adds 1 to arg1.",
+                .args = .{ .arg1 = "value to be incremented" },
+            }),
+            juiz.containerPart(createContainer, .{
+                .type_name = "example_component_zig_container",
+                .description = "Holds an integer value.",
+                .args = .{ .value = "initial value" },
+            }),
+            juiz.containerProcessPart(containerGet, .{
+                .type_name = "example_component_zig_container_get",
+                .container_type = "example_component_zig_container",
+                .description = "Returns the value of the container.",
+            }),
+            juiz.containerProcessPart(containerIncrement, .{
+                .type_name = "example_component_zig_container_increment",
+                .container_type = "example_component_zig_container",
+                .description = "Adds arg1 to the value of the container.",
+                .args = .{ .arg1 = "value to be added" },
+            }),
+        },
+    });
+}
+```
+
+It is written the same way as `src/my_juiz.zig` in the skeleton of chapters 1 and 2. Compared with one library per type (single elements), like the talker and listener in the example repository, only the way they are exposed differs.
+
+- Instead of `juiz.exportProcess`, `juiz.exportContainer` and `juiz.exportContainerProcess` for single elements, `juiz.exportComponent` at the end exposes everything together.
+- `.type_name` is the Component's name, and `.parts` the list of the elements it contains. Each element pairs a function with the same options as for a single element (type name, description, argument descriptions) using `juiz.processPart`, `juiz.containerPart` or `juiz.containerProcessPart`.
+- Which Container a ContainerProcess is bound to is given, as before, by `.container_type` (the Container type name).
+- The Container and the ContainerProcesses are in the same library, so the state type can be in the same file too (for single elements, both libraries `@import` the type from the same file).
+- Mistakes such as type names that clash within the Component, a `.container_type` that is not a Container of the same Component, or a `self` type that differs from the state type of the Container are compile errors.
+
+The build is one `addPlugin` in [`build.zig`](https://github.com/OpenJUIZ/juiz_examples_zig/blob/main/build.zig) (the example repository lists all the examples in a table and calls `addPlugin` for each).
+
+```zig
+const lib = juiz.addPlugin(.{
+    .name = "example_component_zig",
+    .root_source_file = b.path("component/example_component_zig.zig"),
+});
+juiz.installBundle(lib, .{});
+```
+
+This produces a single shared library: `build/plugins/libexample_component_zig.so` on Linux and `build/plugins/libexample_component_zig.dylib` on macOS.
+
+What the talker and listener examples split per type now lives in one library.
+The bodies of the Processes and ContainerProcesses are unchanged. Processes are still idempotent functions, and only ContainerProcesses touch state.
+
+## Read the configuration file
+
+[`example_component.conf`](https://github.com/OpenJUIZ/juiz_examples_zig/blob/main/example_component.conf)
+
+```yaml
+name: example_component
+option:
+  http_broker:
+    start: true
+    port: 8000
+plugins:
+  components:
+    example_component_zig:
+      language: "zig"
+      path: "./build/plugins"
+processes:
+  - type_name: example_component_zig_increment
+    name: proc0
+containers:
+  - type_name: example_component_zig_container
+    name: container0
+    value: 100
+    processes:
+      - type_name: example_component_zig_container_increment
+        name: increment0
+      - type_name: example_component_zig_container_get
+        name: get0
+```
+
+Compare it with `talker_listener.conf` in the example repository (it loads talker and listener from one file per type and connects them).
+
+### plugins: one Component entry
+
+```yaml
+plugins:
+  components:
+    example_component_zig:
+      language: "zig"
+      path: "./build/plugins"
+```
+
+`talker_listener.conf` lists types one by one in `process_factories` (Containers go in `container_factories`, with each ContainerProcess under its Container).
+With a Component, as in `app/app.conf` from chapter 3, you write **just one Component name** in `components`. As with one file per type, the key determines which file is loaded.
+
+For the Component name `example_component_zig`, juiz loads `libexample_component_zig.so` (`libexample_component_zig.dylib` on macOS) from `./build/plugins`. The configuration file has no file extension in it, so the same file works on every OS.
+
+That one entry loads every Process, Container and ContainerProcess type in the Component.
+
+### processes and containers: created as usual
+
+`processes` and `containers` are written exactly as in chapter 3. Put a type name from the Component in `type_name` and the instance name in `name`.
+You can pass a Container's initial value the same way, too.
+
+Where a type came from does not matter to the side creating instances.
+A Component is for "distributing types together", and the instances you create behave exactly as if they had been loaded from separate files.
+
+## Run it
+
+Pass the configuration file with `-f`.
+
+```sh
+juiz -f example_component.conf -d
+```
+
+## Call it from outside
+
+Leave `juiz` running, open another terminal, and look at the lists.
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/proc0::example_component_zig_increment"]
+juiz container list
+# => ["http://127.0.0.1:8000/container/container0::example_component_zig_container"]
+juiz container-process list
+# => ["http://127.0.0.1:8000/container_process/get0::example_component_zig_container_get:container0", "http://127.0.0.1:8000/container_process/increment0::example_component_zig_container_increment:container0"]
+```
+
+Process, Container and ContainerProcess instances have all been created from types loaded from one file. The IDs look exactly like those in earlier chapters.
+Call each of them.
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/proc0::example_component_zig_increment" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_zig_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(100), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_component_zig_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(105), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_zig_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(105), option: []))
+```
+
+The Process adds 1 to its argument and returns it, and the ContainerProcesses change or read the Container's value.
+From the caller's point of view, they are indistinguishable from types loaded from one file per type, as with the talker and listener in the example repository.
+
+## A Component is the unit of distribution
+
+As you have seen, bundling into a Component changes nothing about how Processes and Containers work or how you use them. Only **how the files are bundled** changes.
+
+- **Authors** can write related Processes, Containers and ContainerProcesses in one project and distribute them as one library. For a camera, for example, a Container that opens and holds the camera, a ContainerProcess that reads images, and a Process that converts images can all be one Component.
+- **Users** write one line in `components` under `plugins` to get every type inside. Which types to instantiate, and how many, is still decided freely with `processes` and `containers`.
+
+<Aside type="tip" title="Distributing your skeleton">
+The `my_juiz` you made in chapters 1 to 3 is also one Component. Run the skeleton's `scripts/pack.sh` (`scripts\pack.ps1` on Windows) to bundle the Component library and `app/app.conf` into a single `.juizapp` file; whoever receives it can run it with just `juiz run`. See "Distribute" in [Starting from a skeleton (juiz pkg)](/guides/pkg/#distribute) and [Distributing apps (.juizapp)](/guides/app-package/).
+</Aside>
+
+In other words, Processes, Containers and ContainerProcesses are "units for running", while a Component is the "unit for distributing".
+
+## Try it yourself
+
+- Add another instance of `example_component_zig_increment` to `processes`. As in chapter 3, you can create any number of instances from types loaded from a Component.
+- Add another Container (for example `container1`) and its ContainerProcesses to `containers`. `container0` and `container1` hold separate values.
+- Add `connections` and `ecs` from chapter 5 and connect the first Process's output to `arg1` of the second Process you added. Types from a Component connect the same way as any other. `plugins` can list `components` and `process_factories` side by side, so you can also connect to a Process from a separate file, such as the talker in the example repository.
+- You can also load a Component from the command line without a configuration file. With `-1`, juiz creates one instance of every type in the Component (named "type name + `0`", as in the skeleton's `app/app.conf`).
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --component ./build/plugins/libexample_component_zig.so -l zig -1 -d
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --component ./build/plugins/libexample_component_zig.dylib -l zig -1 -d
+```
+
+</TabItem>
+</Tabs>
+
+## Summary
+
+- A Component bundles several Processes, Containers and ContainerProcesses into one library.
+- In a configuration file, writing one Component name in `components` under `plugins` loads every type inside it.
+- Creating instances, IDs, calling and connecting all work the same as when types are loaded from separate files. A Component does not change how things run; it is the **unit of distribution**.
+
+In the next chapter you choose the transport that connects juiz instances. Move on to [Choosing a transport: the IPC broker](/tutorial/ipc-broker/).

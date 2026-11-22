@@ -14,7 +14,7 @@ juiz pkg create my_robot -b rust
 ```
 
 Without any changes, the skeleton builds, starts with `juiz -f app/app.conf`, answers calls, and packs into a [.juizapp](../app-package/) with `juiz pack` for distribution.
-The SDK version written in the build files (juiz_sdk, pyjuiz, libjuiz_sdk, hsjuiz) is the version of the juiz that made the skeleton. You do not have to match it to `juiz --version` by hand, which is a common stumbling point in the tutorial.
+The SDK version written in the build files (juiz_sdk, pyjuiz, libjuiz_sdk, hsjuiz, zigjuiz) is the version of the juiz that made the skeleton. You do not have to match it to `juiz --version` by hand, which is a common stumbling point in the tutorial.
 
 <Aside type="caution" title="Requires juiz 0.2.6 or later">
 `juiz pkg` is available from juiz 0.2.6. Check it with `juiz --version`. It is included both in juiz installed with `pip install juiz-cli` and in juiz installed with `cargo install juiz_app`.
@@ -33,14 +33,15 @@ juiz pkg create <name> -b <lang> [-t <template>] [-o <dir>]
 | Option | Default | Meaning |
 | --- | --- | --- |
 | `<name>` | (required) | A name that starts with a lowercase letter and has only lowercase letters, digits and `_` (such as `my_robot`). It becomes the Component name, the package name and the prefix of the type names |
-| `-b`, `--lang` | (required) | `rust` / `python` / `cpp` / `haskell` |
+| `-b`, `--lang` | (required) | `rust` / `python` / `cpp` / `haskell` / `zig` |
 | `-t`, `--template` | `component` | Which types to put in: `component` / `process` / `container` (table below) |
 | `--idl <file.jidl>` | none | Make typed functions from the declarations of a JIDL file instead of the example types ([below](#make-a-typed-skeleton-from-jidl-idl)) |
 | `-o`, `--output` | `./<name>` | The directory to create. If it exists and is not empty, it is an error and nothing is written |
 | `--license` | `none` | `mit-apache` puts LICENSE-MIT and LICENSE-APACHE and writes `MIT OR Apache-2.0` in the license field of each file |
 | `--author` | `git config user.name` | The copyright holder for `--license mit-apache` |
-| `--juiz-sdk-dir` | `~/.juiz/sdk/<version>` | C++ and Haskell only. Where libjuiz_sdk is |
+| `--juiz-sdk-dir` | `~/.juiz/sdk/<version>` | C++, Haskell and Zig only. Where libjuiz_sdk is |
 | `--hsjuiz-dir` | `~/juiz-<version>/bindings/hsjuiz` | Haskell only. Where the hsjuiz source is |
+| `--zigjuiz-dir` | none | Zig only. Where the zigjuiz source is. If given, `build.zig.zon` points there with a relative path. If not, `scripts/dev.sh` gets zigjuiz from the GitHub release with `zig fetch` the first time |
 
 A name that breaks the rules is an error with a suggested fix (`my_robot` for `My-Robot`, for example). Language keywords (`type`, `class` and so on) and names such as `juiz`, `std` and `test` are not allowed either.
 
@@ -81,6 +82,7 @@ my_robot/
 | Python | `pyproject.toml` | `app/python/<name>.py` | only `pack` (nothing to build) |
 | C++ | `CMakeLists.txt` | `src/<name>.cpp` | `dev`, `pack` (`.sh`, `.ps1`) |
 | Haskell | `cabal.project`, `<name-kebab>.cabal` | `src/<Name>.hs` | `dev.sh`, `pack.sh`, `bundle-plugin-deps.sh` |
+| Zig | `build.zig`, `build.zig.zon` | `src/<name>.zig` | `dev.sh`, `pack.sh` |
 
 `app/app.conf` has an instance of each type (`my_robot_add0`, `my_robot0` and so on) and an execution context `main_ec` that calls `my_robot_increment0` every second (it has `auto_start: false`, so it does not run just because juiz started). The HTTP port is 8000.
 
@@ -146,6 +148,22 @@ You need ghc and cabal. `cabal.project` has the absolute paths of hsjuiz and lib
 Haskell works on Linux and macOS only (on Windows the skeleton is created but cannot run).
 
 </TabItem>
+<TabItem label="Zig">
+
+```sh
+juiz pkg create my_robot -b zig
+cd my_robot
+# once: install libjuiz_sdk (the same version as juiz)
+juiz sdk install
+scripts/dev.sh                  # the first time it gets zigjuiz with zig fetch; zig build and put the plugin in app/plugins/<target>/
+juiz -f app/app.conf -d         # start (keep it running)
+```
+
+You need Zig 0.17.x (if you installed it with `pip install ziglang==0.17.1`, run `ZIG="python3 -m ziglang" scripts/dev.sh`). The name can be up to 32 characters (the limit of `.name` in `build.zig.zon`).
+You can also build for another CPU or OS, like `scripts/dev.sh --target aarch64-unknown-linux-gnu` (run `juiz sdk install --target <target>` first).
+The Zig skeleton works on Linux and macOS only (Windows is [issue #588](https://github.com/OpenJUIZ/juiz/issues/588)). Zig is available from the version after juiz 0.3.2.
+
+</TabItem>
 </Tabs>
 
 Call the types from another terminal. `my_robot_get` returns the value increased by each call of `my_robot_increment`.
@@ -175,7 +193,7 @@ juiz pkg add container my_robot_arm       # Container my_robot_arm with my_robot
 | `process <name>` | Process `<name>` | Same as `my_robot_add` (`a + b`) |
 | `container <name>` | Container `<name>`, ContainerProcess `<name>_increment` and `<name>_get` | Same as `my_robot` and its ContainerProcesses |
 
-- It edits **only the Component source and `app/app.conf`**. It creates no new files and does not touch Cargo.toml, CMakeLists.txt or the .cabal file.
+- It edits **only the Component source and `app/app.conf`**. It creates no new files and does not touch Cargo.toml, CMakeLists.txt, the .cabal file or build.zig.
 - The language and the Component name are read from `app/app.conf`. For a skeleton in another directory, add `-C <dir>`.
 - If the name is already in the conf or the source, it is an error and nothing changes. If you have reshaped the source so much that the place to add is not found, it is also an error that tells you to add it by hand.
 - It does not update the type table in README.md.
@@ -184,7 +202,7 @@ After adding, rebuild with `scripts/dev.sh` (for languages with a build) and res
 
 ## Make a typed skeleton from JIDL (--idl)
 
-From the `process` and `container` declarations of a [data type](../datatype/) JIDL file, you can make a skeleton whose functions have typed arguments and return values. It works for all four languages: Rust, Python, C++ and Haskell (Python, C++ and Haskell from 0.2.7).
+From the `process` and `container` declarations of a [data type](../datatype/) JIDL file, you can make a skeleton whose functions have typed arguments and return values. It works for all five languages: Rust, Python, C++, Haskell and Zig (Python, C++ and Haskell from 0.2.7, Zig from the version after 0.3.2).
 
 ```text
 // arm.jidl
@@ -282,6 +300,28 @@ my_arm/
 `scripts/dev.sh` makes the types with `juiz idl -g haskell -o gen idl/arm.jidl` before building. When the .jidl gets a new namespace, add its module to `other-modules` in the .cabal file.
 
 </TabItem>
+<TabItem label="Zig">
+
+```text
+my_arm/
+├─ build.zig         juiz.addTypes makes the types from the .jidl in idl/ and passes them as juiz_types
+├─ build.zig.zon
+├─ idl/arm.jidl
+├─ src/my_arm.zig    one function per declaration. The body is return error.NotImplemented
+└─ app/app.conf
+```
+
+```zig
+fn move_to(args: struct { target: types.juiz_std.geometry.Pose2D, speed: f64 = 1.0 }) !types.juiz_std.geometry.Pose2D {
+    _ = args;
+    // write the body of move_to
+    return error.NotImplemented;
+}
+```
+
+Each `zig build` makes the types with `juiz-idl -g zig` (or `juiz idl -g zig` if there is no juiz-idl). So the `juiz` command must be in PATH when you build.
+
+</TabItem>
 </Tabs>
 
 - It cannot be used together with `-t`. The example types (`my_arm_add` and so on) are not added.
@@ -303,7 +343,7 @@ juiz run dist/my_robot-0.1.0.juizapp
 - To pack what you have already built, use `scripts/pack.sh --no-build`.
 - To put plugins for several OSes into one .juizapp, run `scripts/dev.sh --release` on each OS, collect the `app/plugins/<target>/` directories in one place, then run `scripts/pack.sh --no-build`. `juiz pkg target` prints the target name.
 - With `--license mit-apache`, LICENSE-MIT and LICENSE-APACHE go into the .juizapp too.
-- The package version starts at `0.1.0`. When you raise it, change both `app/juizapp.yaml` and the build file (Cargo.toml, pyproject.toml, CMakeLists.txt or the .cabal file).
+- The package version starts at `0.1.0`. When you raise it, change both `app/juizapp.yaml` and the build file (Cargo.toml, pyproject.toml, CMakeLists.txt, the .cabal file or build.zig.zon).
 
 For what is inside a .juizapp and how `juiz run` works, see [Distributing apps (.juizapp)](../app-package/).
 
@@ -317,9 +357,10 @@ The skeleton has the version of the juiz that ran `juiz pkg`.
 | pyproject.toml | `pyjuiz==0.3.2` |
 | CMakeLists.txt | `JUIZ_VERSION "0.3.2"` (`find_package(... EXACT)`) |
 | cabal.project | the version is in the paths of hsjuiz and libjuiz_sdk |
-| app/juizapp.yaml | `juiz: ">=0.3.2"` (`"=0.3.2"` for C++ and Haskell) |
+| build.zig.zon | the version is in the URL of the zigjuiz archive (`scripts/dev.sh` writes it the first time) |
+| app/juizapp.yaml | `juiz: ">=0.3.2"` (`"=0.3.2"` for C++, Haskell and Zig) |
 
-A C++ or Haskell .juizapp bundles libjuiz_sdk, which only loads into a juiz of the same version. So it has `juiz: "=<version>"`, and `juiz run` with a different juiz version stops first and shows the version mismatch.
+A C++, Haskell or Zig .juizapp bundles libjuiz_sdk, which only loads into a juiz of the same version. So it has `juiz: "=<version>"`, and `juiz run` with a different juiz version stops first and shows the version mismatch.
 When you upgrade juiz, create the skeleton again or update the versions in the table above by hand.
 
 ## juiz-pkg

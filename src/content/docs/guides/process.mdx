@@ -1,6 +1,6 @@
 ---
 title: Writing a Process
-description: Write a Process that adds 1 to its argument in Rust, C++, Python and Haskell.
+description: Write a Process that adds 1 to its argument in Rust, C++, Python, Haskell and Zig.
 sidebar:
   order: 1
 ---
@@ -86,6 +86,30 @@ The result can be `IO r` or a plain `r`. Build it as a shared library with a cab
 For the types you can use and how to return errors, see the [hsjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz); for setting up a project, see [tutorial chapter 1 (Haskell)](/tutorial/first-process/haskell/).
 
 </TabItem>
+<TabItem label="Zig">
+
+```zig
+const std = @import("std");
+const juiz = @import("juiz");
+
+fn increment(args: struct { arg1: i64 = 1 }) !i64 {
+    return std.math.add(i64, args.arg1, 1);
+}
+
+comptime {
+    juiz.exportProcess(increment, .{
+        .type_name = "increment_process_zig",
+        .description = "Adds 1 to arg1.",
+        .args = .{ .arg1 = "value to be incremented" },
+    });
+}
+```
+
+In Zig, use zigjuiz and take the arguments as one struct. The names, types and default values of its fields become the arguments, and `.args` holds their descriptions (a missing one is a compile error). `juiz.exportProcess` publishes the function with a type name.
+Return a Zig error (`!i64`) to fail; it becomes an error of the juiz call. Build it into a shared library with `addPlugin` in a `build.zig` that uses zigjuiz.
+See the [zigjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/zigjuiz) for the types you can use and how errors are returned, and [Tutorial chapter 1 (Zig)](/tutorial/first-process/zig/) for how to make a project. Zig is available from the version after juiz 0.3.2.
+
+</TabItem>
 </Tabs>
 
 ## Running it on its own
@@ -116,7 +140,7 @@ juiz --process target/debug/increment_process.dll -l rust -e -1 -d
 </TabItem>
 </Tabs>
 
-- `-l` is the language (`rust` / `cpp` / `python` / `haskell`, default `rust`)
+- `-l` is the language (`rust` / `cpp` / `python` / `haskell` / `zig`, default `rust`)
 - `-e` instantiates one loaded Process and runs it with its default arguments
 - `-1` creates one instance per loaded module
 - `-d` starts the HTTP broker after running and keeps waiting

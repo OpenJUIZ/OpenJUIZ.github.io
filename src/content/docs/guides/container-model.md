@@ -19,7 +19,7 @@ Container 3D models were added in juiz 0.2.9. Earlier versions do not have them.
 - **juiz does not interpret the model.** It keeps the file as opaque bytes and only checks its format (the leading bytes), its size and its SHA-256. Opening the mesh and drawing it is up to the receiver (the web UI or your own tools).
 - **One model per Container.** For a robot with many parts, make one Container per part and connect them with Transforms (parts that move at a joint should already be separate Containers).
 - **A model is an attribute of the Container**, not a Process (ContainerProcess). You get it through the same kind of API as `container/profile`.
-- It is configured in the configuration file, so it works whatever language the Container is written in (Rust, Python, C++ or Haskell).
+- It is configured in the configuration file, so it works whatever language the Container is written in (Rust, Python, C++, Haskell or Zig).
 - Anchors ([Transformations](/guides/transformations/)) are Containers too, so they can carry a floor or map model. CompositeContainers can have one as well.
 
 ## Formats
@@ -163,6 +163,7 @@ manifest = containerManifest "pantilt_hs"
 ```
 
 Containers of a Component (`#[juiz_component_container]` in Rust, `@juiz_component_container` in Python, `ComponentManifest::add_container` in C++, `componentContainer` in Haskell) take a default model in the same way.
+Zig (zigjuiz) Containers cannot have a default model per type yet. Give them one with `model:` in the configuration file.
 
 - **A relative path is relative to the directory of the plugin file** (`libpantilt.so`, `pantilt.dll`, `pantilt.py` and so on), not to the configuration file. Put the model file next to the plugin and distribute them together.
 - **The instance's `model:` wins.** If the Container in the configuration file has `model:`, it is used **as a whole** (keys are not merged, so the default's `scale` and so on are not inherited). Write `model: null` to ignore the default and create the Container without a model.
@@ -403,7 +404,7 @@ def close(container) -> dict:
     return juiz.set_model(container, CLOSED_GLB, format='glb')   # the new model info
 ```
 
-- From a Rust ContainerProcess, use `container.set_model(&data, "glb", &Value::Null)` and `clear_model()`. C++, Haskell and Rust C ABI plugins cannot replace models yet.
+- From a Rust ContainerProcess, use `container.set_model(&data, "glb", &Value::Null)` and `clear_model()`. C++, Haskell, Zig and Rust C ABI plugins cannot replace models yet.
 - Over HTTP, send `{"model": {"data": "<base64>", "format": "glb", ...}}` to `PATCH /api/container/set_model?identifier=…`. `scale`, `origin`, `up_axis`, `color` and `file_name` are the same as in the configuration file's `model:`. Sending `null` removes the model.
 - A wrong value gives `ContainerModelInvalidError` (400 over HTTP), and the current model stays.
 - A replaced model lives in memory and is gone when the System stops (the configuration file is not changed). After removing it, the Container does not go back to the configuration file's or the type's default model.
@@ -424,7 +425,7 @@ Over HTTP, `ContainerModelFileNotFoundError` and `ContainerHasNoModelError` are 
 - Several models per Container (one for display, one for collision, and so on).
 - Showing models made of several files (a .gltf that references external files, SDF `<mesh>`).
 - Keeping a replaced model after the System stops, or replacing a model by file path.
-- Replacing a model from a ContainerProcess of a C++, Haskell or Rust C ABI plugin.
+- Replacing a model from a ContainerProcess of a C++, Haskell, Zig or Rust C ABI plugin.
 - Keeping joint kinds, axes and limits in juiz (an import only keeps them as comments).
 
 ## Samples
@@ -444,6 +445,7 @@ In every language's sample repository, the Transformations samples (`transformat
 | Python | [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) |
 | C++ | [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) |
 | Haskell | [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) |
+| Zig | [juiz_examples_zig](https://github.com/OpenJUIZ/juiz_examples_zig) |
 
 The .glb and .stl files were built from boxes and cylinders by `scripts/make_models.py` in each repository (it needs only the Python standard library).
 
