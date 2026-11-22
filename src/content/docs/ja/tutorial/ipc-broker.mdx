@@ -44,7 +44,7 @@ IPC ブローカーは `juiz` コマンドに組み込まれているので、�
 ## 準備
 
 第 4 章で作った `talker` と `listener` を使います。設定ファイルは、第 4 章の最後の Topic の形(talker の `publishes` と `mastersystem`、listener の `subscribes`)のままにしておいてください。
-Rust・C++・Haskell は、第 4 章でビルドしたプラグインをそのまま使います。Process のコードは、この章では書き換えません。
+Rust・C++・Haskell・Zig は、第 4 章でビルドしたプラグインをそのまま使います。Process のコードは、この章では書き換えません。
 
 ターミナルは第 4 章と同じく 3 つ使います。どれも、`talker` と `listener` のあるディレクトリで開いておいてください(Python の場合は、どのターミナルでも venv を有効にしておきます)。
 
@@ -336,6 +336,62 @@ talker の Process は、`http://` の ID で出てきます。talker の juiz �
   "components":
     "talker":
       "language": "haskell"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "talker_talk"
+    "name": "talker_talk0"
+    "publishes":
+      - "chatter"
+"ecs":
+  - "type_name": "main_loop_ec"
+    "name": "talker_ec"
+    "rate": 1.0
+    "bind":
+      - "type_name": "talker_talk"
+        "name": "talker_talk0"
+    "auto_start": true
+```
+
+</TabItem>
+<TabItem label="Zig">
+
+```yaml title="listener/app/app.conf"
+"name": "listener"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"brokers":
+  - "type_name": "ipc"
+    "name": "listener"
+"plugins":
+  "components":
+    "listener":
+      "language": "zig"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "listener_listen"
+    "name": "listener_listen0"
+    "subscribes":
+      "arg1": "chatter"
+```
+
+```yaml title="talker/app/app.conf"
+"name": "talker"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8001
+"mastersystem":
+  "broker_type": "ipc"
+  "broker_name": "listener"
+"brokers":
+  - "type_name": "ipc"
+    "name": "talker"
+"plugins":
+  "components":
+    "talker":
+      "language": "zig"
       "path": "plugins/{target}"
 "processes":
   - "type_name": "talker_talk"

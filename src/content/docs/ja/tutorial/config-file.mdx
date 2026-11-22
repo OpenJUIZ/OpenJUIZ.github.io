@@ -147,6 +147,34 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 ```
 
 </TabItem>
+<TabItem label="Zig">
+
+```yaml title="app/app.conf"
+"name": "my_juiz"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"plugins":
+  "components":
+    "my_juiz":
+      "language": "zig"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 0
+    "processes":
+      - "type_name": "counter_increment"
+        "name": "counter_increment0"
+      - "type_name": "counter_get"
+        "name": "counter_get0"
+```
+
+</TabItem>
 </Tabs>
 
 言語によって違うのは、`plugins` の `language` と `path` の 2 行だけです。
@@ -183,7 +211,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
 | 項目 | 意味 |
 | --- | --- |
-| `language` | ライブラリの言語です。`rust`・`python`・`c++`・`haskell` のどれかを書きます |
+| `language` | ライブラリの言語です。`rust`・`python`・`c++`・`haskell`・`zig` のどれかを書きます |
 | `path` | ライブラリを探すディレクトリです。相対パスは、設定ファイルのあるディレクトリ(`app/`)から数えます |
 
 juiz は、`path` のディレクトリから、Component の名前に合ったファイルを探します。
@@ -210,6 +238,12 @@ Linux なら `app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so`、macOS なら
 
 `plugins/{target}` の `{target}` は、動かしているマシンのターゲット名(`juiz pkg target` で表示されるもの)に置き換わります。
 Linux なら `app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so`、macOS なら `libmy_juiz.dylib` が読み込まれます。
+
+</TabItem>
+<TabItem label="Zig">
+
+`plugins/{target}` の `{target}` は、動かしているマシンのターゲット名(`juiz pkg target` で表示されるもの)に置き換わります。
+Linux なら `app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so`、macOS なら `libmy_juiz.dylib` が読み込まれます(`scripts/dev.sh` が隣に置いた libjuiz_sdk も一緒に使われます)。
 
 </TabItem>
 </Tabs>
@@ -323,7 +357,7 @@ juiz container-process call "http://127.0.0.1:8000/container_process/counter_inc
     "processes":
 ```
 
-この値は、第 2 章で読んだ Container を作る関数(Rust・Python では `counter` の引数 `initial_value`、C++ では `counter` が受け取る `args`、Haskell では `counter_create` の引数)に渡されます。
+この値は、第 2 章で読んだ Container を作る関数(Rust・Python では `counter` の引数 `initial_value`、C++ では `counter` が受け取る `args`、Haskell では `counter_create` の引数、Zig では `counter_create` の引数の struct)に渡されます。
 
 `juiz` を Ctrl+C で止めて起動し直し、`counter_get` を呼び出すと `3` が返ってきます。
 

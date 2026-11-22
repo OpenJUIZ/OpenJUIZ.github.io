@@ -14,7 +14,7 @@ juiz pkg create my_robot -b rust
 ```
 
 作った雛形は、手を加えずにビルド → `juiz -f app/app.conf` で起動 → 呼び出し → `juiz pack` で [.juizapp](../app-package/) にして配布、まで通ります。
-ビルドのファイルに書く SDK(juiz_sdk・pyjuiz・libjuiz_sdk・hsjuiz)の版は、雛形を作った juiz 自身の版にそろえて書かれます。チュートリアルでつまずきやすい「`juiz --version` と同じ版にそろえる」を手で直す必要はありません。
+ビルドのファイルに書く SDK(juiz_sdk・pyjuiz・libjuiz_sdk・hsjuiz・zigjuiz)の版は、雛形を作った juiz 自身の版にそろえて書かれます。チュートリアルでつまずきやすい「`juiz --version` と同じ版にそろえる」を手で直す必要はありません。
 
 <Aside type="caution" title="juiz 0.2.6 以降が必要です">
 `juiz pkg` は juiz 0.2.6 から使えます。`juiz --version` で確かめてください。`pip install juiz-cli` で入れた juiz にも、`cargo install juiz_app` で入れた juiz にも入っています。
@@ -33,14 +33,15 @@ juiz pkg create <名前> -b <言語> [-t <種類>] [-o <ディレクトリ>]
 | オプション | 既定 | 意味 |
 | --- | --- | --- |
 | `<名前>` | (必須) | 英小文字で始まり、英小文字・数字・`_` だけの名前(`my_robot` など)。Component の名前、パッケージ名、型名の頭になります |
-| `-b`, `--lang` | (必須) | `rust` / `python` / `cpp` / `haskell` |
+| `-b`, `--lang` | (必須) | `rust` / `python` / `cpp` / `haskell` / `zig` |
 | `-t`, `--template` | `component` | 入れる型の種類。`component` / `process` / `container`(下の表) |
 | `--idl <file.jidl>` | なし | 例の型の代わりに、JIDL の宣言から型付きの関数を作ります([下](#jidl-から型付きの雛形を作るidl)) |
 | `-o`, `--output` | `./<名前>` | 作るディレクトリ。既にあって空でなければエラーになり、何も書きません |
 | `--license` | `none` | `mit-apache` で LICENSE-MIT・LICENSE-APACHE を置き、各ファイルのライセンスの欄に `MIT OR Apache-2.0` を書きます |
 | `--author` | `git config user.name` | `--license mit-apache` のときの著作権者 |
-| `--juiz-sdk-dir` | `~/.juiz/sdk/<版>` | C++・Haskell のみ。libjuiz_sdk を置いた場所 |
+| `--juiz-sdk-dir` | `~/.juiz/sdk/<版>` | C++・Haskell・Zig のみ。libjuiz_sdk を置いた場所 |
 | `--hsjuiz-dir` | `~/juiz-<版>/bindings/hsjuiz` | Haskell のみ。hsjuiz のソースの場所 |
+| `--zigjuiz-dir` | なし | Zig のみ。zigjuiz のソースの場所。指定すると `build.zig.zon` にそこへの相対パスを書きます。指定しなければ、`scripts/dev.sh` が初回に Releases から `zig fetch` で取り込みます |
 
 名前の規則に合わないときは、直した名前の例を添えたエラーになります(`My-Robot` なら `my_robot` など)。言語のキーワード(`type`・`class` など)や `juiz`・`std`・`test` なども使えません。
 
@@ -81,6 +82,7 @@ my_robot/
 | Python | `pyproject.toml` | `app/python/<名前>.py` | `pack` だけ(ビルドが無いため) |
 | C++ | `CMakeLists.txt` | `src/<名前>.cpp` | `dev`・`pack`(`.sh`・`.ps1`) |
 | Haskell | `cabal.project`、`<名前-kebab>.cabal` | `src/<Name>.hs` | `dev.sh`・`pack.sh`・`bundle-plugin-deps.sh` |
+| Zig | `build.zig`、`build.zig.zon` | `src/<名前>.zig` | `dev.sh`・`pack.sh` |
 
 `app/app.conf` には、入っている型のインスタンス(`my_robot_add0`、`my_robot0` など)と、`my_robot_increment0` を 1 秒ごとに呼ぶ実行コンテキスト `main_ec`(`auto_start: false` なので、起動しただけでは動きません)が書かれています。HTTP のポートは 8000 です。
 雛形の中のコメントと README は英語です。
@@ -147,6 +149,22 @@ ghc と cabal が要ります。`cabal.project` には hsjuiz と libjuiz_sdk �
 Haskell は Linux と macOS だけです(Windows では雛形は作れますが、動かせません)。
 
 </TabItem>
+<TabItem label="Zig">
+
+```sh
+juiz pkg create my_robot -b zig
+cd my_robot
+# 初回だけ: libjuiz_sdk(juiz と同じ版)を入れる
+juiz sdk install
+scripts/dev.sh                  # 初回は zigjuiz を zig fetch で取り込み、zig build して app/plugins/<ターゲット>/ に置く
+juiz -f app/app.conf -d         # 起動(このままにしておく)
+```
+
+Zig 0.17.x が要ります(`pip install ziglang==0.17.1` で入れたときは `ZIG="python3 -m ziglang" scripts/dev.sh`)。名前は 32 文字までです(`build.zig.zon` の `.name` の制限)。
+`scripts/dev.sh --target aarch64-unknown-linux-gnu` のように、別の CPU・OS 向けにもビルドできます(先に `juiz sdk install --target <ターゲット>`)。
+Zig の雛形は Linux と macOS だけです(Windows は [issue #588](https://github.com/OpenJUIZ/juiz/issues/588))。Zig は juiz 0.3.2 の次の版から使えます。
+
+</TabItem>
 </Tabs>
 
 別の端末から呼び出します。`my_robot_get` は `my_robot_increment` を呼んだ回数だけ増えた値を返します。
@@ -176,7 +194,7 @@ juiz pkg add container my_robot_arm       # Container my_robot_arm と my_robot_
 | `process <名前>` | Process `<名前>` | `my_robot_add` と同じ(`a + b`) |
 | `container <名前>` | Container `<名前>`、ContainerProcess `<名前>_increment`・`<名前>_get` | `my_robot` などと同じ |
 
-- 書き換えるのは **Component のソース 1 つと `app/app.conf` だけ**です。新しいファイルは作らず、Cargo.toml・CMakeLists.txt・.cabal も直しません。
+- 書き換えるのは **Component のソース 1 つと `app/app.conf` だけ**です。新しいファイルは作らず、Cargo.toml・CMakeLists.txt・.cabal・build.zig も直しません。
 - 言語と Component の名前は `app/app.conf` から読みます。別のディレクトリの雛形には `-C <ディレクトリ>` を付けます。
 - 同じ名前が conf やソースに既にあればエラーになり、何も変えません。ソースの形を大きく変えていて足す場所が見つからないときも、エラーになって手で足すよう案内されます。
 - README.md の型の表は直しません。
@@ -185,7 +203,7 @@ juiz pkg add container my_robot_arm       # Container my_robot_arm と my_robot_
 
 ## JIDL から型付きの雛形を作る(--idl)
 
-[データ型](../datatype/)の JIDL に書いた `process`・`container` の宣言から、引数と戻り値に型の付いた関数を持つ雛形を作れます。Rust・Python・C++・Haskell の 4 つの言語で使えます(Python・C++・Haskell は 0.2.7 から)。
+[データ型](../datatype/)の JIDL に書いた `process`・`container` の宣言から、引数と戻り値に型の付いた関数を持つ雛形を作れます。Rust・Python・C++・Haskell・Zig の 5 つの言語で使えます(Python・C++・Haskell は 0.2.7 から、Zig は 0.3.2 の次の版から)。
 
 ```text
 // arm.jidl
@@ -283,6 +301,28 @@ my_arm/
 `scripts/dev.sh` がビルドの前に `juiz idl -g haskell -o gen idl/arm.jidl` で型を作ります。.jidl に名前空間が増えたら、.cabal の `other-modules` に足してください。
 
 </TabItem>
+<TabItem label="Zig">
+
+```text
+my_arm/
+├─ build.zig         juiz.addTypes で idl/ の .jidl から型を作り、juiz_types として渡す
+├─ build.zig.zon
+├─ idl/arm.jidl
+├─ src/my_arm.zig    宣言ごとの関数。本体は return error.NotImplemented
+└─ app/app.conf
+```
+
+```zig
+fn move_to(args: struct { target: types.juiz_std.geometry.Pose2D, speed: f64 = 1.0 }) !types.juiz_std.geometry.Pose2D {
+    _ = args;
+    // write the body of move_to
+    return error.NotImplemented;
+}
+```
+
+型は `zig build` のたびに `juiz-idl -g zig`(無ければ `juiz idl -g zig`)で作られます。そのため、ビルドのときに `juiz` コマンドが PATH に要ります。
+
+</TabItem>
 </Tabs>
 
 - `-t` とは一緒に使えません。例の型(`my_arm_add` など)は入りません。
@@ -304,7 +344,7 @@ juiz run dist/my_robot-0.1.0.juizapp
 - 既にビルドしてあるものをそのまま入れるときは `scripts/pack.sh --no-build` です。
 - 複数の OS のプラグインを 1 つの .juizapp に入れるときは、それぞれの OS で `scripts/dev.sh --release` して `app/plugins/<ターゲット>/` を 1 か所に集めてから `scripts/pack.sh --no-build` します。ターゲット名は `juiz pkg target` で表示できます。
 - `--license mit-apache` で作ったときは、LICENSE-MIT・LICENSE-APACHE も .juizapp に入ります。
-- パッケージの版は `0.1.0` から始まります。版を上げるときは、`app/juizapp.yaml` とビルドのファイル(Cargo.toml・pyproject.toml・CMakeLists.txt・.cabal)の両方を直してください。
+- パッケージの版は `0.1.0` から始まります。版を上げるときは、`app/juizapp.yaml` とビルドのファイル(Cargo.toml・pyproject.toml・CMakeLists.txt・.cabal・build.zig.zon)の両方を直してください。
 
 .juizapp の中身や `juiz run` の動きは [アプリの配布(.juizapp)](../app-package/) を見てください。
 
@@ -318,9 +358,10 @@ juiz run dist/my_robot-0.1.0.juizapp
 | pyproject.toml | `pyjuiz==0.3.2` |
 | CMakeLists.txt | `JUIZ_VERSION "0.3.2"`(`find_package(... EXACT)`) |
 | cabal.project | hsjuiz・libjuiz_sdk のパスに版が入る |
-| app/juizapp.yaml | `juiz: ">=0.3.2"`(C++・Haskell は `"=0.3.2"`) |
+| build.zig.zon | zigjuiz のアーカイブの URL に版が入る(`scripts/dev.sh` が初回に書く) |
+| app/juizapp.yaml | `juiz: ">=0.3.2"`(C++・Haskell・Zig は `"=0.3.2"`) |
 
-C++ と Haskell の .juizapp は libjuiz_sdk を同梱するので、動かす juiz と版が一致しないと読み込めません。そのため `juiz: "=<版>"` にしてあり、違う版の juiz で `juiz run` すると、最初に版の違いを示して止まります。
+C++・Haskell・Zig の .juizapp は libjuiz_sdk を同梱するので、動かす juiz と版が一致しないと読み込めません。そのため `juiz: "=<版>"` にしてあり、違う版の juiz で `juiz run` すると、最初に版の違いを示して止まります。
 juiz を上げたときは、雛形を作り直すか、上の表の版を手で直してください。
 
 ## juiz-pkg

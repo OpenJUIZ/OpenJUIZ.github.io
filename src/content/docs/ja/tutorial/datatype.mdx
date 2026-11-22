@@ -144,6 +144,22 @@ Haskell の型は、`build.sh` が juiz のソースからビルドした `juiz-
 pip で入れた `juiz`(juiz-cli)には pyjuiz も入っているので、`pip install pyjuiz` は要りません。cargo で入れた `juiz` は、起動したターミナルで有効にしている venv の pyjuiz を使うので、`juiz` を起動するターミナルでもこの venv を有効にしておきます。
 
 </TabItem>
+<TabItem label="Zig">
+
+```sh
+cd juiz_examples_zig
+git pull
+./build.sh
+python3 -m venv .venv        # この章では Python の Process も一緒に動かす
+source .venv/bin/activate    # Windows では .venv\Scripts\activate
+pip install "pyjuiz @ git+https://github.com/OpenJUIZ/juiz@5700911b1017e4e63f933e90a966c9352e9ece31#subdirectory=bindings/pyjuiz"
+```
+
+Zig の型は、`zig build` の中で `juiz-idl -g zig`(無ければ `juiz idl -g zig`)が作ります。
+zigjuiz を初めて配る版の公開前は、サンプル集が juiz の main のコミットに合わせてあるので、pyjuiz も同じコミットから入れます(公開後は `juiz` と同じ版の `pip install pyjuiz==<版>` です)。
+cargo で入れた `juiz` は、起動したターミナルで有効にしている venv の pyjuiz を使うので、`juiz` を起動するターミナルでもこの venv を有効にしておきます。
+
+</TabItem>
 </Tabs>
 
 この章で使うファイルは次のとおりです。
@@ -151,7 +167,7 @@ pip で入れた `juiz`(juiz-cli)には pyjuiz も入っているので、`pip i
 | 役割 | 名前 |
 | --- | --- |
 | 型の定義(IDL) | `types/geometry.jidl` |
-| Process `pose_move`(言語ごとに `pose_move` / `pose_move_python` / `pose_move_cpp` / `pose_move_hs`) | 姿勢 `pose` を速度 `twist` で `dt` 秒動かした姿勢を返す |
+| Process `pose_move`(言語ごとに `pose_move` / `pose_move_python` / `pose_move_cpp` / `pose_move_hs` / `pose_move_zig`) | 姿勢 `pose` を速度 `twist` で `dt` 秒動かした姿勢を返す |
 | Python の Process `twist_python` | 速度 `Twist2D` を出す |
 | Python の Process `pose_print_python` | 受け取った姿勢 `Pose2D` を表示する |
 | 設定ファイル `typed_pose.conf` | 3 つを型付きでつなぐ |
@@ -160,7 +176,7 @@ pip で入れた `juiz`(juiz-cli)には pyjuiz も入っているので、`pip i
 ## IDL で型を書く
 
 型は、juiz の IDL である **JIDL**(拡張子 `.jidl`)で書きます。
-[`types/geometry.jidl`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/types/geometry.jidl) は、Rust・Python・C++・Haskell の 4 つのサンプル集で同じ中身にしてあります。
+[`types/geometry.jidl`](https://github.com/OpenJUIZ/juiz_examples_rust/blob/main/types/geometry.jidl) は、Rust・Python・C++・Haskell・Zig の 5 つのサンプル集で同じ中身にしてあります。
 
 ```text
 namespace examples.geometry;
@@ -395,11 +411,83 @@ juizProcess 'poseMove 'manifest
 生成した record のフィールドの関数は「型名 + フィールド名」(`pose2DPosition`、`frame_id` なら `pose2DFrameId`)です。
 
 </TabItem>
+<TabItem label="Zig">
+
+Zig では、`build.zig` の `juiz.addTypes` が、ビルドのときに `juiz-idl -g zig` で型を作り、モジュールとして渡します(`juiz-idl` が無ければ `juiz idl` を使います)。
+生成したファイルをリポジトリに置く必要はありません。どんなものができるかは、`juiz idl` でも確かめられます。
+
+```sh
+juiz idl -g zig -o gen-zig types/geometry.jidl
+# => gen-zig/juiz_idl.zig, gen-zig/examples/geometry.zig
+```
+
+名前空間 `examples.geometry` が、`@import("juiz_types").examples.geometry` になります。record は既定値付きのフィールドを持つ struct です。
+
+```zig title="gen-zig/examples/geometry.zig(抜粋)"
+pub const Pose2D = struct {
+    position: Point2D = .{ .x = 0.0, .y = 0.0 },
+    theta: f64 = 0.0,
+    frame_id: []const u8 = "map",
+
+    pub const juiz_type: juiz.TypeInfo = .{ .name = "examples.geometry.Pose2D", .fingerprint = "sha256:123b8c15...", ... };
+};
+```
+
+[`build.zig`](https://github.com/OpenJUIZ/juiz_examples_zig/blob/main/build.zig)
+
+```zig
+const types = juiz.addTypes(.{ .files = &.{b.path("types/geometry.jidl")} });
+const lib = juiz.addPlugin(.{
+    .name = "pose_move_zig",
+    .root_source_file = b.path("process/pose_move_zig.zig"),
+    .imports = &.{.{ .name = "juiz_types", .module = types }},
+});
+```
+
+[`process/pose_move_zig.zig`](https://github.com/OpenJUIZ/juiz_examples_zig/blob/main/process/pose_move_zig.zig)
+
+```zig
+const std = @import("std");
+const juiz = @import("juiz");
+const geometry = @import("juiz_types").examples.geometry;
+
+const Pose2D = geometry.Pose2D;
+const Twist2D = geometry.Twist2D;
+
+/// 型付きの引数の既定値は型の値で書く (.{} は全フィールドが既定値)。
+/// 結果が型付きの型なので、戻り値の型 (output_schema) もマニフェストに載る
+fn poseMove(args: struct { pose: Pose2D = .{}, twist: Twist2D = .{}, dt: f64 = 1 }) Pose2D {
+    const p = args.pose;
+    const distance = args.twist.linear * args.dt;
+    var moved = p;
+    moved.position.x = p.position.x + distance * @cos(p.theta);
+    moved.position.y = p.position.y + distance * @sin(p.theta);
+    moved.theta = p.theta + args.twist.angular * args.dt;
+    std.debug.print("pose_move_zig: ({d:.2}, {d:.2}, {d:.2}) -> ({d:.2}, {d:.2}, {d:.2})\n", .{
+        p.position.x, p.position.y, p.theta, moved.position.x, moved.position.y, moved.theta,
+    });
+    return moved;
+}
+
+comptime {
+    juiz.exportProcess(poseMove, .{
+        .type_name = "pose_move_zig",
+        .description = "Moves the pose by the twist for dt seconds.",
+        .args = .{ .pose = "current pose", .twist = "velocity", .dt = "duration [s]" },
+    });
+}
+```
+
+引数の struct のフィールドを生成した型にするだけで、型付きの引数になります。既定値は型の値(`.{}` は全フィールドが既定値)で書きます。
+戻り値の型も生成した型(ここでは `Pose2D`)なので、戻り値の型もマニフェストに載ります。
+引数は juiz が型で読んでから渡します。足りないフィールドは既定値で埋まり、型に合わない辞書は関数を呼ぶ前にエラーになります。
+
+</TabItem>
 </Tabs>
 
 ## 型付きの Process を動かす
 
-まず Python の型を `gen/` に作ります。Rust・C++・Haskell のサンプル集でも、速度を出す Process と姿勢を表示する Process は Python で書いてあるので、この手順が要ります。
+まず Python の型を `gen/` に作ります。Rust・C++・Haskell・Zig のサンプル集でも、速度を出す Process と姿勢を表示する Process は Python で書いてあるので、この手順が要ります。
 
 ```sh
 juiz idl -g python -o gen types/geometry.jidl
@@ -629,6 +717,60 @@ connections:
 Haskell の `pose_move_hs` が、Python の Process から `Twist2D` を受け取り、Python の Process へ `Pose2D` を渡します。`juiz` を起動したターミナルには、`pose_move_hs: (0.00, 0.00, 0.00) -> (0.50, 0.00, 0.00)` のように Haskell の Process の表示も出ます。
 
 </TabItem>
+<TabItem label="Zig">
+
+[`typed_pose.conf`](https://github.com/OpenJUIZ/juiz_examples_zig/blob/main/typed_pose.conf)
+
+```yaml
+name: typed_pose
+option:
+  http_broker:
+    start: true
+    port: 8000
+  # Python のプラグインの場所 (./python) から見た、Python の型 (gen/) の場所
+  pythonpath: ["../gen"]
+plugins:
+  process_factories:
+    pose_move_zig:
+      language: "zig"
+      path: "./build/plugins"
+    twist_python:
+      language: python
+      path: "./python"
+    pose_print_python:
+      language: python
+      path: "./python"
+processes:
+  - type_name: twist_python
+    name: twist0
+  - type_name: pose_move_zig
+    name: move0
+  - type_name: pose_print_python
+    name: print0
+connections:
+  - name: twist_to_move
+    connection_type: Pull
+    source:
+      name: twist0
+      type_name: twist_python
+    destination:
+      name: move0
+      type_name: pose_move_zig
+    arg_name: twist
+  - name: move_to_print
+    connection_type: Push
+    source:
+      name: move0
+      type_name: pose_move_zig
+    destination:
+      name: print0
+      type_name: pose_print_python
+    arg_name: pose
+```
+
+Zig の `pose_move_zig` が、Python の Process から `Twist2D` を受け取り、Python の Process へ `Pose2D` を渡します。`juiz` を起動したターミナルには、`pose_move_zig: (0.00, 0.00, 0.00) -> (0.50, 0.00, 0.00)` のように Zig の Process の表示も出ます。
+
+</TabItem>
 </Tabs>
 
 `option.pythonpath` は、Python の Process が `gen/` の型を `import` できるようにする設定です。
@@ -708,6 +850,14 @@ curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/
 ```
 
 </TabItem>
+<TabItem label="Zig">
+
+```sh
+curl -X PATCH "http://127.0.0.1:8000/api/process/execute?identifier=core://core/process/move0::pose_move_zig" -H "Content-Type: application/json" -d '{}'
+# => {"frame_id":"map","position":{"x":0.5,"y":0.0},"theta":0.0}
+```
+
+</TabItem>
 </Tabs>
 
 <Aside type="caution" title="Windows で curl を使うとき">
@@ -755,6 +905,14 @@ juiz process call "http://127.0.0.1:8000/process/move0::pose_move_cpp" '{"pose":
 
 ```sh
 juiz process call "http://127.0.0.1:8000/process/move0::pose_move_hs" '{"pose": {"position": {"x": 1.0, "y": 2.0}}, "twist": {"linear": 1.0}, "dt": 2.0}' -p
+# => CapsulePtr((value:Value({"frame_id":"map","position":{"x":3.0,"y":2.0},"theta":0.0}), option: []))
+```
+
+</TabItem>
+<TabItem label="Zig">
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/move0::pose_move_zig" '{"pose": {"position": {"x": 1.0, "y": 2.0}}, "twist": {"linear": 1.0}, "dt": 2.0}' -p
 # => CapsulePtr((value:Value({"frame_id":"map","position":{"x":3.0,"y":2.0},"theta":0.0}), option: []))
 ```
 
@@ -863,6 +1021,19 @@ juiz type list --long
 ```
 
 </TabItem>
+<TabItem label="Zig">
+
+```sh
+juiz type list --long
+# NAME                                KIND    SHORT_ID                     USED_BY
+# examples.geometry.Point2D           record  Point2D@5649ab39             pose_move_zig,pose_print_python
+# examples.geometry.Pose2D            record  Pose2D@123b8c15              pose_move_zig,pose_print_python
+# examples.geometry.Twist2D           record  Twist2D@115b9e0f             pose_move_zig,twist_python
+# juiz_std.common.Header              record  Header@d3c08526              transformations
+# ...
+```
+
+</TabItem>
 </Tabs>
 
 型の一覧には、サンプルの `examples.geometry` の 3 型のあとに、juiz に組み込まれた標準型 `juiz_std` の 10 型も並びます。これは [Transformations](/ja/guides/transformations/) と [3D モデル](/ja/guides/container-model/) が使う型で、juiz がいつも読み込んでいます(USED_BY は `transformations` と `container_model`)。
@@ -900,7 +1071,7 @@ connections:
       type_name: twist_python
     destination:
       name: move0
-      type_name: pose_move   # Python は pose_move_python、C++ は pose_move_cpp、Haskell は pose_move_hs
+      type_name: pose_move   # Python は pose_move_python、C++ は pose_move_cpp、Haskell は pose_move_hs、Zig は pose_move_zig
     arg_name: pose
 ```
 
@@ -929,7 +1100,7 @@ juiz -f typed_mismatch.conf -d
 
 ## まとめ
 
-- 型は JIDL(`.jidl`)で書き、`juiz idl`(Rust は `build.rs` の `juiz_idl`、C++ は CMake の `juiz_generate_types()`、Haskell は `juiz idl -g haskell` で作ったモジュール)で各言語の型を作ります。
+- 型は JIDL(`.jidl`)で書き、`juiz idl`(Rust は `build.rs` の `juiz_idl`、C++ は CMake の `juiz_generate_types()`、Haskell は `juiz idl -g haskell` で作ったモジュール、Zig は `build.zig` の `juiz.addTypes`)で各言語の型を作ります。
 - 生成した型を引数と戻り値に書くと、その Process は型付きになります。今までの型の引数は型なしのままです。
 - 型は契約で、通信で流れるのは今までどおりの辞書です。CLI や curl からも辞書で呼べます。
 - 同じ JIDL から作った型は、言語が違っても指紋が同じになり、そのままつながります。型の合わない接続は、つなぐ時点でエラーになります。

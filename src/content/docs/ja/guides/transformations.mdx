@@ -309,9 +309,37 @@ cameraPose Camera reference = poseStampedToValue reference <$> containerPose ref
 失敗すると `JuizError`(コード -901〜-905)を投げます。
 
 </TabItem>
+<TabItem label="Zig">
+
+`juiz.pose(self, reference)` で読み、`juiz.setPose(self, reference, pose)` で書きます。最初の引数には、ContainerProcess が受け取った `self` を渡します。
+
+```zig
+fn move(self: *MobileBase, ctx: juiz.Context, args: struct {
+    vx: f64 = 0,
+    omega: f64 = 0,
+    dt: f64 = 1,
+    reference: []const u8 = "odom",
+}) !juiz.Value {
+    self.x += args.vx * @cos(self.theta) * args.dt;
+    self.y += args.vx * @sin(self.theta) * args.dt;
+    self.theta += args.omega * args.dt;
+    // odom → base0 の Transform が書き換わり、Pose 通知が出る
+    const written = try juiz.setPose(self, args.reference, juiz.makePose2d(self.x, self.y, self.theta));
+    return juiz.poseStampedToValue(ctx.allocator, written, args.reference);
+}
+
+fn cameraPose(self: *const Camera, ctx: juiz.Context, args: struct { reference: []const u8 = "map" }) !juiz.Value {
+    const p = try juiz.pose(self, args.reference);
+    return juiz.poseStampedToValue(ctx.allocator, p, args.reference);
+}
+```
+
+失敗すると `juiz.PoseError`(`error.NoCommonAnchor` など、-901〜-907 に対応)を返します。`try` でそのまま返すと、呼び出しのエラー文に juiz が返した理由も入ります。値の型は `juiz.Pose`・`juiz.PoseStamped` などで、`juiz.makePose2d`・`juiz.fromRpy`・`juiz.yaw` などで作ったり読んだりします。
+
+</TabItem>
 </Tabs>
 
-C++・Haskell・C ABI の Rust では、読み書きの口は**その呼び出しの間だけ**使えます。ContainerProcess の中で立てた別のスレッドや、呼び出しの後から読み書きすると `TransformationsNotAttachedError` になります。
+C++・Haskell・Zig・C ABI の Rust では、読み書きの口は**その呼び出しの間だけ**使えます。ContainerProcess の中で立てた別のスレッドや、呼び出しの後から読み書きすると `TransformationsNotAttachedError` になります。
 
 ### 読む規則
 
@@ -386,6 +414,18 @@ juiz_transform_stamped t = juiz::set_transform(slam, "map", "odom", juiz::make_t
 t <- setTransform "map" "odom" (ContainerTransform (0.1, 0, 0) (0, 0, 0, 1))
 pure (transformStampedToValue "map" "odom" t)
 ```
+
+</TabItem>
+<TabItem label="Zig">
+
+```zig
+const lidar = try juiz.lookup(self, "lidar0", "robot0"); // robot0 から見た lidar0
+std.debug.print("lidar0: x={d}\n", .{lidar.pose.position.x});
+const t = try juiz.setTransform(self, "map", "odom", juiz.makeTransform(0.1, 0, 0, juiz.quaternion_identity));
+return juiz.transformStampedToValue(ctx.allocator, t, "map", "odom");
+```
+
+`juiz.lookup(self, target, reference)` は `juiz.PoseStamped` を、`juiz.setTransform(self, source, destination, transform)` は `juiz.TransformStamped` を返します。
 
 </TabItem>
 </Tabs>
@@ -490,6 +530,20 @@ cameraPose Camera reference = poseStampedToValue reference <$> containerPose ref
 中で `setContainerPose` を呼ぶと `JuizError`(`juizPoseNotWritableError`)になります。ただし `IORef` などで持つ Container の状態の書き換えは**止められません**。readonly にした関数では Container の状態を書き換えないよう、書き手が守ってください。
 
 </TabItem>
+<TabItem label="Zig">
+
+`self` を `*const` で受けると readonly になります(マニフェストに `readonly: true` が載ります)。
+
+```zig
+fn cameraPose(self: *const Camera, ctx: juiz.Context, args: struct { reference: []const u8 = "map" }) !juiz.Value {
+    const p = try juiz.pose(self, args.reference);
+    return juiz.poseStampedToValue(ctx.allocator, p, args.reference);
+}
+```
+
+readonly の関数の中から `juiz.setPose`・`juiz.setTransform` を呼ぶと**コンパイルエラー**になります。`self` が `*const` なので、Container の状態の書き換えもコンパイラが止めます。
+
+</TabItem>
 </Tabs>
 
 ## Anchor の更新
@@ -564,6 +618,14 @@ juiz container-process call "http://127.0.0.1:8000/container_process/pan0::panti
 ```sh
 juiz container-process call "http://127.0.0.1:8000/container_process/move0::mobile_base_hs_move:base0" '{"vx": 1.0, "dt": 1.0}' -p
 juiz container-process call "http://127.0.0.1:8000/container_process/pan0::pantilt_hs_set_pan:pantilt0" '{"pan": 1.5707963267948966}' -p
+```
+
+</TabItem>
+<TabItem label="Zig">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/move0::mobile_base_zig_move:base0" '{"vx": 1.0, "dt": 1.0}' -p
+juiz container-process call "http://127.0.0.1:8000/container_process/pan0::pantilt_zig_set_pan:pantilt0" '{"pan": 1.5707963267948966}' -p
 ```
 
 </TabItem>
@@ -741,7 +803,7 @@ juiz -s http://127.0.0.1:8001 anchor tree map
 #    └─ ...
 ```
 
-ContainerProcess の中の `pose` / `set_pose`(Rust・Python・C++・Haskell)の形は変わりません。基準に `map` と書けば、写しから計算されます。
+ContainerProcess の中の `pose` / `set_pose`(Rust・Python・C++・Haskell・Zig)の形は変わりません。基準に `map` と書けば、写しから計算されます。
 
 親の System からは、子の System の Container を**ブローカー付きの ID** で指定すると、子の System に回して読みます。基準には親の System の Container(子の System が写しとして持っているもの)を使えます。ID の型名(`camera_python`)は Python のサンプルの例で、言語ごとに違います。
 
@@ -847,6 +909,7 @@ Python ではどれも `juiz.TransformationsError`(`RuntimeError` の子)の子�
 | Python | [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) | `component/mobile_robot_python.py` | `mobile_base_python`・`pantilt_python`・`camera_python`・`pose_print_python` |
 | C++ | [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) | `component/mobile_robot_cpp` | `mobile_base_cpp`・`pantilt_cpp`・`camera_cpp`・`pose_print_cpp` |
 | Haskell | [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) | `component/MobileRobot.hs` | `mobile_base_hs`・`pantilt_hs`・`camera_hs`・`pose_print_hs` |
+| Zig | [juiz_examples_zig](https://github.com/OpenJUIZ/juiz_examples_zig) | `component/mobile_robot_zig.zig` | `mobile_base_zig`・`pantilt_zig`・`camera_zig`・`pose_print_zig` |
 
 ContainerProcess の型名は、Container の型名に `_move`・`_set_pan`・`_pose` を付けたものです(`mobile_base_python_move` など)。
 

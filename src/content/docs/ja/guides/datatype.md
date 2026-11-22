@@ -129,7 +129,7 @@ record Sample {
 }
 ```
 
-- 制約(`juiz.minimum` など)は、型で辞書を読むとき(呼び出し時の検査、既定値の検査、Rust の生成コードの `from_value`)に確かめます。Python・C++・Haskell・TypeScript の生成コードは確かめません。
+- 制約(`juiz.minimum` など)は、型で辞書を読むとき(呼び出し時の検査、既定値の検査、Rust の生成コードの `from_value`)に確かめます。Python・C++・Haskell・Zig・TypeScript の生成コードは確かめません。
 - 属性は指紋にも互換性の判定にも入りません(変えても同じ型です)。
 - 引数(`process` の引数)には属性を書けません。
 - 定数は各言語の生成コードの定数になります。
@@ -140,6 +140,7 @@ record Sample {
 | Python | クラス変数 `Sample.MODE_A` |
 | C++ | `static constexpr` のメンバ `Sample::MODE_A` |
 | Haskell | 値 `sampleMODE_A` |
+| Zig | struct の宣言 `Sample.MODE_A` |
 | TypeScript | `SampleConstants.MODE_A`(`export const SampleConstants = { … } as const`) |
 
 ## 辞書での表し方
@@ -188,6 +189,8 @@ juiz idl [-o 出力先] [-g 出力の種類,…] [--check] 入力.jidl|入力.av
 | `python` | dataclass / `enum.Enum` と型付きのクライアント(名前空間 `a.b` → `a/b/__init__.py`) |
 | `cpp` | struct / `enum class` と cppjuiz の `juiz::type_traits`(`<名前空間>.h`・`juiz_idl.h`、ヘッダのみ) |
 | `haskell` | record・直和型と hsjuiz のインスタンス(名前空間 `a.b` → モジュール `A.B`) |
+| `zig` | struct / enum と型の情報 `juiz_type`(名前空間 `a.b` → `a/b.zig`、根は `juiz_idl.zig`)。ふつうは build.zig の `juiz.addTypes` から作る |
+| `zig-skeleton` | `process` / `container` 宣言からの Zig の雛形。一度作ってコピーし、本体を書く |
 | `typescript` | interface・文字列リテラルの union と型参照(`<名前空間>.ts`・`juiz_idl.ts`、実行時の依存なし) |
 
 言語ごとの使い方:
@@ -196,25 +199,26 @@ juiz idl [-o 出力先] [-g 出力の種類,…] [--check] 入力.jidl|入力.av
 - **Python**: `juiz idl -g python -o gen idl/geometry.jidl` で作ったパッケージを `option.pythonpath`(設定ファイル)や `PYTHONPATH` に入れ、`from robot.geometry import Pose2D` として型ヒントに書きます。`process move_to` からは型付きのクライアント `MoveToClient`、`container motor` からは `MotorClient` も作られます。
 - **C++**: CMake で `juiz_generate_types(<ターゲット> IDL idl/geometry.jidl)`(juiz の `bindings/cppjuiz/cmake/juiz_idl.cmake`)。ビルドのときにヘッダを作ります。manifest に `add_typed_arg<T>(…)` と `returns<T>()` を書きます。
 - **Haskell**: `juiz-idl -g haskell -o gen idl/geometry.jidl` で作ったモジュールを cabal の `hs-source-dirs` と `other-modules` に足し、manifest に `addTypedArg` を書きます。
+- **Zig**: build.zig で `juiz.addTypes(.{ .files = &.{b.path("idl/geometry.jidl")} })` を呼び、`addPlugin` の `.imports` に `juiz_types` として渡します。ビルドのときに `juiz-idl -g zig` で型を作ります。名前空間 `robot.geometry` は `@import("juiz_types").robot.geometry` になります。生成した型を引数の struct のフィールドや戻り値に書くと型付きになります(Zig は juiz 0.3.2 の次の版から)。
 
-各言語の例は、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp)・[Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell))の `types/geometry.jidl` と、それを使う `pose_move` にあります。
+各言語の例は、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp)・[Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell)・[Zig](https://github.com/OpenJUIZ/juiz_examples_zig))の `types/geometry.jidl` と、それを使う `pose_move` にあります。
 
 ### 言語との対応
 
-| JIDL | Rust | Python | C++ | Haskell | TypeScript |
-|---|---|---|---|---|---|
-| `boolean` | `bool` | `bool` | `bool` | `Bool` | `boolean` |
-| `int` / `long` | `i32` / `i64` | `int` | `int32_t` / `int64_t` | `Int32` / `Int64` | `number` |
-| `float` / `double` | `f32` / `f64` | `float` | `float` / `double` | `Float` / `Double` | `number` |
-| `string` | `String` | `str` | `std::string` | `Text` | `string` |
-| `bytes` | `Vec<u8>` | `bytes` | `std::vector<uint8_t>` | `ByteString` | `string`(base64) |
-| `array<T>` | `Vec<T>` | `list[T]` | `std::vector<T>` | `[T]` | `T[]` |
-| `map<T>` | `HashMap<String, T>` | `dict[str, T]` | `std::map<std::string, T>` | `Map Text T` | `Record<string, T>` |
-| `T?` | `Option<T>` | `T \| None` | `std::optional<T>` | `Maybe T` | `T \| null` |
-| レコード | struct | dataclass | struct | record | interface |
-| 列挙 | enum | `enum.Enum` | `enum class` | 直和型 | 文字列リテラルの union |
-| `any` | `Value` | `Any` | `juiz::Value` | `Value` | `unknown` |
-| `image` | `DynamicImage` | `PIL.Image.Image` | (未対応) | (未対応) | (未対応) |
+| JIDL | Rust | Python | C++ | Haskell | Zig | TypeScript |
+|---|---|---|---|---|---|---|
+| `boolean` | `bool` | `bool` | `bool` | `Bool` | `bool` | `boolean` |
+| `int` / `long` | `i32` / `i64` | `int` | `int32_t` / `int64_t` | `Int32` / `Int64` | `i32` / `i64` | `number` |
+| `float` / `double` | `f32` / `f64` | `float` | `float` / `double` | `Float` / `Double` | `f32` / `f64` | `number` |
+| `string` | `String` | `str` | `std::string` | `Text` | `[]const u8` | `string` |
+| `bytes` | `Vec<u8>` | `bytes` | `std::vector<uint8_t>` | `ByteString` | `juiz.Bytes` | `string`(base64) |
+| `array<T>` | `Vec<T>` | `list[T]` | `std::vector<T>` | `[T]` | `[]const T` | `T[]` |
+| `map<T>` | `HashMap<String, T>` | `dict[str, T]` | `std::map<std::string, T>` | `Map Text T` | `juiz.Map(T)` | `Record<string, T>` |
+| `T?` | `Option<T>` | `T \| None` | `std::optional<T>` | `Maybe T` | `?T` | `T \| null` |
+| レコード | struct | dataclass | struct | record | struct | interface |
+| 列挙 | enum | `enum.Enum` | `enum class` | 直和型 | enum(記号は snake_case の小文字) | 文字列リテラルの union |
+| `any` | `Value` | `Any` | `juiz::Value` | `Value` | `juiz.Value` | `unknown` |
+| `image` | `DynamicImage` | `PIL.Image.Image` | (未対応) | (未対応) | `juiz.Image` | (未対応) |
 
 ### import の探し先とほかのパッケージの型
 
@@ -245,7 +249,7 @@ fn main() {
 }
 ```
 
-Rust と Python は `--extern` で型パッケージのものを使います(同じ型が 2 つの別の Rust の型・Python のクラスになるのを避けるため)。C++・Haskell・TypeScript は、ふつうは import した型も一緒に作ります。
+Rust と Python は `--extern` で型パッケージのものを使います(同じ型が 2 つの別の Rust の型・Python のクラスになるのを避けるため)。C++・Haskell・Zig・TypeScript は、ふつうは import した型も一緒に作ります。
 
 ## 型の検査
 
@@ -337,6 +341,7 @@ record Goal {
 | Python | pyjuiz に入っているパッケージ `juiz_std`(`from juiz_std.geometry import Pose2D`)。自分の JIDL から作るときは `--extern juiz_std` |
 | C++ | `juiz_generate_types(<ターゲット> IDL juiz_std/geometry.jidl)` か、自分の JIDL で import する(`juiz_std::geometry::Pose2D`) |
 | Haskell | `juiz-idl -g haskell juiz_std/geometry.jidl`(モジュールは `Juiz_std.Geometry`) |
+| Zig | 自分の JIDL で import する(`@import("juiz_types").juiz_std.geometry.Pose2D`) |
 | TypeScript | `juiz-idl -g typescript juiz_std/geometry.jidl` |
 
 標準の型は一度出したら変えません(足すときは既定値つきのフィールドにします)。

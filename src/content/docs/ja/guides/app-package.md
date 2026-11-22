@@ -5,7 +5,7 @@ sidebar:
   order: 10
 ---
 
-設定ファイルと、それが読み込むプラグイン(Rust・C++・Haskell の共有ライブラリや Python の `.py`)を、1 つのファイル `.juizapp` にまとめて配れます。
+設定ファイルと、それが読み込むプラグイン(Rust・C++・Haskell・Zig の共有ライブラリや Python の `.py`)を、1 つのファイル `.juizapp` にまとめて配れます。
 受け取った人は、ソースもビルドの道具も無しに、`juiz run` だけで動かせます。
 
 ```sh
@@ -28,7 +28,7 @@ talker_listener-0.1.0.juizapp   (zip)
 ├─ plugins/
 │  ├─ x86_64-unknown-linux-gnu/  ターゲットごとのネイティブのプラグイン
 │  │  ├─ libtalker.so
-│  │  └─ libjuiz_sdk.so         C++ / Haskell のとき
+│  │  └─ libjuiz_sdk.so         C++ / Haskell / Zig のとき
 │  └─ aarch64-apple-darwin/
 │     └─ libtalker.dylib
 └─ python/                      OS に依存しない .py
@@ -332,6 +332,7 @@ juiz associate --remove   # 関連付けを外す
 | Rust | `plugins/<ターゲット>/` の so / dylib / dll | 対応する版の juiz(rustc はそろえなくてよい) |
 | C++ | プラグインと libjuiz_sdk | 対応する版の juiz |
 | Haskell | プラグインと libjuiz_sdk、GHC の共有ライブラリ・libffi・libgmp | 対応する版の juiz |
+| Zig | プラグインと libjuiz_sdk | 対応する版の juiz |
 
 - **Python**: ネイティブのプラグインが無いので、どの OS でも動く 1 つのファイル(`targets: [any]`)になります。たくさんの人に配るなら一番楽です。
 - **Rust**: juiz 0.0.30 から、Rust の Process・Container・Component のプラグインは C の関数の境界(プラグインの C ABI)で読み込むので、受け取る側の juiz と rustc の版が違っても動きます。pip で入れた juiz でも動きます。`juiz pack` はマニフェストに `rust.abi`(ABI の版)を書き、`juiz run` は起動前にそれを確かめます。
@@ -339,16 +340,17 @@ juiz associate --remove   # 関連付けを外す
   - `juiz` の範囲を自分で書くときは `>=0.0.30` からにしてください。0.0.29 以前の juiz は新しい形のプラグインを読めないので、範囲に入っていれば pack が警告します。
 - **C++**: CMake で `find_package(juiz_sdk)` の後に `juiz_sdk_bundle(<ターゲット>)` を呼ぶと、プラグインの RPATH が自身の場所(`$ORIGIN` / `@loader_path`)だけになり、隣に libjuiz_sdk が写されます。できたディレクトリの中身を `plugins/<ターゲット>/` に置きます。Windows の juiz はプラグインの隣の DLL を探します。
 - **Haskell**: juiz の `scripts/bundle-plugin-deps.sh <プラグイン> <出力先>` で、プラグインと依存するライブラリを 1 つのディレクトリに集め、隣を探すように書き換えます(Linux は patchelf、macOS は install_name_tool と codesign)。受け取る側に GHC は要りません。
+- **Zig**: build.zig で `b.installArtifact(lib)` の代わりに `juiz.installBundle(lib, .{})` を呼ぶと、`zig build` で `zig-out/plugins/` にプラグインと libjuiz_sdk を並べ、プラグインの rpath を自身の場所(`$ORIGIN` / `@loader_path`)だけにします。中身をそのまま `plugins/<ターゲット>/` に置きます。Zig は 1 台から別の OS・CPU 向けにもビルドできるので(`juiz sdk install --target <ターゲット>` と `-Dtarget`)、複数のターゲットのプラグインを 1 台で作れます。受け取る側に Zig は要りません(Zig は juiz 0.3.2 の次の版から)。
 
 C++・Haskell の Linux 向けは、受け取る側の glibc が作った側より古いと動かないので、古めの環境(Ubuntu 22.04 など)でビルドすると多くの機械で動きます。
 `juiz pack` は、この機械のターゲットのプラグインが、隣のファイルと OS の基本のライブラリ以外を使っていれば警告します。
 
 ## サンプル
 
-4 つのサンプル集に、`packages/` と、ビルドの結果を写して `juiz pack` する `scripts/make_packages.py` があります。タグを付けると CI が作った `.juizapp` を Releases に載せます。
+5 つのサンプル集に、`packages/` と、ビルドの結果を写して `juiz pack` する `scripts/make_packages.py` があります。タグを付けると CI が作った `.juizapp` を Releases に載せます。
 
 - [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python): `talker_listener` と、基礎とアプリの例 `chatter_base` / `chatter_listener`
-- [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp): `talker_listener`(ターゲットごとのファイル)
+- [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp)・[juiz_examples_zig](https://github.com/OpenJUIZ/juiz_examples_zig): `talker_listener`(ターゲットごとのファイル)
 
 ```sh
 # juiz_examples_python で

@@ -147,6 +147,34 @@ After adding the Container in chapter 2, `app/app.conf` looks like this (the com
 ```
 
 </TabItem>
+<TabItem label="Zig">
+
+```yaml title="app/app.conf"
+"name": "my_juiz"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"plugins":
+  "components":
+    "my_juiz":
+      "language": "zig"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+"containers":
+  - "type_name": "counter"
+    "name": "counter0"
+    "initial_value": 0
+    "processes":
+      - "type_name": "counter_increment"
+        "name": "counter_increment0"
+      - "type_name": "counter_get"
+        "name": "counter_get0"
+```
+
+</TabItem>
 </Tabs>
 
 Only the two lines `language` and `path` under `plugins` differ by language.
@@ -183,7 +211,7 @@ Let's go through it from the top.
 
 | Item | Meaning |
 | --- | --- |
-| `language` | The language of the library: one of `rust`, `python`, `c++` and `haskell` |
+| `language` | The language of the library: one of `rust`, `python`, `c++`, `haskell` and `zig` |
 | `path` | The directory to look for the library in. A relative path counts from the directory of the configuration file (`app/`) |
 
 juiz looks in the `path` directory for the file that matches the Component name.
@@ -210,6 +238,12 @@ On Linux `app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so` is loaded, on macO
 
 `{target}` in `plugins/{target}` is replaced with the target name of the machine you run on (what `juiz pkg target` prints).
 On Linux `app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so` is loaded, and on macOS `libmy_juiz.dylib`.
+
+</TabItem>
+<TabItem label="Zig">
+
+`{target}` in `plugins/{target}` is replaced with the target name of the machine you run on (what `juiz pkg target` prints).
+On Linux `app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so` is loaded, and on macOS `libmy_juiz.dylib` (with the libjuiz_sdk that `scripts/dev.sh` put next to it).
 
 </TabItem>
 </Tabs>
@@ -323,7 +357,7 @@ The skeleton already has `"initial_value": 0`. Change it so the counter starts a
     "processes":
 ```
 
-This value is passed to the function that makes the Container, which you read in chapter 2 (the argument `initial_value` of `counter` in Rust and Python, the `args` that `counter` takes in C++, and the argument of `counter_create` in Haskell).
+This value is passed to the function that makes the Container, which you read in chapter 2 (the argument `initial_value` of `counter` in Rust and Python, the `args` that `counter` takes in C++, the argument of `counter_create` in Haskell, and the argument struct of `counter_create` in Zig).
 
 Stop `juiz` with Ctrl+C, start it again, and call `counter_get`; it returns `3`.
 

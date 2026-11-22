@@ -19,7 +19,7 @@ Container の 3D モデルは juiz 0.2.9 で入った機能です。それより
 - **juiz はモデルの中身を解釈しません**。ファイルを不透明なバイト列として持ち、確かめるのは形式(先頭のバイト)・大きさ・SHA-256 だけです。メッシュを開いて描くのは受け取った側(管理画面や、利用者のツール)です。
 - **1 つの Container に 1 つ**です。部品が多いロボットは部品ごとに Container を分け、Transform でつなぎます(関節で動く部分は、もともと別の Container のはずです)。
 - **モデルは Container の属性**で、Process(ContainerProcess)ではありません。`container/profile` と同じ種類の API で取り出します。
-- 設定ファイルに書く機能なので、Container の中身の言語(Rust・Python・C++・Haskell)に関係なく使えます。
+- 設定ファイルに書く機能なので、Container の中身の言語(Rust・Python・C++・Haskell・Zig)に関係なく使えます。
 - Anchor([Transformations](/ja/guides/transformations/))も Container なので、床や地図のモデルを持てます。CompositeContainer も持てます。
 
 ## 形式
@@ -163,6 +163,7 @@ manifest = containerManifest "pantilt_hs"
 ```
 
 Component の Container(Rust の `#[juiz_component_container]`、Python の `@juiz_component_container`、C++ の `ComponentManifest::add_container`、Haskell の `componentContainer`)にも同じように書けます。
+Zig(zigjuiz)の Container には、まだ型ごとの既定のモデルを書けません。設定ファイルの `model:` で付けてください。
 
 - **相対パスはプラグインのファイル**(`libpantilt.so`・`pantilt.dll`・`pantilt.py` など)**のあるディレクトリから**です。設定ファイルからではありません。モデルのファイルはプラグインの横に置いて一緒に配ってください。
 - **インスタンスの `model:` が優先**します。設定ファイルの Container に `model:` があれば、そちらを**丸ごと**使います(キーごとには混ぜず、既定の `scale` なども引き継ぎません)。`model: null` と書けば、既定を使わずモデル無しで作ります。
@@ -403,7 +404,7 @@ def close(container) -> dict:
     return juiz.set_model(container, CLOSED_GLB, format='glb')   # 差し替えた後のモデル情報
 ```
 
-- Rust の ContainerProcess からは `container.set_model(&data, "glb", &Value::Null)`・`clear_model()` です。C++・Haskell・Rust の C ABI プラグインからはまだ差し替えられません。
+- Rust の ContainerProcess からは `container.set_model(&data, "glb", &Value::Null)`・`clear_model()` です。C++・Haskell・Zig・Rust の C ABI プラグインからはまだ差し替えられません。
 - HTTP は `PATCH /api/container/set_model?identifier=…` に `{"model": {"data": "<base64>", "format": "glb", ...}}` を送ります。`scale`・`origin`・`up_axis`・`color`・`file_name` は設定ファイルの `model:` と同じです。`null` を送ると外します。
 - 値が正しくないときは `ContainerModelInvalidError`(HTTP では 400)で、今のモデルは変わりません。
 - 差し替えたモデルはメモリに持ち、System を止めると残りません(設定ファイルは書き換えません)。外した後は、設定ファイルや型の既定のモデルにも戻りません。
@@ -424,7 +425,7 @@ HTTP では `ContainerModelFileNotFoundError` と `ContainerHasNoModelError` が
 - 1 つの Container に複数のモデル(見た目用・当たり判定用など)。
 - 複数のファイルからなるモデル(外部ファイルを参照する .gltf、SDF の `<mesh>`)の表示。
 - 差し替えたモデルを System を止めた後まで残すこと、ファイルのパスでの差し替え。
-- C++・Haskell・Rust の C ABI プラグインの ContainerProcess からの差し替え。
+- C++・Haskell・Zig・Rust の C ABI プラグインの ContainerProcess からの差し替え。
 - 関節の種類・軸・範囲を juiz が持つこと(取り込みではコメントに残すだけです)。
 
 ## サンプル
@@ -444,6 +445,7 @@ HTTP では `ContainerModelFileNotFoundError` と `ContainerHasNoModelError` が
 | Python | [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) |
 | C++ | [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) |
 | Haskell | [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) |
+| Zig | [juiz_examples_zig](https://github.com/OpenJUIZ/juiz_examples_zig) |
 
 .glb と .stl は、各リポジトリの `scripts/make_models.py` が箱と円柱から作ったものです(Python の標準ライブラリだけで動きます)。
 

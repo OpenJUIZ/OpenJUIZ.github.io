@@ -132,7 +132,7 @@ Keys for the broker (`brokers`) and broker proxies (`broker_proxies`, `subsystem
 
 - **No encryption and no access control.** It is plain TCP, so use it inside a network you trust.
 - Peer discovery (Zenoh scouting) is off; it only talks to the peer named in `name`. Setups through zenohd, or connecting to other Zenoh applications or ROS 2 (rmw_zenoh), are not supported.
-- pyjuiz (calling juiz from Python) and the C++ and Haskell clients do not speak Zenoh. Use HTTP or IPC there (you can still write Processes in Python, C++ and Haskell).
+- pyjuiz (calling juiz from Python) and the C++ and Haskell clients do not speak Zenoh. Use HTTP or IPC there (you can still write Processes in Python, C++, Haskell and Zig).
 - When the peer cannot be reached, does not answer in time, or is not a juiz Zenoh broker, you get `zenoh://127.0.0.1:7448: can not connect (...)`, `no response within 10000 ms`, or `no juiz zenoh broker answered`.
 
 ## Speeding up with shared memory

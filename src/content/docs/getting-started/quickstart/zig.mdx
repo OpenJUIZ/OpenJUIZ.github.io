@@ -1,0 +1,129 @@
+---
+title: "Quick start: Zig"
+description: Build the Zig examples and run a Process with juiz.
+sidebar:
+  order: 5
+  label: Zig
+prev:
+  link: /getting-started/quickstart/
+  label: Quick start
+next:
+  link: /tutorial/
+  label: How this tutorial works
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Using the Zig examples [juiz_examples_zig](https://github.com/OpenJUIZ/juiz_examples_zig), you run a Process that just adds 1 to its argument.
+
+<Aside type="caution" title="Available from the version after juiz 0.3.2">
+Zig support comes in the version after juiz 0.3.2. The version number is decided at the release.
+Until then, the examples follow a commit on the main branch of juiz, so install the `juiz` command from the same commit as shown below.
+</Aside>
+
+## Install the juiz command
+
+Install the `juiz` command from the main commit of juiz that the examples follow. You need the Rust toolchain (and on Linux, the Python development files; on Ubuntu, `sudo apt install python3-dev`).
+
+```sh
+cargo install juiz_app --git https://github.com/OpenJUIZ/juiz --rev 5700911b1017e4e63f933e90a966c9352e9ece31 --locked
+```
+
+After the version that ships zigjuiz is released, you can use the released `juiz` installed as described in [Installation](/getting-started/install/).
+
+## Build the examples
+
+Requirements:
+
+- Linux, macOS, or Windows (x86_64). On Windows, run `./build.sh` in Git Bash
+- Zig 0.17.x (install from [ziglang.org](https://ziglang.org/download/). zigjuiz supports exactly one Zig version)
+- Rust (stable), used to build libjuiz_sdk
+- git
+
+```sh
+git clone https://github.com/OpenJUIZ/juiz_examples_zig.git
+cd juiz_examples_zig
+./build.sh
+```
+
+`build.sh` gets the juiz sources (to use zigjuiz), builds libjuiz_sdk, and then builds the examples. The first run takes a while.
+Each example is built as a shared library in `build/plugins`, and libjuiz_sdk is placed there too.
+If you use Zig installed with `pip install ziglang==0.17.1`, run `ZIG="python3 -m ziglang" ./build.sh`.
+
+## The Process code
+
+This is the Process you will run.
+
+[`process/increment_process_zig.zig`](https://github.com/OpenJUIZ/juiz_examples_zig/blob/main/process/increment_process_zig.zig)
+
+```zig
+const std = @import("std");
+const juiz = @import("juiz");
+
+/// The arguments come as one struct. The names, types and default values of its fields become the arguments in the manifest
+fn increment(args: struct { arg1: i64 = 1 }) !i64 {
+    // Adding to the maximum of i64 returns error.Overflow (juiz gets it as an error)
+    return std.math.add(i64, args.arg1, 1);
+}
+
+comptime {
+    juiz.exportProcess(increment, .{
+        .type_name = "increment_process_zig",
+        .description = "Adds 1 to arg1.",
+        .args = .{ .arg1 = "value to be incremented" },
+    });
+}
+```
+
+## Start it
+
+From the root of the repository, start `juiz` with the configuration file. The configuration file looks for plugins by paths relative to the repository root.
+
+```sh
+juiz -f increment_process.conf -d
+```
+
+With `-d`, juiz starts the HTTP broker on port 8000 and keeps running (stop it with Ctrl+C).
+
+## Call it
+
+Leave `juiz` running, open another terminal in the same directory, and call the Process.
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/increment0::increment_process_zig"]
+juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_zig" '{"arg1": 3}' -p
+# => CapsulePtr((value:Value(4), option: []))
+```
+
+You passed `3` and got `4` back.
+
+### Call it from a browser
+
+Open the following URL in a browser to call the Process from Swagger UI and check the result.
+
+```
+http://127.0.0.1:8000/docs/
+```
+
+Open `PATCH /api/process/call`, press "Try it out", enter `core://core/process/increment0::increment_process_zig` as identifier and `{"arg1": 3}` as the request body, and press "Execute".
+
+### Look at it in the web UI
+
+Open the following URL to see the running Processes and connections in the web UI. See [Web UI](/guides/web-ui/) for details.
+
+```
+http://127.0.0.1:8000/ui/
+```
+
+## Next steps
+
+Once it runs, move on to [How this tutorial works](/tutorial/). It starts with writing a Process from scratch.
+The tutorial has Zig pages too ([chapter 1 (Zig)](/tutorial/first-process/zig/)). For details of writing with zigjuiz, see the [zigjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/zigjuiz).
+
+Quick start for other languages:
+
+- [Rust](/getting-started/quickstart/rust/)
+- [Python](/getting-started/quickstart/python/)
+- [C++](/getting-started/quickstart/cpp/)
+- [Haskell](/getting-started/quickstart/haskell/)

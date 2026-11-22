@@ -177,6 +177,7 @@ The README also shows how to start the same configuration file twice with `--nam
 | Python | [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) | `talker_python` / `listener_python` |
 | C++ | [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) | `talker_cpp` / `listener_cpp` |
 | Haskell | [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) | `talker_hs` / `listener_hs` |
+| Zig | [juiz_examples_zig](https://github.com/OpenJUIZ/juiz_examples_zig) | `talker_zig` / `listener_zig` |
 
 To prepare the examples, see the page for each language in [Quick start](/getting-started/quickstart/).
 

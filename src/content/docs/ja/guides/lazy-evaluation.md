@@ -55,7 +55,7 @@ numpy の配列を戻り値にできるようになりました(今までは落�
 
 | 場所 | 振る舞い |
 |---|---|
-| Rust・C++・Haskell の Process への受け渡し | 受け取る側が共通形式を読むので変換する |
+| Rust・C++・Haskell・Zig の Process への受け渡し | 受け取る側が共通形式を読むので変換する |
 | ブローカー越しの応答(HTTP・QUIC など、CLI の `call` も) | 変換して今までと同じ JSON や画像を返す |
 | Topic への publish | 今までどおり変換して配る |
 | profile・管理画面の引数の値 | 変換して今までと同じ値を見せる |
@@ -101,7 +101,7 @@ def add_key(d: dict) -> dict:
 
 ## まだ対象でないもの
 
-- Haskell
+- Haskell・Zig
 - Topic(Python 同士でも変換して配ります)
 - ブローカー越し・別プロセス(必ず変換します)
 

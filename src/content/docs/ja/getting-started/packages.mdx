@@ -292,3 +292,116 @@ Linux・macOS の rpath は、Template Haskell を動かすときに GHC が hsj
 <Aside type="note">
 Hackage に無い 0.2.5 以前の版では、juiz のソースを同じ版のタグで取得し(`git clone --depth 1 --branch v0.2.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.2.4`)、`cabal.project` の `packages:` にその `bindings/hsjuiz` を足します(`packages: . /home/me/juiz-0.2.4/bindings/hsjuiz`)。[チュートリアル](/ja/tutorial/first-process/haskell/) はこの方法で書いています。
 </Aside>
+
+## Zig
+
+[zigjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/zigjuiz)(`@import("juiz")`)で書きます。Zig 0.17.x が必要です(Linux・macOS・Windows)。
+zigjuiz は Zig の関数から juiz が探す C の関数を comptime に作るので、C++・Haskell と同じく libjuiz_sdk にリンクした共有ライブラリになります。
+
+<Aside type="caution" title="juiz 0.3.2 の次の版から使えます">
+Zig は juiz 0.3.2 の次の版で入る機能です。版の番号は公開のときに決まります。
+公開までに試すときは、下の「[公開前の版で試す](#公開前の版で試す)」のとおり、juiz の main から入れてください。
+</Aside>
+
+### 対応する Zig の版
+
+Zig は 1.0 の前で、版ごとに標準ライブラリや `build.zig` の書き方が変わります。zigjuiz は **Zig の版を 1 つだけ** に対応し、違う版ではビルドを止めます。
+juiz の版ごとの対応は次のとおりです。
+
+| juiz・zigjuiz の版 | Zig の版 |
+| --- | --- |
+| 0.3.2 の次の版〜(zigjuiz を初めて配る版) | 0.17.x |
+
+Zig は [ziglang.org](https://ziglang.org/download/) から入れます。`pip install ziglang==0.17.1` でも入り、そのときは `zig` の代わりに `python3 -m ziglang` で動かします(雛形の `scripts/dev.sh` は `ZIG="python3 -m ziglang" scripts/dev.sh` で使えます)。
+
+### zigjuiz と libjuiz_sdk を用意する
+
+zigjuiz は、juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) に版ごとのアーカイブ `zigjuiz-<版>.tar.gz` として置いてあります。
+自分のプロジェクト(`build.zig.zon` のあるディレクトリ)で、`juiz` と同じ版を `zig fetch --save` で取り込みます。
+libjuiz_sdk は `juiz sdk install` で入れます(`juiz` と同じ版が `~/.juiz/sdk/<版>` に入ります。場所は `juiz sdk path` で表示できます)。
+
+```sh
+juiz --version      # 例: juiz <版>
+juiz sdk install
+zig fetch --save https://github.com/OpenJUIZ/juiz/releases/download/v<版>/zigjuiz-<版>.tar.gz
+```
+
+`build.zig.zon` の `dependencies` に `.zigjuiz = .{ .url = "...", .hash = "..." }` が書かれます。juiz を新しい版にしたときは、新しい版の URL でもう一度 `zig fetch --save` を打ちます。
+[`juiz pkg create <名前> -b zig`](/ja/guides/pkg/) で作った雛形では、`scripts/dev.sh` が初めての実行のときにこれを行うので、自分で打つ必要はありません。
+
+`build.zig` では、`zigjuiz.init` を 1 回呼び、プラグインごとに `addPlugin` を呼びます。zigjuiz が libjuiz_sdk を探してリンクし、rpath も付けます。
+
+```zig title="build.zig"
+const std = @import("std");
+const zigjuiz = @import("zigjuiz");
+
+pub fn build(b: *std.Build) void {
+    const juiz = zigjuiz.init(b, .{
+        .target = b.standardTargetOptions(.{}),
+        .optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseSafe }),
+    });
+    const lib = juiz.addPlugin(.{
+        .name = "increment_process_zig", // lib<名前>.so。conf の名前と同じにする
+        .root_source_file = b.path("src/increment_process_zig.zig"),
+    });
+    b.installArtifact(lib);
+}
+```
+
+`zig build --release` で、`zig-out/lib` に `libincrement_process_zig.so`(macOS は `.dylib`)ができます。
+`b.installArtifact(lib)` の代わりに `juiz.installBundle(lib, .{})` を使うと、`zig-out/plugins/` にプラグインと libjuiz_sdk を並べて置き、`.juizapp` にそのまま入れられる形にします。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+ライブラリは `lib<名前>.so` です。libjuiz_sdk は `juiz sdk path` の場所から探し、rpath にその場所とプラグイン自身の場所(`$ORIGIN`)を入れます。
+
+</TabItem>
+<TabItem label="macOS">
+
+ライブラリは `lib<名前>.dylib` です。Apple シリコンは `aarch64-macos`、Intel は `x86_64-macos` のターゲットです。rpath にはプラグイン自身の場所(`@loader_path`)と libjuiz_sdk の場所が入ります。
+
+</TabItem>
+<TabItem label="Windows">
+
+PowerShell で、Linux・macOS と同じコマンドを打ちます。ライブラリは lib の付かない `<名前>.dll` で、**`zig-out/bin`** に置かれます(`zig-out/lib` の `<名前>.lib` は juiz では使いません)。設定ファイルの `path` には DLL のあるディレクトリを書きます。
+Windows には rpath が無いので、zigjuiz が `zig build` のときに `juiz_sdk.dll` を `zig-out/bin` に写します。
+Zig の既定の `x86_64-windows-gnu` でビルドし、libjuiz_sdk の `juiz_sdk.dll.lib` にそのままリンクします(Haskell のような名前を変えた複製は要りません)。
+
+`juiz pkg create -b zig` の雛形は、まだ Windows でビルドできません([issue #588](https://github.com/OpenJUIZ/juiz/issues/588))。Windows では、上の `build.zig` を自分で書いてください。
+
+</TabItem>
+</Tabs>
+
+libjuiz_sdk を別の場所に置いたときは、`zig build -Djuiz-sdk=<展開したディレクトリ>` で指定します。
+Zig は 1 台から別の OS・CPU 向けにもビルドできます(`juiz sdk install --target <ターゲット名>` と `-Dtarget`)。書き方の詳細、使える型、エラーの返し方は [zigjuiz の README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/zigjuiz) を見てください。
+
+### 公開前の版で試す
+
+zigjuiz を初めて配る版が公開されるまでは、`juiz` コマンドと zigjuiz を juiz の main から用意します。サンプル集 [juiz_examples_zig](https://github.com/OpenJUIZ/juiz_examples_zig) も、いまは juiz の main のコミットに合わせてあります。
+libjuiz_sdk は、`juiz sdk install` で入る公開版(0.3.2)のままで使えます。
+
+```sh
+cargo install juiz_app --git https://github.com/OpenJUIZ/juiz --rev 5700911b1017e4e63f933e90a966c9352e9ece31 --locked
+juiz sdk install
+git clone https://github.com/OpenJUIZ/juiz.git ~/juiz-main
+git -C ~/juiz-main checkout 5700911b1017e4e63f933e90a966c9352e9ece31
+```
+
+`cargo install` には Rust のツールチェーンが要ります(Linux では Python の開発用ファイルも。Ubuntu なら `sudo apt install python3-dev`)。
+自分のプロジェクトでは、Releases のアーカイブの代わりに、取得したソースの zigjuiz を `build.zig.zon` の `.path` で指します。
+Zig は `.path` に絶対パスを受けないので、プロジェクトのディレクトリからの相対パスで書きます。
+
+```zig title="build.zig.zon(抜粋)"
+.dependencies = .{
+    .zigjuiz = .{ .path = "../juiz-main/bindings/zigjuiz" },
+},
+```
+
+ソースの zigjuiz は、同じソースの C のヘッダ(`bindings/cjuiz/include`)を相対パスで読むので、`zig fetch --save=zigjuiz <ソース>/bindings/zigjuiz` で取り込むとビルドできません。`.path` を使ってください。
+
+雛形を作るときは `--zigjuiz-dir` でソースの zigjuiz を指定します。`build.zig.zon` にそこへの相対パスが書かれ、`scripts/dev.sh` は Releases から取得しません。
+
+```sh
+juiz pkg create my_juiz -b zig --zigjuiz-dir ~/juiz-main/bindings/zigjuiz
+```

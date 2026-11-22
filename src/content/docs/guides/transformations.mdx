@@ -309,9 +309,37 @@ cameraPose Camera reference = poseStampedToValue reference <$> containerPose ref
 On failure they throw `JuizError` (codes -901 to -905).
 
 </TabItem>
+<TabItem label="Zig">
+
+Read with `juiz.pose(self, reference)` and write with `juiz.setPose(self, reference, pose)`. Pass the `self` that the ContainerProcess received as the first argument.
+
+```zig
+fn move(self: *MobileBase, ctx: juiz.Context, args: struct {
+    vx: f64 = 0,
+    omega: f64 = 0,
+    dt: f64 = 1,
+    reference: []const u8 = "odom",
+}) !juiz.Value {
+    self.x += args.vx * @cos(self.theta) * args.dt;
+    self.y += args.vx * @sin(self.theta) * args.dt;
+    self.theta += args.omega * args.dt;
+    // rewrites the odom → base0 Transform and sends a Pose notification
+    const written = try juiz.setPose(self, args.reference, juiz.makePose2d(self.x, self.y, self.theta));
+    return juiz.poseStampedToValue(ctx.allocator, written, args.reference);
+}
+
+fn cameraPose(self: *const Camera, ctx: juiz.Context, args: struct { reference: []const u8 = "map" }) !juiz.Value {
+    const p = try juiz.pose(self, args.reference);
+    return juiz.poseStampedToValue(ctx.allocator, p, args.reference);
+}
+```
+
+On failure they return a `juiz.PoseError` (`error.NoCommonAnchor` and so on, matching -901 to -907). If you return it with `try`, the error message of the call also has the reason that juiz gave. The values are `juiz.Pose`, `juiz.PoseStamped` and so on; make and read them with `juiz.makePose2d`, `juiz.fromRpy`, `juiz.yaw` and others.
+
+</TabItem>
 </Tabs>
 
-In C++, Haskell and C ABI Rust, the accessors work **only during the call**. Reading or writing from another thread started inside the ContainerProcess, or after the call has returned, gives `TransformationsNotAttachedError`.
+In C++, Haskell, Zig and C ABI Rust, the accessors work **only during the call**. Reading or writing from another thread started inside the ContainerProcess, or after the call has returned, gives `TransformationsNotAttachedError`.
 
 ### Rules for reading
 
@@ -386,6 +414,18 @@ juiz_transform_stamped t = juiz::set_transform(slam, "map", "odom", juiz::make_t
 t <- setTransform "map" "odom" (ContainerTransform (0.1, 0, 0) (0, 0, 0, 1))
 pure (transformStampedToValue "map" "odom" t)
 ```
+
+</TabItem>
+<TabItem label="Zig">
+
+```zig
+const lidar = try juiz.lookup(self, "lidar0", "robot0"); // lidar0 seen from robot0
+std.debug.print("lidar0: x={d}\n", .{lidar.pose.position.x});
+const t = try juiz.setTransform(self, "map", "odom", juiz.makeTransform(0.1, 0, 0, juiz.quaternion_identity));
+return juiz.transformStampedToValue(ctx.allocator, t, "map", "odom");
+```
+
+`juiz.lookup(self, target, reference)` returns a `juiz.PoseStamped`, and `juiz.setTransform(self, source, destination, transform)` returns a `juiz.TransformStamped`.
 
 </TabItem>
 </Tabs>
@@ -490,6 +530,20 @@ cameraPose Camera reference = poseStampedToValue reference <$> containerPose ref
 Calling `setContainerPose` inside throws `JuizError` (`juizPoseNotWritableError`). However, changes to Container state held in an `IORef` or similar **cannot be stopped**. In a readonly function, it is up to you not to change the Container's state.
 
 </TabItem>
+<TabItem label="Zig">
+
+Taking `self` as `*const` makes it readonly (the manifest gets `readonly: true`).
+
+```zig
+fn cameraPose(self: *const Camera, ctx: juiz.Context, args: struct { reference: []const u8 = "map" }) !juiz.Value {
+    const p = try juiz.pose(self, args.reference);
+    return juiz.poseStampedToValue(ctx.allocator, p, args.reference);
+}
+```
+
+Calling `juiz.setPose` or `juiz.setTransform` inside a readonly function is a **compile error**. Since `self` is `*const`, the compiler also stops changes to the Container state.
+
+</TabItem>
 </Tabs>
 
 ## Anchor updates
@@ -564,6 +618,14 @@ juiz container-process call "http://127.0.0.1:8000/container_process/pan0::panti
 ```sh
 juiz container-process call "http://127.0.0.1:8000/container_process/move0::mobile_base_hs_move:base0" '{"vx": 1.0, "dt": 1.0}' -p
 juiz container-process call "http://127.0.0.1:8000/container_process/pan0::pantilt_hs_set_pan:pantilt0" '{"pan": 1.5707963267948966}' -p
+```
+
+</TabItem>
+<TabItem label="Zig">
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/move0::mobile_base_zig_move:base0" '{"vx": 1.0, "dt": 1.0}' -p
+juiz container-process call "http://127.0.0.1:8000/container_process/pan0::pantilt_zig_set_pan:pantilt0" '{"pan": 1.5707963267948966}' -p
 ```
 
 </TabItem>
@@ -741,7 +803,7 @@ juiz -s http://127.0.0.1:8001 anchor tree map
 #    └─ ...
 ```
 
-`pose` / `set_pose` inside a ContainerProcess (Rust, Python, C++, Haskell) keep the same form. Give `map` as the reference and the replica is used.
+`pose` / `set_pose` inside a ContainerProcess (Rust, Python, C++, Haskell, Zig) keep the same form. Give `map` as the reference and the replica is used.
 
 From the parent System, give the child System's Container **with a broker-qualified ID** and the read is forwarded to the child System. The reference can be a Container of the parent System that the child holds as a replica. The type name in the ID (`camera_python`) is from the Python sample and differs per language.
 
@@ -847,6 +909,7 @@ Every sample repository has `transformations.conf` and one Component holding the
 | Python | [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) | `component/mobile_robot_python.py` | `mobile_base_python`, `pantilt_python`, `camera_python`, `pose_print_python` |
 | C++ | [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp) | `component/mobile_robot_cpp` | `mobile_base_cpp`, `pantilt_cpp`, `camera_cpp`, `pose_print_cpp` |
 | Haskell | [juiz_examples_haskell](https://github.com/OpenJUIZ/juiz_examples_haskell) | `component/MobileRobot.hs` | `mobile_base_hs`, `pantilt_hs`, `camera_hs`, `pose_print_hs` |
+| Zig | [juiz_examples_zig](https://github.com/OpenJUIZ/juiz_examples_zig) | `component/mobile_robot_zig.zig` | `mobile_base_zig`, `pantilt_zig`, `camera_zig`, `pose_print_zig` |
 
 ContainerProcess type names are the Container type name plus `_move`, `_set_pan` or `_pose` (such as `mobile_base_python_move`).
 

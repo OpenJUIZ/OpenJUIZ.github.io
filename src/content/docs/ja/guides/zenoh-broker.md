@@ -132,7 +132,7 @@ Topic の push も、call と同じく Zenoh で相手の juiz に届きます�
 
 - **暗号化もアクセス制御もしません。** 平文の TCP なので、信頼できるネットワークの中で使ってください。
 - 相手の自動発見(Zenoh の scouting)は切ってあり、`name` に書いた相手とだけ話します。zenohd を挟む構成や、ほかの Zenoh のアプリ・ROS 2(rmw_zenoh)とつなぐことはできません。
-- Python から外の juiz を呼ぶ pyjuiz、C++・Haskell のクライアントには Zenoh はありません。HTTP か IPC を使ってください(Process を Python・C++・Haskell で書くことはできます)。
+- Python から外の juiz を呼ぶ pyjuiz、C++・Haskell のクライアントには Zenoh はありません。HTTP か IPC を使ってください(Process を Python・C++・Haskell・Zig で書くことはできます)。
 - 繋がらないとき、待ち時間を過ぎたとき、繋ぎ先が juiz の Zenoh ブローカーでないときは、`zenoh://127.0.0.1:7448: can not connect (...)`・`no response within 10000 ms`・`no juiz zenoh broker answered` のエラーになります。
 
 ## 共有メモリで速くする

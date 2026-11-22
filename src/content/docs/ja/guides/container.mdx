@@ -123,6 +123,35 @@ juizContainer 'create 'manifest
 `containerManifest` の引数は、Container を作る関数の引数になります(設定ファイルの `containers` に書いた値を受け取ります)。書き換える値は `IORef` に入れます。
 
 </TabItem>
+<TabItem label="Zig">
+
+```zig
+// example_container_state.zig: 状態の型 (Container と ContainerProcess の両方のライブラリが @import する)
+pub const Counter = struct {
+    value: i64,
+};
+```
+
+```zig
+// example_container_zig.zig
+const juiz = @import("juiz");
+const state = @import("example_container_state.zig");
+
+fn create(args: struct { value: i64 = 0 }) state.Counter {
+    return .{ .value = args.value };
+}
+
+comptime {
+    juiz.exportContainer(create, .{
+        .type_name = "example_container_zig",
+        .args = .{ .value = "initial value" },
+    });
+}
+```
+
+Container を作る関数は、Process と同じく引数を 1 つの struct で受けます(設定ファイルの `containers` に書いた値が入ります)。返した値を zigjuiz が Container の状態として持ちます。状態の型が `pub fn deinit(self: *State) void` を持っていれば、Container を消すときに呼ばれます。
+
+</TabItem>
 </Tabs>
 
 ## ContainerProcess
@@ -200,6 +229,32 @@ juizContainerProcess 'increment 'manifest
 
 `containerProcessManifest` の 2 つ目の引数が、結びつける Container の型名です。
 状態の型は、Container と ContainerProcess のライブラリで同じモジュールの同じ型を使ってください(型が違うとエラーになります)。1 つのライブラリにまとめる場合は `juizComponent` を使います([チュートリアル第 6 章(Haskell)](/ja/tutorial/component/haskell/))。
+
+</TabItem>
+<TabItem label="Zig">
+
+```zig
+// example_container_zig_increment.zig
+const std = @import("std");
+const juiz = @import("juiz");
+const state = @import("example_container_state.zig");
+
+fn increment(self: *state.Counter, args: struct { arg1: i64 = 1 }) !i64 {
+    self.value = try std.math.add(i64, self.value, args.arg1);
+    return self.value;
+}
+
+comptime {
+    juiz.exportContainerProcess(increment, .{
+        .type_name = "example_container_zig_increment",
+        .container_type = "example_container_zig",
+        .args = .{ .arg1 = "value to be added" },
+    });
+}
+```
+
+最初の引数 `self` で Container の状態を受け取ります。`.container_type` が、結びつける Container の型名です。`self` を `*const` で受けると readonly の ContainerProcess になります。
+状態の型は、Container と ContainerProcess のライブラリで同じファイルの同じ型を `@import` してください(型が違うと、関数を呼ばずに -1104 のエラーを返します)。1 つのライブラリにまとめる場合は `juiz.exportComponent` を使います([チュートリアル第 6 章(Zig)](/ja/tutorial/component/zig/))。
 
 </TabItem>
 </Tabs>

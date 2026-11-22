@@ -1,0 +1,424 @@
+---
+title: "1. はじめての Process(Zig)"
+description: juiz pkg create で Zig の雛形を作り、2 つの数を足す Process をビルドして動かし、外から呼び出します。
+sidebar:
+  order: 5
+  label: Zig
+prev:
+  link: /ja/tutorial/first-process/
+  label: "1. はじめての Process"
+next:
+  link: /ja/tutorial/container/zig/
+  label: "2. 状態を持つ(Zig)"
+---
+
+import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
+
+この章では、`juiz pkg create` で Zig のプロジェクトの雛形を作り、その中の「2 つの数を足して返す」Process をビルドして動かします。
+まず本体の Process のコードを読み、それから動かして、ブラウザとターミナルから呼び出します。最後に、雛形のほかのファイルを読みます。
+
+<Aside type="tip" title="この章で学ぶこと">
+- `juiz pkg create` で、Process を書く Zig のプロジェクトの雛形を作る方法
+- 雛形の中身(`build.zig`・`build.zig.zon`・`src/my_juiz.zig`・`app/app.conf`・`scripts/`)の読み方
+- Process は、引数を受け取って結果を返す冪等な関数であること
+- Process には「型名」と「インスタンス名」があること
+- 外から Process を呼び出して結果を受け取る使い方(call)
+</Aside>
+
+<Aside type="caution" title="juiz 0.3.2 の次の版から使えます">
+Zig は juiz 0.3.2 の次の版で入る機能です。版の番号は公開のときに決まります。
+公開までに試すときは、[言語ごとのパッケージの「公開前の版で試す」](/ja/getting-started/packages/#公開前の版で試す) のとおり、`juiz` コマンドと zigjuiz を juiz の main から用意してください。
+そのときは、この章の `juiz pkg create` に `--zigjuiz-dir ~/juiz-main/bindings/zigjuiz` を付けます(`scripts/dev.sh` は Releases から zigjuiz を取得しなくなります)。
+</Aside>
+
+<Aside type="note" title="Windows では">
+Zig のチュートリアルは Linux と macOS の手順で書いています。`juiz pkg create` の Zig の雛形は、まだ Windows でビルドできません([issue #588](https://github.com/OpenJUIZ/juiz/issues/588))。
+zigjuiz そのものは Windows でも使えます。書き方は [言語ごとのパッケージの「Zig」](/ja/getting-started/packages/#zig) の「Windows」タブを見てください。
+</Aside>
+
+## 準備
+
+次のものを用意してください(Linux・macOS)。
+
+- `juiz` コマンド。[インストール](/ja/getting-started/install/) の、pip と cargo のどちらの入れ方でもかまいません
+- Zig 0.17.x。[ziglang.org](https://ziglang.org/download/) から入れます。zigjuiz は Zig の版を 1 つだけに対応していて、違う版ではビルドが止まります([対応する Zig の版](/ja/getting-started/packages/#対応する-zig-の版))
+- `juiz` と同じ版の libjuiz_sdk
+
+Zig の Process は、zigjuiz(juiz の Zig 用のライブラリ)を使って書き、libjuiz_sdk(juiz と値を受け渡す関数の共有ライブラリ)にリンクしてビルドします。
+zigjuiz は、雛形の `scripts/dev.sh` が初めてビルドするときに、juiz の GitHub Releases から `zig fetch` で取り込みます。ここで用意するのは libjuiz_sdk だけです。
+
+`juiz` と Zig の版を確かめてから、`juiz sdk install` で同じ版の libjuiz_sdk を `~/.juiz/sdk/<版>` に入れます。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+juiz --version
+# => juiz <版>
+zig version
+# => 0.17.1
+juiz sdk install
+ls "$(juiz sdk path)/lib"
+# => libjuiz_sdk.so  ...
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+juiz --version
+# => juiz <版>
+zig version
+# => 0.17.1
+juiz sdk install
+ls "$(juiz sdk path)/lib"
+# => libjuiz_sdk.dylib  ...
+```
+
+</TabItem>
+</Tabs>
+
+Zig は 0.17 の版なら、表示される版が違ってもかまいません。`pip install ziglang==0.17.1` で入れた Zig を使うときは、`zig` の代わりに `python3 -m ziglang` と打ち、この章の `scripts/dev.sh` は `ZIG="python3 -m ziglang" scripts/dev.sh` で実行します。
+
+## 雛形を作る
+
+作業用のディレクトリで、次のコマンドを打ちます。
+
+```sh
+juiz pkg create my_juiz -b zig -t process
+```
+
+| 部分 | 意味 |
+| --- | --- |
+| `my_juiz` | プロジェクトの名前です。同じ名前のディレクトリが作られ、型名の頭にもなります。英小文字で始まり、英小文字・数字・`_` だけが使えます(Zig では 32 文字まで) |
+| `-b zig` | 使う言語です(`rust` / `python` / `cpp` / `haskell` / `zig`) |
+| `-t process` | 入れる型の種類です。`process` では Process を 1 つだけ入れます。省略すると Container も入りますが、この章では Process だけから始めます |
+
+作ると、次に打つコマンドが表示されます。
+
+```text
+Created my_juiz (zig, process) in ./my_juiz  [zigjuiz <版>]
+
+Next steps:
+  cd my_juiz
+  scripts/dev.sh                  # build and put the plugin and libjuiz_sdk in app/plugins/<target>/
+  juiz -f app/app.conf -d         # start (keep it running)
+  ...
+```
+
+以降のコマンドは、すべて `my_juiz` で実行します。
+
+```sh
+cd my_juiz
+```
+
+## プロジェクトの形
+
+雛形には、次のファイルが入っています。
+
+<FileTree>
+- my_juiz/
+  - build.zig ビルドの設定
+  - build.zig.zon Zig のパッケージの情報(zigjuiz への依存)
+  - src/
+    - my_juiz.zig Process のコード
+  - app/
+    - app.conf 起動の設定ファイル
+    - juizapp.yaml 配布用のパッケージ(.juizapp)の情報
+  - scripts/
+    - dev.sh ビルドして app/plugins/ に置く
+    - pack.sh 配布用のパッケージを作る
+  - README.md この雛形の使い方(英語)
+  - .gitignore
+</FileTree>
+
+juiz では、Process を共有ライブラリ(`.so`・`.dylib`)としてビルドし、`juiz` コマンドがそれをプラグインとして読み込みます。
+雛形では、`src/my_juiz.zig` に書いた型をまとめて 1 つの共有ライブラリにし、`app/app.conf` に書いたとおりに読み込んで起動します。
+まず、開発の本体である Process のコードから読みましょう。
+
+## Process のコード: src/my_juiz.zig
+
+```zig title="src/my_juiz.zig"
+const std = @import("std");
+const juiz = @import("juiz");
+
+/// Returns a + b.
+fn my_juiz_add(args: struct { a: i64 = 0, b: i64 = 0 }) !i64 {
+    return std.math.add(i64, args.a, args.b); // error.Overflow becomes an error of the call
+}
+
+comptime {
+    juiz.exportComponent(.{
+        .type_name = "my_juiz",
+        .description = "my_juiz: a juiz component.",
+        .parts = .{
+            juiz.processPart(my_juiz_add, .{
+                .type_name = "my_juiz_add",
+                .description = "Returns a + b.",
+                .args = .{ .a = "first value", .b = "second value" },
+            }),
+        },
+    });
+}
+```
+
+ファイルの先頭の説明のコメントは省いています。
+
+| 部分 | 意味 |
+| --- | --- |
+| `@import("juiz")` | zigjuiz を読み込みます |
+| `fn my_juiz_add(args: struct { a: i64 = 0, b: i64 = 0 }) !i64` | Process の本体です。引数は **1 つの struct** で受けます。フィールドの名前・型・既定値が、そのまま Process の引数(名前・型・既定値)になります。呼び出すときに省いた引数には、既定値が使われます |
+| `std.math.add(...)` | `a + b` を返します。`i64` に収まらないときは `error.Overflow` を返します。戻り値の型 `!i64` の `!` は「エラーを返すことがある」という意味です |
+| `comptime { juiz.exportComponent(...) }` | 関数を、`juiz` から読み込めるように公開します。コンパイルのときに、juiz が探す C の関数を zigjuiz が作ります |
+| `.type_name = "my_juiz"` | このライブラリ(Component)の名前です |
+| `juiz.processPart(my_juiz_add, .{ ... })` | 関数を Process として並べます。`.type_name` の文字列が Process の**型名**、`.args` は引数の説明です |
+
+`.args` には、struct のフィールドと同じ名前で、全部の引数の説明を書きます。説明を書き忘れたり、引数に無い名前を書いたりすると、コンパイルエラーになります。
+
+関数が返した Zig のエラーは、juiz の呼び出しのエラーになります。juiz は落ちません。
+ただし **panic は捕まえられず、juiz ごと落ちます**。失敗はエラーで返すようにしてください(`std.math.add` のように、エラーを返す関数を使う)。
+
+雛形では、複数の型を 1 つのライブラリにまとめる **Component** という形で書かれています。
+この章では Process が 1 つだけですが、第 2 章で Container を同じファイルに足していきます。Component については第 6 章で詳しく扱います。
+
+## Process は冪等な関数
+
+`my_juiz_add` は、引数を受け取って結果を返すだけです。
+外部の状態を読み書きしないので、同じ引数を渡せばいつも同じ結果が返ります(冪等)。
+この性質のおかげで、Process はテストしやすく、あとでつないだり別のマシンに置いたりしても振る舞いが変わりません。
+
+## ビルドする
+
+`scripts/dev.sh` でビルドします。初めての実行では、先に zigjuiz を `build.zig.zon` に取り込みます(ネットワークにつながっている必要があります)。
+
+<Tabs syncKey="platform">
+<TabItem label="Linux">
+
+```sh
+scripts/dev.sh
+# => adding zigjuiz <版> to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v<版>/zigjuiz-<版>.tar.gz
+#    app/plugins/x86_64-unknown-linux-gnu/libjuiz_sdk.so
+#    app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so
+```
+
+</TabItem>
+<TabItem label="macOS">
+
+```sh
+scripts/dev.sh
+# => adding zigjuiz <版> to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v<版>/zigjuiz-<版>.tar.gz
+#    app/plugins/aarch64-apple-darwin/libjuiz_sdk.dylib
+#    app/plugins/aarch64-apple-darwin/libmy_juiz.dylib
+```
+
+Intel の Mac では、`aarch64-apple-darwin` の所が `x86_64-apple-darwin` になります。
+
+</TabItem>
+</Tabs>
+
+`scripts/dev.sh` は、`zig build` でビルドし、できあがった共有ライブラリと libjuiz_sdk を `app/plugins/<ターゲット>/` に写します。
+`<ターゲット>` は、`x86_64-unknown-linux-gnu` のような「どの CPU・OS 向けか」を表す名前で、`juiz pkg target` で表示できます。
+初回は Zig の標準ライブラリなどもコンパイルするので、少し時間がかかります。2 回目からは、変えたところだけをビルドし直します。
+
+libjuiz_sdk が見つからないときは、`juiz sdk install` を打つように案内してビルドが止まります。Zig の版が 0.17 でないときも、`scripts/dev.sh` が止まります。
+
+## 動かす
+
+設定ファイル `app/app.conf` を `-f` で渡して、`juiz` を起動します。
+
+```sh
+juiz -f app/app.conf -d
+```
+
+| オプション | 意味 |
+| --- | --- |
+| `-f <ファイル>` | 設定ファイルを読み込み、そこに書かれたとおりにプラグインを読み込んで、インスタンスを作る |
+| `-d` | 起動したまま待機する(Ctrl+C で終了) |
+
+起動すると、`juiz 管理画面: http://localhost:8000/ui/` と表示されます。HTTP ブローカーが 8000 番ポートで待ち受けています。
+
+## ブラウザから呼び出す
+
+`juiz` を起動したまま、ブラウザで管理画面 `http://localhost:8000/ui/` を開きます。次のような画面が出ます。
+
+![管理画面。左に「処理 Process」の下の my_juiz_add0、中央の図に my_juiz_add0 の楕円が描かれている](../../../../../assets/tutorial-web-ui/first-process-top.png)
+
+画面は 3 つの部分に分かれています。
+
+- **左の一覧**: 動いているものの一覧です。「処理 Process」の下に、インスタンス `my_juiz_add0` が型名 `my_juiz_add` と並んで出ています。
+- **中央の図**: 系の図です。Process は楕円で描かれ、大きな字がインスタンス名、小さな字が型名です。
+- **右の欄**: 選んだものの性質(詳しい情報)が出ます。まだ何も選んでいないので空です。
+
+左の一覧か中央の図で `my_juiz_add0` をクリックすると、右の欄に Process の情報が出ます。
+右の欄を下へスクロールすると「呼び出す」という見出しがあり、引数 `a`・`b` の入力欄が並んでいます。
+`a` に `1`、`b` に `2` を入れて「呼び出す」ボタンを押してください。下の「結果」に `3` が出れば成功です。
+
+![右の欄の拡大。引数の表(a と b、型 Int、既定値 0)、呼び出すの欄に a=1・b=2、結果に 3](../../../../../assets/tutorial-web-ui/first-process-call.png)
+
+右の欄のほかの部分も見ておきましょう。
+
+- 「引数」の表には、引数の名前・型・既定値が並んでいます。既定値は、呼び出すときに省いた引数に使われる値で、struct のフィールドに書いたもの(`= 0`)です(「拘束値」は第 3 章で扱います)。
+- 「既定値に戻す」を押すと、入力欄が既定値(`0`)に戻ります。「JSON で編集」では、引数を JSON でまとめて書けます。
+- 上のほうの「基本」には、型名と、この Process の識別子(ID)が出ています。
+
+値を変えて、何度か呼び出してみてください。同じ引数なら、何度呼んでも同じ結果が返ります。
+管理画面のほかの使い方は [ガイドの「管理画面」](/ja/guides/web-ui/) にあります。
+
+## ターミナルから呼び出す
+
+ブラウザでしたことは、ターミナルからもできます。`juiz` を起動したまま、別のターミナルを開いて `my_juiz` に移り、Process を呼び出してみます。
+まず、動いている Process の一覧を見ます。
+
+```sh
+juiz process list
+# => ["http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add"]
+```
+
+表示された URL が、この Process の **ID** です。
+`http://127.0.0.1:8000` は Process がいる場所(ブローカー)、`process/` の後ろは「インスタンス名`::`型名」を表しています。
+[ネームスペース](/ja/guides/namespace/)を使うと、インスタンス名の前に `robot1/` のようにネームスペースが入ります。使わなければ上のとおりです。
+
+この ID と引数を指定して、Process を呼び出します(call)。引数は JSON で渡します。
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add" '{"a": 1, "b": 2}' -p
+# => CapsulePtr((value:Value(3), option: []))
+```
+
+`1` と `2` を渡して `3` が返ってきました。`-p` は結果を表示するオプションです。
+引数を省くと、既定値(`a` も `b` も `0`)が使われます。`'{"a": 5}'` を渡すと `5` が返ります。
+何度呼び出しても、同じ引数なら同じ結果が返ることも確かめてみてください。
+
+`i64` の最大値に足して、エラーになることも確かめておきましょう。
+
+```sh
+juiz process call "http://127.0.0.1:8000/process/my_juiz_add0::my_juiz_add" '{"a": 9223372036854775807, "b": 1}' -p
+# => Error: ...
+#    ... Zig plugin function (process(my_juiz_add)) failed (return_value=-1101): my_juiz_add returned error.Overflow ...
+```
+
+関数が返した `error.Overflow` が、呼び出しのエラーとして返ってきます。`juiz` は動き続けているので、続けて呼び出せます。
+
+`juiz` コマンドも管理画面も、HTTP で同じ API を呼んでいるだけです。
+つまり、HTTP を話せるプログラムなら、どの言語からでも Process を呼び出して結果を受け取れます。
+これが、juiz をサーバー・クライアントのように使う **call** という使い方です。
+
+## 雛形のほかのファイルを読む
+
+Process のコードのほかに、雛形にはビルドと起動のためのファイルが入っています。
+
+### ビルドの設定: build.zig と build.zig.zon
+
+`build.zig` には、共有ライブラリを作る手順が書かれています。
+
+```zig title="build.zig"
+const std = @import("std");
+const zigjuiz = @import("zigjuiz");
+
+pub fn build(b: *std.Build) void {
+    const juiz = zigjuiz.init(b, .{
+        .target = b.standardTargetOptions(.{}),
+        // --release builds with ReleaseSafe (keeps the safety checks such as out-of-bounds access)
+        .optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseSafe }),
+    });
+    const lib = juiz.addPlugin(.{
+        .name = "my_juiz",
+        .root_source_file = b.path("src/my_juiz.zig"),
+    });
+    // zig-out/plugins/: the plugin and libjuiz_sdk side by side, with the rpath $ORIGIN (@loader_path on macOS)
+    juiz.installBundle(lib, .{});
+}
+```
+
+先頭の説明のコメントは省いています。
+
+| 部分 | 意味 |
+| --- | --- |
+| `@import("zigjuiz")` | `build.zig.zon` に取り込んだ zigjuiz のビルド用の関数を読み込みます |
+| `zigjuiz.init(b, ...)` | 1 つの `build.zig` で 1 回だけ呼びます。libjuiz_sdk を探し(既定は `juiz sdk path` の場所)、見つからなければ `juiz sdk install` を案内してビルドを止めます |
+| `.preferred_optimize_mode = .ReleaseSafe` | `--release` のときに、範囲外アクセスなどの安全検査を残したままにします。検査に引っかかると panic になるので、気づきやすくなります |
+| `juiz.addPlugin(.{ .name = "my_juiz", ... })` | 共有ライブラリを 1 つ作ります。名前 `my_juiz` から、Linux では `libmy_juiz.so`、macOS では `libmy_juiz.dylib` ができます。`src/my_juiz.zig` から `@import("juiz")` で zigjuiz を使えるようにします |
+| `juiz.installBundle(lib, .{})` | できたライブラリと libjuiz_sdk を `zig-out/plugins/` に並べて置きます。rpath は自分のいる場所(`$ORIGIN`、macOS は `@loader_path`)だけにするので、そのまま `.juizapp` に入れられます |
+
+`build.zig.zon` は、Zig のパッケージの情報です。`scripts/dev.sh` が初めて動いたときに、zigjuiz への依存が `dependencies` に書き足されます。
+
+```zig title="build.zig.zon(scripts/dev.sh を一度実行した後)"
+.{
+    .name = .my_juiz,
+    .version = "0.1.0",
+    .fingerprint = 0x...,
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{
+        .zigjuiz = .{
+            .url = "https://github.com/OpenJUIZ/juiz/releases/download/v<版>/zigjuiz-<版>.tar.gz",
+            .hash = "zigjuiz-<版>-...",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
+```
+
+| 部分 | 意味 |
+| --- | --- |
+| `.name`・`.version` | このパッケージの名前と版です。`.version` は `app/juizapp.yaml` の `version` と合わせます |
+| `.fingerprint` | このパッケージを見分ける乱数です。プロジェクトを写して使うときも、そのままにしておきます |
+| `.dependencies` の `.zigjuiz` | zigjuiz のアーカイブの URL と、中身から計算したハッシュです。`zig fetch --save` が書きます |
+
+**zigjuiz と libjuiz_sdk の版は、`juiz --version` で表示される版と同じにしてください。** 版が違うと、`juiz` がプラグインを読み込めないことがあります。
+`juiz` を新しい版にしたときは、新しい版で `juiz sdk install` を打ち、`zig fetch --save=zigjuiz <新しい版の URL>` で zigjuiz を取り込み直してください(同じ名前の依存は置き換わります)。
+
+### 起動の設定ファイル: app/app.conf
+
+`juiz -f` に渡した設定ファイルです(先頭のコメントは省いています)。
+
+```yaml title="app/app.conf"
+"name": "my_juiz"
+"option":
+  "http_broker":
+    "start": true
+    "port": 8000
+"plugins":
+  "components":
+    "my_juiz":
+      "language": "zig"
+      "path": "plugins/{target}"
+"processes":
+  - "type_name": "my_juiz_add"
+    "name": "my_juiz_add0"
+```
+
+設定ファイルは YAML で書きます。ここでは、大まかに次のことが書かれています。
+
+- `option`: HTTP ブローカーを 8000 番ポートで立ち上げる
+- `plugins`: `plugins/{target}` から、Component `my_juiz` のライブラリを Zig のプラグインとして**読み込む**。`{target}` は動かしているマシンのターゲット名に置き換わるので、`scripts/dev.sh` が置いた `app/plugins/<ターゲット>/libmy_juiz.so` が読み込まれます(パスは、設定ファイルのあるディレクトリ `app/` からの相対です)
+- `processes`: 読み込んだ型 `my_juiz_add` から、`my_juiz_add0` という名前の**インスタンスを作る**
+
+ここで「読み込む」と「インスタンスを作る」が分かれていることに注目してください。
+ライブラリを読み込むと、juiz は Process の**型**(作り方)を覚えます。`processes` に書くと、その型から名前の付いた**インスタンス**を作ります。
+呼び出すときの ID に入っていた `my_juiz_add0` がインスタンス名、`my_juiz_add` が型名です。
+同じ型から、名前の違うインスタンスをいくつも作ることもできます(第 3 章で扱います)。
+
+### scripts と app/juizapp.yaml
+
+`scripts/dev.sh` は、上で使ったビルド用のスクリプトです。`--target <ターゲット>` を付けると、別の CPU・OS 向けにもビルドできます(Zig は 1 台から別のマシン向けにビルドできます)。
+`scripts/pack.sh` と `app/juizapp.yaml` は、できあがった部品を `.juizapp` というファイル 1 つにまとめて配る(`juiz run` だけで動かせる)ためのものです。チュートリアルでは使いません。使い方は [アプリの配布(.juizapp)](/ja/guides/app-package/) にあります。
+
+## やってみよう
+
+- `src/my_juiz.zig` を書き換えて、足す代わりに掛け算を返すようにしてみましょう(`std.math.mul(i64, args.a, args.b)`)。`scripts/dev.sh` でビルドし直して `juiz` を起動し直すと、`{"a": 3, "b": 4}` に対して `12` が返ってくるはずです。
+- `.args` から `.b` の説明を消して、`scripts/dev.sh` を打ってみましょう。説明の無い引数がコンパイルエラーになります。
+- `juiz pkg add process my_juiz_sub` を打つと、`src/my_juiz.zig` と `app/app.conf` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `std.math.sub` に書き換え、ビルドし直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
+
+## まとめ
+
+- `juiz pkg create <名前> -b zig` で、ビルド・起動・呼び出しまでそのまま通るプロジェクトの雛形を作れます。zigjuiz は `scripts/dev.sh` が `juiz` と同じ版を取り込み、libjuiz_sdk は `juiz sdk install` で入れます。
+- Zig の Process は、zigjuiz の `addPlugin` で共有ライブラリとしてビルドし、`juiz` がプラグインとして読み込みます。雛形では `scripts/dev.sh` がビルドして `app/plugins/<ターゲット>/` に置きます。
+- Process は、引数を受け取って結果を返すだけの冪等な関数です。Zig では、引数を 1 つの struct で受け、`juiz.exportComponent` の `processPart` で型名と説明を付けて公開します。失敗は Zig のエラーで返します。
+- juiz はライブラリを読み込んで Process の**型**を覚え、設定ファイルに書いたとおりに、そこから名前の付いた**インスタンス**を作ります。
+- 動いている Process には URL の形をした ID があり、ID と引数を指定して外から呼び出せます(call)。
+
+次の章では、このプロジェクトにカウンタの Container を足して、状態を持つ部品の書き方を学びます。[状態を持つ: Container と ContainerProcess(Zig)](/ja/tutorial/container/zig/) に進みましょう。

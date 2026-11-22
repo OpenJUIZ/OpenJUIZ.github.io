@@ -28,7 +28,7 @@ talker_listener-0.1.0.juizapp   (zip)
 ├─ plugins/
 │  ├─ x86_64-unknown-linux-gnu/  native plugins per target
 │  │  ├─ libtalker.so
-│  │  └─ libjuiz_sdk.so         for C++ / Haskell
+│  │  └─ libjuiz_sdk.so         for C++ / Haskell / Zig
 │  └─ aarch64-apple-darwin/
 │     └─ libtalker.dylib
 └─ python/                      OS-independent .py files
@@ -332,6 +332,7 @@ juiz associate --remove   # remove the association
 | Rust | so / dylib / dll in `plugins/<target>/` | a matching version of juiz (the rustc does not have to match) |
 | C++ | plugins and libjuiz_sdk | a matching version of juiz |
 | Haskell | plugins, libjuiz_sdk, GHC shared libraries, libffi and libgmp | a matching version of juiz |
+| Zig | plugins and libjuiz_sdk | a matching version of juiz |
 
 - **Python**: with no native plugins, one file runs on every OS (`targets: [any]`). This is the easiest way to ship to many people.
 - **Rust**: since juiz 0.0.30, Rust Process, Container and Component plugins are loaded through a C function boundary (the plugin C ABI), so they work even when the receiver's juiz was built with another rustc. They also work with juiz installed by pip. `juiz pack` writes `rust.abi` (the ABI version) to the manifest and `juiz run` checks it before starting.
@@ -339,16 +340,17 @@ juiz associate --remove   # remove the association
   - If you write the `juiz` range yourself, start it at `>=0.0.30`. juiz 0.0.29 and earlier cannot load the new-style plugins, so pack warns when they are in the range.
 - **C++**: in CMake, call `juiz_sdk_bundle(<target>)` after `find_package(juiz_sdk)`. The plugin's RPATH becomes only its own directory (`$ORIGIN` / `@loader_path`) and libjuiz_sdk is copied next to it. Put the contents of that directory in `plugins/<target>/`. On Windows, juiz looks for DLLs next to the plugin.
 - **Haskell**: juiz's `scripts/bundle-plugin-deps.sh <plugin> <out-dir>` gathers the plugin and the libraries it uses into one directory and rewrites them to look next to themselves (patchelf on Linux, install_name_tool and codesign on macOS). The receiver does not need GHC.
+- **Zig**: in build.zig, call `juiz.installBundle(lib, .{})` instead of `b.installArtifact(lib)`. `zig build` then puts the plugin and libjuiz_sdk side by side in `zig-out/plugins/` and sets the plugin's rpath to its own directory only (`$ORIGIN` / `@loader_path`). Put the contents in `plugins/<target>/` as they are. Zig can build for other OSes and CPUs from one machine (`juiz sdk install --target <target>` and `-Dtarget`), so you can make the plugins of several targets on one machine. The receiver does not need Zig (Zig is available from the version after juiz 0.3.2).
 
 C++ and Haskell builds for Linux do not run where glibc is older than on the build machine, so build on an older system (such as Ubuntu 22.04) to reach more machines.
 `juiz pack` warns when a plugin for the current target uses libraries other than the files next to it and the OS base libraries.
 
 ## Examples
 
-The four example repositories have `packages/` and `scripts/make_packages.py`, which copies the build results and runs `juiz pack`. When a tag is pushed, CI attaches the `.juizapp` files to Releases.
+The five example repositories have `packages/` and `scripts/make_packages.py`, which copies the build results and runs `juiz pack`. When a tag is pushed, CI attaches the `.juizapp` files to Releases.
 
 - [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python): `talker_listener`, and the base/app pair `chatter_base` / `chatter_listener`
-- [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust), [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp): `talker_listener` (one file per target)
+- [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust), [juiz_examples_cpp](https://github.com/OpenJUIZ/juiz_examples_cpp), [juiz_examples_zig](https://github.com/OpenJUIZ/juiz_examples_zig): `talker_listener` (one file per target)
 
 ```sh
 # in juiz_examples_python

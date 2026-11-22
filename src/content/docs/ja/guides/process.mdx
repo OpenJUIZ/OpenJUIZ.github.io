@@ -1,6 +1,6 @@
 ---
 title: Process を書く
-description: 引数に 1 を足して返す Process を Rust、C++、Python、Haskell で書きます。
+description: 引数に 1 を足して返す Process を Rust、C++、Python、Haskell、Zig で書きます。
 sidebar:
   order: 1
 ---
@@ -86,6 +86,30 @@ Haskell では hsjuiz を使い、manifest(型名と引数の定義)を自分で
 使える型やエラーの返し方は [hsjuiz の README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz)、プロジェクトの作り方は [チュートリアル第 1 章(Haskell)](/ja/tutorial/first-process/haskell/) にあります。
 
 </TabItem>
+<TabItem label="Zig">
+
+```zig
+const std = @import("std");
+const juiz = @import("juiz");
+
+fn increment(args: struct { arg1: i64 = 1 }) !i64 {
+    return std.math.add(i64, args.arg1, 1);
+}
+
+comptime {
+    juiz.exportProcess(increment, .{
+        .type_name = "increment_process_zig",
+        .description = "Adds 1 to arg1.",
+        .args = .{ .arg1 = "value to be incremented" },
+    });
+}
+```
+
+Zig では zigjuiz を使い、引数を 1 つの struct で受けます。フィールドの名前・型・既定値がそのまま引数になり、`.args` に説明を書きます(書き漏れはコンパイルエラー)。`juiz.exportProcess` で型名を付けて公開します。
+失敗は Zig のエラー(`!i64`)で返すと、juiz の呼び出しのエラーになります。zigjuiz の `build.zig` の `addPlugin` で共有ライブラリとしてビルドします。
+使える型やエラーの返し方は [zigjuiz の README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/zigjuiz)、プロジェクトの作り方は [チュートリアル第 1 章(Zig)](/ja/tutorial/first-process/zig/) にあります。Zig は juiz 0.3.2 の次の版から使えます。
+
+</TabItem>
 </Tabs>
 
 ## 単体で動かす
@@ -116,7 +140,7 @@ juiz --process target/debug/increment_process.dll -l rust -e -1 -d
 </TabItem>
 </Tabs>
 
-- `-l` は言語（`rust` / `cpp` / `python` / `haskell`、既定は `rust`）
+- `-l` は言語（`rust` / `cpp` / `python` / `haskell` / `zig`、既定は `rust`）
 - `-e` はロードした Process を一つ実体化し、既定の引数で実行
 - `-1` はロードしたモジュールごとにインスタンスを一つ作成
 - `-d` は実行後に HTTP ブローカーを立てて待機
