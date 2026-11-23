@@ -41,9 +41,9 @@ C++ の Process は、libjuiz_sdk(juiz と値を受け渡す関数の共有ラ�
 
 ```sh
 juiz --version
-# => juiz 0.3.2
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.2
-ls ~/.juiz/sdk/0.3.2
+# => juiz 0.3.3
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.3
+ls ~/.juiz/sdk/0.3.3
 # => cjuiz  cppjuiz  lib  ...
 ```
 
@@ -52,9 +52,9 @@ ls ~/.juiz/sdk/0.3.2
 
 ```sh
 juiz --version
-# => juiz 0.3.2
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.2
-ls ~/.juiz/sdk/0.3.2
+# => juiz 0.3.3
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.3
+ls ~/.juiz/sdk/0.3.3
 # => cjuiz  cppjuiz  lib  ...
 ```
 
@@ -65,9 +65,9 @@ PowerShell で実行します。
 
 ```powershell
 juiz --version
-# => juiz 0.3.2
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.3.2
-ls $env:USERPROFILE\.juiz\sdk\0.3.2
+# => juiz 0.3.3
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.3.3
+ls $env:USERPROFILE\.juiz\sdk\0.3.3
 # => bin  cjuiz  cppjuiz  lib  ...
 ```
 
@@ -95,12 +95,12 @@ juiz pkg create my_juiz -b cpp -t process
 作ると、次に打つコマンドが表示されます(libjuiz_sdk は準備で入れたので、ここに表示される `curl ... install-juiz-sdk.sh` は飛ばしてかまいません)。
 
 ```text
-Created my_juiz (cpp, process) in ./my_juiz  [libjuiz_sdk 0.3.2]
+Created my_juiz (cpp, process) in ./my_juiz  [libjuiz_sdk 0.3.3]
 
 Next steps:
   cd my_juiz
-  # once: put libjuiz_sdk 0.3.2 in ~/.juiz/sdk/0.3.2
-  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.2
+  # once: put libjuiz_sdk 0.3.3 in ~/.juiz/sdk/0.3.3
+  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.3
   scripts/dev.sh                  # build and put the plugin and libjuiz_sdk in app/plugins/<target>/
   juiz -f app/app.conf -d         # start (keep it running)
   ...
@@ -333,7 +333,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(JUIZ_VERSION "0.3.2")
+set(JUIZ_VERSION "0.3.3")
 if(WIN32)
   file(TO_CMAKE_PATH "$ENV{USERPROFILE}/.juiz/sdk/${JUIZ_VERSION}" JUIZ_SDK_DEFAULT_DIR)
 else()

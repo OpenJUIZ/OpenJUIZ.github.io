@@ -340,7 +340,7 @@ juiz associate --remove   # 関連付けを外す
   - `juiz` の範囲を自分で書くときは `>=0.0.30` からにしてください。0.0.29 以前の juiz は新しい形のプラグインを読めないので、範囲に入っていれば pack が警告します。
 - **C++**: CMake で `find_package(juiz_sdk)` の後に `juiz_sdk_bundle(<ターゲット>)` を呼ぶと、プラグインの RPATH が自身の場所(`$ORIGIN` / `@loader_path`)だけになり、隣に libjuiz_sdk が写されます。できたディレクトリの中身を `plugins/<ターゲット>/` に置きます。Windows の juiz はプラグインの隣の DLL を探します。
 - **Haskell**: juiz の `scripts/bundle-plugin-deps.sh <プラグイン> <出力先>` で、プラグインと依存するライブラリを 1 つのディレクトリに集め、隣を探すように書き換えます(Linux は patchelf、macOS は install_name_tool と codesign)。受け取る側に GHC は要りません。
-- **Zig**: build.zig で `b.installArtifact(lib)` の代わりに `juiz.installBundle(lib, .{})` を呼ぶと、`zig build` で `zig-out/plugins/` にプラグインと libjuiz_sdk を並べ、プラグインの rpath を自身の場所(`$ORIGIN` / `@loader_path`)だけにします。中身をそのまま `plugins/<ターゲット>/` に置きます。Zig は 1 台から別の OS・CPU 向けにもビルドできるので(`juiz sdk install --target <ターゲット>` と `-Dtarget`)、複数のターゲットのプラグインを 1 台で作れます。受け取る側に Zig は要りません(Zig は juiz 0.3.2 の次の版から)。
+- **Zig**: build.zig で `b.installArtifact(lib)` の代わりに `juiz.installBundle(lib, .{})` を呼ぶと、`zig build` で `zig-out/plugins/` にプラグインと libjuiz_sdk を並べ、プラグインの rpath を自身の場所(`$ORIGIN` / `@loader_path`)だけにします。中身をそのまま `plugins/<ターゲット>/` に置きます。Zig は 1 台から別の OS・CPU 向けにもビルドできるので(`juiz sdk install --target <ターゲット>` と `-Dtarget`)、複数のターゲットのプラグインを 1 台で作れます。受け取る側に Zig は要りません(Zig は juiz 0.3.3 から)。
 
 C++・Haskell の Linux 向けは、受け取る側の glibc が作った側より古いと動かないので、古めの環境(Ubuntu 22.04 など)でビルドすると多くの機械で動きます。
 `juiz pack` は、この機械のターゲットのプラグインが、隣のファイルと OS の基本のライブラリ以外を使っていれば警告します。

@@ -15,7 +15,7 @@ import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 | Rust(Python・C++・Haskell・Zig も併用可) | `cargo install juiz_app` | 必要 |
 
 C++ と Haskell の機能要素は、どちらの入れ方の `juiz` でも動きます(「[言語ごとのパッケージ](/ja/getting-started/packages/#c-と-haskell-の共通-libjuiz_sdk)」で、`juiz` と同じ版の libjuiz_sdk を用意します)。
-Zig の機能要素も同じく、どちらの `juiz` でも動きます(juiz 0.3.2 の次の版から。「[言語ごとのパッケージ](/ja/getting-started/packages/#zig)」)。
+Zig の機能要素も同じく、どちらの `juiz` でも動きます(juiz 0.3.3 から。「[言語ごとのパッケージ](/ja/getting-started/packages/#zig)」)。
 
 ## juiz コマンドを入れる
 
@@ -86,7 +86,7 @@ pip で入れた `juiz` は、juiz の CI でビルドしたものです。juiz 
 crates.io で公開されている `juiz_app` をインストールします。Windows の PowerShell でも、同じコマンドで入れられます。
 
 ```sh
-cargo install juiz_app --version 0.3.2 --locked
+cargo install juiz_app --version 0.3.3 --locked
 ```
 
 `juiz` コマンドが `~/.cargo/bin`(Windows では `%USERPROFILE%\.cargo\bin`)に入ります。
@@ -102,7 +102,7 @@ cargo install juiz_app --version 0.3.2 --locked
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-pip install pyjuiz==0.3.2
+pip install pyjuiz==0.3.3
 ```
 
 </TabItem>
@@ -111,7 +111,7 @@ pip install pyjuiz==0.3.2
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-pip install pyjuiz==0.3.2
+pip install pyjuiz==0.3.3
 ```
 
 </TabItem>
@@ -120,7 +120,7 @@ pip install pyjuiz==0.3.2
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
-pip install pyjuiz==0.3.2
+pip install pyjuiz==0.3.3
 ```
 
 </TabItem>

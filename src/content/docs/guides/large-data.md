@@ -9,7 +9,7 @@ juiz Processes can be called from other processes and other machines through bro
 This page explains when to use each of the four brokers (HTTP, QUIC, Zenoh and IPC) and how to pass large data such as camera images quickly.
 
 :::caution[Requires juiz 0.0.26 or later]
-The IPC broker, raw-byte image transfer over the QUIC broker, shared memory, pyjuiz's `IpcProxy`, and image arguments and return values in C++ and Haskell are available from juiz 0.0.26 (Zig from the version after 0.3.2).
+The IPC broker, raw-byte image transfer over the QUIC broker, shared memory, pyjuiz's `IpcProxy`, and image arguments and return values in C++ and Haskell are available from juiz 0.0.26 (Zig from 0.3.3).
 The QUIC broker in 0.0.26 cannot talk to QUIC brokers of earlier versions (the wire format changed). Use 0.0.26 or later for every juiz you connect over QUIC.
 :::
 
@@ -254,7 +254,7 @@ invert img = img { imageData = BS.map (255 -) (imageData img) }   -- for 8-bit f
 
 `Image` can only be used as the type of an argument or return value itself. It cannot go inside a dictionary or list (such as `[Image]`).
 
-In Zig (from the version after juiz 0.3.2), make a field of the argument struct or the return type `juiz.Image`. It has `width`, `height`, `format` (`.rgb8`, `.l8` and so on), `stride` and `data`.
+In Zig (from juiz 0.3.3), make a field of the argument struct or the return type `juiz.Image`. It has `width`, `height`, `format` (`.rgb8`, `.l8` and so on), `stride` and `data`.
 
 ```zig
 fn invert(ctx: juiz.Context, args: struct { img: juiz.Image }) !juiz.Image {
