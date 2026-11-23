@@ -161,7 +161,7 @@ juiz -f app/app.conf -d         # start (keep it running)
 
 You need Zig 0.17.x (if you installed it with `pip install ziglang==0.17.1`, run `ZIG="python3 -m ziglang" scripts/dev.sh`). The name can be up to 32 characters (the limit of `.name` in `build.zig.zon`).
 You can also build for another CPU or OS, like `scripts/dev.sh --target aarch64-unknown-linux-gnu` (run `juiz sdk install --target <target>` first).
-The Zig skeleton works on Linux and macOS only (Windows is [issue #588](https://github.com/OpenJUIZ/juiz/issues/588)). Zig is available from juiz 0.3.3.
+Zig is available from juiz 0.3.3. On Windows, from the version after juiz 0.3.3, use `scripts\dev.ps1` (`-Release`, `-Target`) and `scripts\pack.ps1`. The target is `x86_64-pc-windows-msvc` ([issue #588](https://github.com/OpenJUIZ/juiz/issues/588)). The Zig skeleton of 0.3.3 works on Linux and macOS only.
 
 </TabItem>
 </Tabs>

@@ -162,7 +162,7 @@ juiz -f app/app.conf -d         # 起動(このままにしておく)
 
 Zig 0.17.x が要ります(`pip install ziglang==0.17.1` で入れたときは `ZIG="python3 -m ziglang" scripts/dev.sh`)。名前は 32 文字までです(`build.zig.zon` の `.name` の制限)。
 `scripts/dev.sh --target aarch64-unknown-linux-gnu` のように、別の CPU・OS 向けにもビルドできます(先に `juiz sdk install --target <ターゲット>`)。
-Zig の雛形は Linux と macOS だけです(Windows は [issue #588](https://github.com/OpenJUIZ/juiz/issues/588))。Zig は juiz 0.3.3 から使えます。
+Zig は juiz 0.3.3 から使えます。Windows では juiz 0.3.3 の次の版から、`scripts\dev.ps1`(`-Release`・`-Target`)と `scripts\pack.ps1` を使います。ターゲットは `x86_64-pc-windows-msvc` です([issue #588](https://github.com/OpenJUIZ/juiz/issues/588))。0.3.3 の Zig の雛形は Linux と macOS だけです。
 
 </TabItem>
 </Tabs>

@@ -363,7 +363,7 @@ Run the same commands as on Linux and macOS in PowerShell. The library is `<name
 Windows has no rpath, so zigjuiz copies `juiz_sdk.dll` to `zig-out/bin` during `zig build`.
 It builds for Zig's default `x86_64-windows-gnu` and links `juiz_sdk.dll.lib` of libjuiz_sdk as is (no renamed copy like Haskell's is needed).
 
-The skeleton of `juiz pkg create -b zig` does not build on Windows yet ([issue #588](https://github.com/OpenJUIZ/juiz/issues/588)). On Windows, write the `build.zig` above yourself.
+The skeleton of `juiz pkg create -b zig` works on Windows from the version after juiz 0.3.3 ([issue #588](https://github.com/OpenJUIZ/juiz/issues/588)). Use `scripts\dev.ps1` (`-Release` for a release build) and `scripts\pack.ps1` in PowerShell; the plugin goes to `app/plugins/x86_64-pc-windows-msvc/` as `<name>.dll` together with `juiz_sdk.dll`. The skeleton of 0.3.3 and earlier does not build on Windows, so write the `build.zig` above yourself there.
 
 </TabItem>
 </Tabs>

@@ -363,7 +363,7 @@ PowerShell で、Linux・macOS と同じコマンドを打ちます。ライブ�
 Windows には rpath が無いので、zigjuiz が `zig build` のときに `juiz_sdk.dll` を `zig-out/bin` に写します。
 Zig の既定の `x86_64-windows-gnu` でビルドし、libjuiz_sdk の `juiz_sdk.dll.lib` にそのままリンクします(Haskell のような名前を変えた複製は要りません)。
 
-`juiz pkg create -b zig` の雛形は、まだ Windows でビルドできません([issue #588](https://github.com/OpenJUIZ/juiz/issues/588))。Windows では、上の `build.zig` を自分で書いてください。
+`juiz pkg create -b zig` の雛形は、juiz 0.3.3 の次の版から Windows でも使えます([issue #588](https://github.com/OpenJUIZ/juiz/issues/588))。PowerShell で `scripts\dev.ps1`(release ビルドは `-Release`)と `scripts\pack.ps1` を使い、プラグインは `app/plugins/x86_64-pc-windows-msvc/` に `<名前>.dll` と `juiz_sdk.dll` が置かれます。0.3.3 までの雛形は Windows でビルドできないので、上の `build.zig` を自分で書いてください。
 
 </TabItem>
 </Tabs>
