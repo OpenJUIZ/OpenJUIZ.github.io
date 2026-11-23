@@ -38,9 +38,8 @@ cd juiz_examples_zig
 ./build.sh
 ```
 
-The `build.sh` of the examples gets the juiz source and builds the examples with zigjuiz and libjuiz_sdk from it (you do not need to run `juiz sdk install` as in chapter 1).
-It builds libjuiz_sdk from source with Rust (stable), so install that too. The first run takes a while.
-The juiz version it gets is set by `JUIZ_GIT_REF` in `build.sh`. Until the first version that ships zigjuiz is released, it follows a commit on the main branch of juiz, and you install the `juiz` command from the same commit (see the [README](https://github.com/OpenJUIZ/juiz_examples_zig#readme) of the examples).
+The `build.sh` of the examples gets zigjuiz and libjuiz_sdk of the same version as `juiz` from juiz's [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) and builds the examples (you do not need to run `juiz sdk install` as in chapter 1). The first run takes a while.
+The juiz version it gets is set by `JUIZ_GIT_REF` in `build.sh` (`v0.3.3` by default). If your `juiz --version` is different, match it as described in the [README](https://github.com/OpenJUIZ/juiz_examples_zig#readme) of the examples.
 If you use Zig installed with `pip install ziglang==0.17.1`, run `ZIG="python3 -m ziglang" ./build.sh`.
 
 Each example is built as a shared library in `build/plugins`, and libjuiz_sdk is placed there too. The file names depend on the OS.

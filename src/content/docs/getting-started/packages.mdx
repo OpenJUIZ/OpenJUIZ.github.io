@@ -19,7 +19,7 @@ Using the same juiz_sdk version as `juiz` is the safest choice. Since juiz_sdk 0
 crate-type = ["cdylib"]
 
 [dependencies]
-juiz_sdk = "0.3.2"
+juiz_sdk = "0.3.3"
 ```
 
 [Tutorial chapter 1 (Rust)](/tutorial/first-process/rust/) explains `Cargo.toml` while reading the skeleton made with `juiz pkg create`.
@@ -39,7 +39,7 @@ pyjuiz comes with `juiz-cli`. There is nothing else to install.
 As described in "Using Python Processes too" in [Installation](/getting-started/install/), install only pyjuiz, at the same version as `juiz`.
 
 ```sh
-pip install pyjuiz==0.3.2
+pip install pyjuiz==0.3.3
 ```
 
 </TabItem>
@@ -57,16 +57,16 @@ The easiest way is `install-juiz-sdk.sh` (`install-juiz-sdk.ps1` on Windows), wh
 <TabItem label="Linux">
 
 ```sh
-juiz --version      # e.g. juiz 0.3.2
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.2
+juiz --version      # e.g. juiz 0.3.3
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.3
 ```
 
 </TabItem>
 <TabItem label="macOS">
 
 ```sh
-juiz --version      # e.g. juiz 0.3.2
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.2
+juiz --version      # e.g. juiz 0.3.3
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.3
 ```
 
 </TabItem>
@@ -75,8 +75,8 @@ curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-
 Run this in PowerShell. Windows archives are available from 0.0.27.
 
 ```powershell
-juiz --version      # e.g. juiz 0.3.2
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.3.2
+juiz --version      # e.g. juiz 0.3.3
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.3.3
 ```
 
 </TabItem>
@@ -87,49 +87,49 @@ To download it by hand, pick your OS, get the archive below and extract it to th
 <Tabs syncKey="os">
 <TabItem label="Linux (x86_64)">
 
-Download: [juiz_sdk-0.3.2-x86_64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.3.2/juiz_sdk-0.3.2-x86_64-unknown-linux-gnu.tar.gz)
+Download: [juiz_sdk-0.3.3-x86_64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.3.3/juiz_sdk-0.3.3-x86_64-unknown-linux-gnu.tar.gz)
 
 ```sh
 mkdir -p ~/.juiz/sdk
-tar xzf juiz_sdk-0.3.2-x86_64-unknown-linux-gnu.tar.gz
-mv juiz_sdk-0.3.2-x86_64-unknown-linux-gnu ~/.juiz/sdk/0.3.2
-# => ~/.juiz/sdk/0.3.2/lib/libjuiz_sdk.so
+tar xzf juiz_sdk-0.3.3-x86_64-unknown-linux-gnu.tar.gz
+mv juiz_sdk-0.3.3-x86_64-unknown-linux-gnu ~/.juiz/sdk/0.3.3
+# => ~/.juiz/sdk/0.3.3/lib/libjuiz_sdk.so
 ```
 
 </TabItem>
 <TabItem label="Linux (aarch64)">
 
-Download: [juiz_sdk-0.3.2-aarch64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.3.2/juiz_sdk-0.3.2-aarch64-unknown-linux-gnu.tar.gz)
+Download: [juiz_sdk-0.3.3-aarch64-unknown-linux-gnu.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.3.3/juiz_sdk-0.3.3-aarch64-unknown-linux-gnu.tar.gz)
 
 ```sh
 mkdir -p ~/.juiz/sdk
-tar xzf juiz_sdk-0.3.2-aarch64-unknown-linux-gnu.tar.gz
-mv juiz_sdk-0.3.2-aarch64-unknown-linux-gnu ~/.juiz/sdk/0.3.2
-# => ~/.juiz/sdk/0.3.2/lib/libjuiz_sdk.so
+tar xzf juiz_sdk-0.3.3-aarch64-unknown-linux-gnu.tar.gz
+mv juiz_sdk-0.3.3-aarch64-unknown-linux-gnu ~/.juiz/sdk/0.3.3
+# => ~/.juiz/sdk/0.3.3/lib/libjuiz_sdk.so
 ```
 
 </TabItem>
 <TabItem label="macOS (Apple silicon)">
 
-Download: [juiz_sdk-0.3.2-aarch64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.3.2/juiz_sdk-0.3.2-aarch64-apple-darwin.tar.gz)
+Download: [juiz_sdk-0.3.3-aarch64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.3.3/juiz_sdk-0.3.3-aarch64-apple-darwin.tar.gz)
 
 ```sh
 mkdir -p ~/.juiz/sdk
-tar xzf juiz_sdk-0.3.2-aarch64-apple-darwin.tar.gz
-mv juiz_sdk-0.3.2-aarch64-apple-darwin ~/.juiz/sdk/0.3.2
-# => ~/.juiz/sdk/0.3.2/lib/libjuiz_sdk.dylib
+tar xzf juiz_sdk-0.3.3-aarch64-apple-darwin.tar.gz
+mv juiz_sdk-0.3.3-aarch64-apple-darwin ~/.juiz/sdk/0.3.3
+# => ~/.juiz/sdk/0.3.3/lib/libjuiz_sdk.dylib
 ```
 
 </TabItem>
 <TabItem label="macOS (Intel)">
 
-Download: [juiz_sdk-0.3.2-x86_64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.3.2/juiz_sdk-0.3.2-x86_64-apple-darwin.tar.gz)
+Download: [juiz_sdk-0.3.3-x86_64-apple-darwin.tar.gz](https://github.com/OpenJUIZ/juiz/releases/download/v0.3.3/juiz_sdk-0.3.3-x86_64-apple-darwin.tar.gz)
 
 ```sh
 mkdir -p ~/.juiz/sdk
-tar xzf juiz_sdk-0.3.2-x86_64-apple-darwin.tar.gz
-mv juiz_sdk-0.3.2-x86_64-apple-darwin ~/.juiz/sdk/0.3.2
-# => ~/.juiz/sdk/0.3.2/lib/libjuiz_sdk.dylib
+tar xzf juiz_sdk-0.3.3-x86_64-apple-darwin.tar.gz
+mv juiz_sdk-0.3.3-x86_64-apple-darwin ~/.juiz/sdk/0.3.3
+# => ~/.juiz/sdk/0.3.3/lib/libjuiz_sdk.dylib
 ```
 
 </TabItem>
@@ -137,13 +137,13 @@ mv juiz_sdk-0.3.2-x86_64-apple-darwin ~/.juiz/sdk/0.3.2
 
 Archives for Windows (x86_64) are available from 0.0.27. The DLL is built with MSVC, but it exposes only C functions, so plugins built with MinGW and other compilers can use it too.
 
-Download: [juiz_sdk-0.3.2-x86_64-pc-windows-msvc.zip](https://github.com/OpenJUIZ/juiz/releases/download/v0.3.2/juiz_sdk-0.3.2-x86_64-pc-windows-msvc.zip)
+Download: [juiz_sdk-0.3.3-x86_64-pc-windows-msvc.zip](https://github.com/OpenJUIZ/juiz/releases/download/v0.3.3/juiz_sdk-0.3.3-x86_64-pc-windows-msvc.zip)
 
 ```powershell
 mkdir $env:USERPROFILE\.juiz\sdk -Force
-Expand-Archive juiz_sdk-0.3.2-x86_64-pc-windows-msvc.zip -DestinationPath .
-Move-Item juiz_sdk-0.3.2-x86_64-pc-windows-msvc $env:USERPROFILE\.juiz\sdk\0.3.2
-# => %USERPROFILE%\.juiz\sdk\0.3.2\bin\juiz_sdk.dll
+Expand-Archive juiz_sdk-0.3.3-x86_64-pc-windows-msvc.zip -DestinationPath .
+Move-Item juiz_sdk-0.3.3-x86_64-pc-windows-msvc $env:USERPROFILE\.juiz\sdk\0.3.3
+# => %USERPROFILE%\.juiz\sdk\0.3.3\bin\juiz_sdk.dll
 ```
 
 </TabItem>
@@ -166,7 +166,7 @@ For 0.0.25 and earlier, get the juiz source at the tag of the same version as `j
 From 0.0.27, CMake can use libjuiz_sdk through `find_package`. Point `CMAKE_PREFIX_PATH` (or the `PATHS` of `find_package`) at the extracted directory.
 
 ```cmake
-find_package(juiz_sdk 0.3.2 EXACT CONFIG REQUIRED)
+find_package(juiz_sdk 0.3.3 EXACT CONFIG REQUIRED)
 add_library(my_process SHARED my_process.cpp)
 target_link_libraries(my_process PRIVATE juiz_sdk::juiz_sdk)
 juiz_sdk_copy_runtime(my_process)   # on Windows, copies juiz_sdk.dll next to the plugin
@@ -181,7 +181,7 @@ You can also let CMake fetch libjuiz_sdk, as [cmake/Juiz.cmake](https://github.c
 ## Haskell
 
 Write components with [hsjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/hsjuiz). You need GHC 9.6 or later and cabal (Linux, macOS, Windows; Windows is supported from 0.0.27).
-hsjuiz is on [Hackage](https://hackage.haskell.org/package/hsjuiz) from 0.2.6. In the `.cabal` of your package, add hsjuiz of the same version as `juiz` to `build-depends` (such as `hsjuiz ==0.3.2.*`), and write where libjuiz_sdk is in `cabal.project`. Run `cabal update` first to get the Hackage index.
+hsjuiz is on [Hackage](https://hackage.haskell.org/package/hsjuiz) from 0.2.6. In the `.cabal` of your package, add hsjuiz of the same version as `juiz` to `build-depends` (such as `hsjuiz ==0.3.3.*`), and write where libjuiz_sdk is in `cabal.project`. Run `cabal update` first to get the Hackage index.
 
 ```sh
 cabal update
@@ -196,8 +196,8 @@ The commands for Windows are in the "Windows" tab below.
 packages: .
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.3.2/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.3.2/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.3.3/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.3.3/lib
 ```
 
 </TabItem>
@@ -207,8 +207,8 @@ package hsjuiz
 packages: .
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.3.2/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.3.2/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.3.3/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.3.3/lib
 ```
 
 </TabItem>
@@ -218,8 +218,8 @@ package hsjuiz
 packages: .
 
 package hsjuiz
-  extra-lib-dirs: /Users/me/.juiz/sdk/0.3.2/lib
-  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.3.2/lib
+  extra-lib-dirs: /Users/me/.juiz/sdk/0.3.3/lib
+  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.3.3/lib
 ```
 
 </TabItem>
@@ -229,8 +229,8 @@ package hsjuiz
 packages: .
 
 package hsjuiz
-  extra-lib-dirs: /Users/me/.juiz/sdk/0.3.2/lib
-  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.3.2/lib
+  extra-lib-dirs: /Users/me/.juiz/sdk/0.3.3/lib
+  ghc-options: -optl-Wl,-rpath,/Users/me/.juiz/sdk/0.3.3/lib
 ```
 
 </TabItem>
@@ -242,15 +242,15 @@ The import library of libjuiz_sdk that Rust builds is named `juiz_sdk.dll.lib`, 
 Copy it into a separate directory under the name `juiz_sdk.lib`.
 
 ```powershell
-mkdir $env:USERPROFILE\.juiz\sdk\0.3.2\import -Force
-Copy-Item $env:USERPROFILE\.juiz\sdk\0.3.2\lib\juiz_sdk.dll.lib $env:USERPROFILE\.juiz\sdk\0.3.2\import\juiz_sdk.lib
+mkdir $env:USERPROFILE\.juiz\sdk\0.3.3\import -Force
+Copy-Item $env:USERPROFILE\.juiz\sdk\0.3.3\lib\juiz_sdk.dll.lib $env:USERPROFILE\.juiz\sdk\0.3.3\import\juiz_sdk.lib
 ```
 
 ```txt title="cabal.project"
 packages: .
 
 package hsjuiz
-  extra-lib-dirs: C:/Users/me/.juiz/sdk/0.3.2/import, C:/Users/me/.juiz/sdk/0.3.2/bin
+  extra-lib-dirs: C:/Users/me/.juiz/sdk/0.3.3/import, C:/Users/me/.juiz/sdk/0.3.3/bin
 ```
 
 `import` is where `juiz_sdk.lib` for linking is, and `bin` is where GHC loads `juiz_sdk.dll` from when it runs Template Haskell.
@@ -298,11 +298,6 @@ For 0.2.5 and earlier, which are not on Hackage, get the juiz source at the tag 
 Write components with [zigjuiz](https://github.com/OpenJUIZ/juiz/tree/main/bindings/zigjuiz) (`@import("juiz")`). You need Zig 0.17.x (Linux, macOS and Windows).
 zigjuiz makes the C functions that juiz looks for from your Zig functions at comptime, so the result is a shared library linked to libjuiz_sdk, like C++ and Haskell.
 
-<Aside type="caution" title="Available from the version after juiz 0.3.2">
-Zig comes in the version after juiz 0.3.2. The version number is decided when it is released.
-To try it before the release, get the `juiz` command and zigjuiz from the juiz main branch as in [Trying it before the release](#trying-it-before-the-release) below.
-</Aside>
-
 ### Supported Zig version
 
 Zig is before 1.0, and its standard library and `build.zig` API change with each version. zigjuiz supports **only one Zig version** and stops the build on any other version.
@@ -310,7 +305,7 @@ The versions match as follows.
 
 | juiz and zigjuiz | Zig |
 | --- | --- |
-| The version after 0.3.2 and later (the first version that ships zigjuiz) | 0.17.x |
+| 0.3.3 and later (the first version that ships zigjuiz) | 0.17.x |
 
 Install Zig from [ziglang.org](https://ziglang.org/download/). `pip install ziglang==0.17.1` also works; then run `python3 -m ziglang` instead of `zig` (the skeleton's `scripts/dev.sh` runs as `ZIG="python3 -m ziglang" scripts/dev.sh`).
 
@@ -376,25 +371,15 @@ The skeleton of `juiz pkg create -b zig` does not build on Windows yet ([issue #
 If libjuiz_sdk is somewhere else, pass `zig build -Djuiz-sdk=<extracted directory>`.
 Zig can also build for other OSes and CPUs from one machine (`juiz sdk install --target <target>` and `-Dtarget`). For the details, the types you can use and how to return errors, see the [zigjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/zigjuiz).
 
-### Trying it before the release
+### Using the zigjuiz source
 
-Until the first version that ships zigjuiz is released, get the `juiz` command and zigjuiz from the juiz main branch. The example repository [juiz_examples_zig](https://github.com/OpenJUIZ/juiz_examples_zig) is also pinned to a commit on juiz main for now.
-libjuiz_sdk can stay the released version (0.3.2) that `juiz sdk install` installs.
-
-```sh
-cargo install juiz_app --git https://github.com/OpenJUIZ/juiz --rev 5700911b1017e4e63f933e90a966c9352e9ece31 --locked
-juiz sdk install
-git clone https://github.com/OpenJUIZ/juiz.git ~/juiz-main
-git -C ~/juiz-main checkout 5700911b1017e4e63f933e90a966c9352e9ece31
-```
-
-`cargo install` needs the Rust toolchain (and the Python development files on Linux: `sudo apt install python3-dev` on Ubuntu).
-In your project, point to the zigjuiz of that source with `.path` in `build.zig.zon` instead of the Releases archive.
+To try changes to zigjuiz, for example, you can use `bindings/zigjuiz` in the juiz source (`git clone https://github.com/OpenJUIZ/juiz.git`).
+In your project, point to the zigjuiz of the source with `.path` in `build.zig.zon` instead of the Releases archive.
 Zig does not take an absolute path in `.path`, so write it relative to the project directory.
 
 ```zig title="build.zig.zon (excerpt)"
 .dependencies = .{
-    .zigjuiz = .{ .path = "../juiz-main/bindings/zigjuiz" },
+    .zigjuiz = .{ .path = "../juiz/bindings/zigjuiz" },
 },
 ```
 
@@ -403,5 +388,5 @@ The zigjuiz in the source reads the C header of the same source (`bindings/cjuiz
 When you create a skeleton, give the zigjuiz source with `--zigjuiz-dir`. `build.zig.zon` then points there with a relative path, and `scripts/dev.sh` does not get zigjuiz from Releases.
 
 ```sh
-juiz pkg create my_juiz -b zig --zigjuiz-dir ~/juiz-main/bindings/zigjuiz
+juiz pkg create my_juiz -b zig --zigjuiz-dir ~/juiz/bindings/zigjuiz
 ```

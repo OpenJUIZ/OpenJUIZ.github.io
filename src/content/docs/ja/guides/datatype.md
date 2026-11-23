@@ -199,7 +199,7 @@ juiz idl [-o 出力先] [-g 出力の種類,…] [--check] 入力.jidl|入力.av
 - **Python**: `juiz idl -g python -o gen idl/geometry.jidl` で作ったパッケージを `option.pythonpath`(設定ファイル)や `PYTHONPATH` に入れ、`from robot.geometry import Pose2D` として型ヒントに書きます。`process move_to` からは型付きのクライアント `MoveToClient`、`container motor` からは `MotorClient` も作られます。
 - **C++**: CMake で `juiz_generate_types(<ターゲット> IDL idl/geometry.jidl)`(juiz の `bindings/cppjuiz/cmake/juiz_idl.cmake`)。ビルドのときにヘッダを作ります。manifest に `add_typed_arg<T>(…)` と `returns<T>()` を書きます。
 - **Haskell**: `juiz-idl -g haskell -o gen idl/geometry.jidl` で作ったモジュールを cabal の `hs-source-dirs` と `other-modules` に足し、manifest に `addTypedArg` を書きます。
-- **Zig**: build.zig で `juiz.addTypes(.{ .files = &.{b.path("idl/geometry.jidl")} })` を呼び、`addPlugin` の `.imports` に `juiz_types` として渡します。ビルドのときに `juiz-idl -g zig` で型を作ります。名前空間 `robot.geometry` は `@import("juiz_types").robot.geometry` になります。生成した型を引数の struct のフィールドや戻り値に書くと型付きになります(Zig は juiz 0.3.2 の次の版から)。
+- **Zig**: build.zig で `juiz.addTypes(.{ .files = &.{b.path("idl/geometry.jidl")} })` を呼び、`addPlugin` の `.imports` に `juiz_types` として渡します。ビルドのときに `juiz-idl -g zig` で型を作ります。名前空間 `robot.geometry` は `@import("juiz_types").robot.geometry` になります。生成した型を引数の struct のフィールドや戻り値に書くと型付きになります(Zig は juiz 0.3.3 から)。
 
 各言語の例は、サンプル集([Rust](https://github.com/OpenJUIZ/juiz_examples_rust)・[Python](https://github.com/OpenJUIZ/juiz_examples_python)・[C++](https://github.com/OpenJUIZ/juiz_examples_cpp)・[Haskell](https://github.com/OpenJUIZ/juiz_examples_haskell)・[Zig](https://github.com/OpenJUIZ/juiz_examples_zig))の `types/geometry.jidl` と、それを使う `pose_move` にあります。
 

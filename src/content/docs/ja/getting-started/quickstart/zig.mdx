@@ -16,20 +16,7 @@ import { Aside } from '@astrojs/starlight/components';
 
 Zig のサンプル集 [juiz_examples_zig](https://github.com/OpenJUIZ/juiz_examples_zig) を使って、引数に 1 を足すだけの Process を動かしてみます。
 
-<Aside type="caution" title="juiz 0.3.2 の次の版から使えます">
-Zig は juiz 0.3.2 の次の版で入る機能です。版の番号は公開のときに決まります。
-公開までは、サンプル集も juiz の main のコミットに合わせてあるので、`juiz` コマンドも下の手順で同じコミットから入れてください。
-</Aside>
-
-## juiz コマンドを入れる
-
-サンプル集が合わせている juiz の main のコミットから、`juiz` コマンドを入れます。Rust のツールチェーンが要ります(Linux では Python の開発用ファイルも。Ubuntu なら `sudo apt install python3-dev`)。
-
-```sh
-cargo install juiz_app --git https://github.com/OpenJUIZ/juiz --rev 5700911b1017e4e63f933e90a966c9352e9ece31 --locked
-```
-
-zigjuiz を配る版の公開後は、[インストール](/ja/getting-started/install/) の手順で入れた公開版の `juiz` を使えます。
+[インストール](/ja/getting-started/install/) の手順で、0.3.3 以降の `juiz` コマンドを入れておいてください。
 
 ## サンプルをビルドする
 
@@ -37,7 +24,6 @@ zigjuiz を配る版の公開後は、[インストール](/ja/getting-started/i
 
 - Linux、macOS、Windows(x86_64)のいずれか。Windows では Git Bash で `./build.sh` を実行します
 - Zig 0.17.x([ziglang.org](https://ziglang.org/download/) から入れる。zigjuiz は Zig の版を 1 つだけに対応しています)
-- Rust(stable)。libjuiz_sdk のビルドに使います
 - git
 
 ```sh
@@ -46,7 +32,7 @@ cd juiz_examples_zig
 ./build.sh
 ```
 
-`build.sh` が、juiz のソースの取得(zigjuiz を使うため)と libjuiz_sdk のビルドから、サンプルのビルドまでを行います。初回は少し時間がかかります。
+`build.sh` が、juiz の GitHub Releases からの zigjuiz と libjuiz_sdk の取得から、サンプルのビルドまでを行います。初回は少し時間がかかります。
 各サンプルは共有ライブラリとして `build/plugins` にビルドされ、libjuiz_sdk も同じ場所に置かれます。
 `pip install ziglang==0.17.1` で入れた Zig を使うときは、`ZIG="python3 -m ziglang" ./build.sh` で実行します。
 

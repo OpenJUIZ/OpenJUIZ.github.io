@@ -107,7 +107,7 @@ comptime {
 
 In Zig, use zigjuiz and take the arguments as one struct. The names, types and default values of its fields become the arguments, and `.args` holds their descriptions (a missing one is a compile error). `juiz.exportProcess` publishes the function with a type name.
 Return a Zig error (`!i64`) to fail; it becomes an error of the juiz call. Build it into a shared library with `addPlugin` in a `build.zig` that uses zigjuiz.
-See the [zigjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/zigjuiz) for the types you can use and how errors are returned, and [Tutorial chapter 1 (Zig)](/tutorial/first-process/zig/) for how to make a project. Zig is available from the version after juiz 0.3.2.
+See the [zigjuiz README](https://github.com/OpenJUIZ/juiz/tree/main/bindings/zigjuiz) for the types you can use and how errors are returned, and [Tutorial chapter 1 (Zig)](/tutorial/first-process/zig/) for how to make a project. Zig is available from juiz 0.3.3.
 
 </TabItem>
 </Tabs>
