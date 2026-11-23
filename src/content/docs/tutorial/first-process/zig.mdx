@@ -26,7 +26,7 @@ You first read the Process code, which is the heart of the project, then run it 
 </Aside>
 
 <Aside type="note" title="On Windows">
-The Zig tutorial is written for Linux and macOS. The Zig skeleton of `juiz pkg create` works on Windows from the version after juiz 0.3.3 ([issue #588](https://github.com/OpenJUIZ/juiz/issues/588)). In PowerShell, use `scripts\dev.ps1` instead of `scripts/dev.sh` and `scripts\pack.ps1` instead of `scripts/pack.sh`; the target is `x86_64-pc-windows-msvc`.
+The Zig tutorial is written for Linux and macOS. The Zig skeleton of `juiz pkg create` works on Windows from juiz 0.3.4 ([issue #588](https://github.com/OpenJUIZ/juiz/issues/588)). In PowerShell, use `scripts\dev.ps1` instead of `scripts/dev.sh` and `scripts\pack.ps1` instead of `scripts/pack.sh`; the target is `x86_64-pc-windows-msvc`.
 zigjuiz itself works on Windows. For how to write it there, see the "Windows" tab of [Zig in Language packages](/getting-started/packages/#zig).
 </Aside>
 
@@ -48,7 +48,7 @@ Check the versions of `juiz` and Zig, then install libjuiz_sdk of the same versi
 
 ```sh
 juiz --version
-# => juiz 0.3.3
+# => juiz 0.3.4
 zig version
 # => 0.17.1
 juiz sdk install
@@ -61,7 +61,7 @@ ls "$(juiz sdk path)/lib"
 
 ```sh
 juiz --version
-# => juiz 0.3.3
+# => juiz 0.3.4
 zig version
 # => 0.17.1
 juiz sdk install
@@ -91,7 +91,7 @@ juiz pkg create my_juiz -b zig -t process
 It prints the commands to run next.
 
 ```text
-Created my_juiz (zig, process) in ./my_juiz  [zigjuiz 0.3.3]
+Created my_juiz (zig, process) in ./my_juiz  [zigjuiz 0.3.4]
 
 Next steps:
   cd my_juiz
@@ -190,7 +190,7 @@ Build with `scripts/dev.sh`. On the first run it first adds zigjuiz to `build.zi
 
 ```sh
 scripts/dev.sh
-# => adding zigjuiz 0.3.3 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.3/zigjuiz-0.3.3.tar.gz
+# => adding zigjuiz 0.3.4 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.4/zigjuiz-0.3.4.tar.gz
 #    app/plugins/x86_64-unknown-linux-gnu/libjuiz_sdk.so
 #    app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so
 ```
@@ -200,7 +200,7 @@ scripts/dev.sh
 
 ```sh
 scripts/dev.sh
-# => adding zigjuiz 0.3.3 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.3/zigjuiz-0.3.3.tar.gz
+# => adding zigjuiz 0.3.4 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.4/zigjuiz-0.3.4.tar.gz
 #    app/plugins/aarch64-apple-darwin/libjuiz_sdk.dylib
 #    app/plugins/aarch64-apple-darwin/libmy_juiz.dylib
 ```
@@ -344,8 +344,8 @@ The comment at the top is left out.
     .minimum_zig_version = "0.17.0",
     .dependencies = .{
         .zigjuiz = .{
-            .url = "https://github.com/OpenJUIZ/juiz/releases/download/v0.3.3/zigjuiz-0.3.3.tar.gz",
-            .hash = "zigjuiz-0.3.3-...",
+            .url = "https://github.com/OpenJUIZ/juiz/releases/download/v0.3.4/zigjuiz-0.3.4.tar.gz",
+            .hash = "zigjuiz-0.3.4-...",
         },
     },
     .paths = .{

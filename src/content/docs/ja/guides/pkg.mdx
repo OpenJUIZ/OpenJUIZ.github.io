@@ -124,13 +124,13 @@ Windows では `python -m venv .venv`、`.venv\Scripts\activate` です。juiz �
 juiz pkg create my_robot -b cpp
 cd my_robot
 # 初回だけ: libjuiz_sdk(juiz と同じ版)を ~/.juiz/sdk/<版> に置く
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.3
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
 scripts/dev.sh                  # cmake でビルドし、プラグインと libjuiz_sdk を app/plugins/<ターゲット>/ に置く
 juiz -f app/app.conf -d         # 起動(このままにしておく)
 ```
 
 cmake と C++ コンパイラが要ります。Windows では `install-juiz-sdk.ps1` と `scripts\dev.ps1` を使います(手順は [インストール](../../getting-started/install/) の C++ を見てください)。
-`juiz pkg create` は SDK が無いときに入れるコマンドを表示するので、`0.3.3` の所はその表示のとおりにしてください。
+`juiz pkg create` は SDK が無いときに入れるコマンドを表示するので、`0.3.4` の所はその表示のとおりにしてください。
 
 </TabItem>
 <TabItem label="Haskell">
@@ -139,8 +139,8 @@ cmake と C++ コンパイラが要ります。Windows では `install-juiz-sdk.
 juiz pkg create my_robot -b haskell
 cd my_robot
 # 初回だけ: hsjuiz のソースと libjuiz_sdk(どちらも juiz と同じ版)を用意する
-git clone --depth 1 --branch v0.3.3 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.3
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.3
+git clone --depth 1 --branch v0.3.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.4
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
 scripts/dev.sh                  # cabal build して app/plugins/<ターゲット>/ に置く
 juiz -f app/app.conf -d         # 起動(このままにしておく)
 ```
@@ -162,7 +162,7 @@ juiz -f app/app.conf -d         # 起動(このままにしておく)
 
 Zig 0.17.x が要ります(`pip install ziglang==0.17.1` で入れたときは `ZIG="python3 -m ziglang" scripts/dev.sh`)。名前は 32 文字までです(`build.zig.zon` の `.name` の制限)。
 `scripts/dev.sh --target aarch64-unknown-linux-gnu` のように、別の CPU・OS 向けにもビルドできます(先に `juiz sdk install --target <ターゲット>`)。
-Zig は juiz 0.3.3 から使えます。Windows では juiz 0.3.3 の次の版から、`scripts\dev.ps1`(`-Release`・`-Target`)と `scripts\pack.ps1` を使います。ターゲットは `x86_64-pc-windows-msvc` です([issue #588](https://github.com/OpenJUIZ/juiz/issues/588))。0.3.3 の Zig の雛形は Linux と macOS だけです。
+Zig は juiz 0.3.3 から使えます。Windows では juiz 0.3.4 から、`scripts\dev.ps1`(`-Release`・`-Target`)と `scripts\pack.ps1` を使います。ターゲットは `x86_64-pc-windows-msvc` です([issue #588](https://github.com/OpenJUIZ/juiz/issues/588))。0.3.3 の Zig の雛形は Linux と macOS だけです。
 
 </TabItem>
 </Tabs>
@@ -354,12 +354,12 @@ juiz run dist/my_robot-0.1.0.juizapp
 
 | ファイル | 書き方 |
 | --- | --- |
-| Cargo.toml | `juiz_sdk = "=0.3.3"` |
-| pyproject.toml | `pyjuiz==0.3.3` |
-| CMakeLists.txt | `JUIZ_VERSION "0.3.3"`(`find_package(... EXACT)`) |
+| Cargo.toml | `juiz_sdk = "=0.3.4"` |
+| pyproject.toml | `pyjuiz==0.3.4` |
+| CMakeLists.txt | `JUIZ_VERSION "0.3.4"`(`find_package(... EXACT)`) |
 | cabal.project | hsjuiz・libjuiz_sdk のパスに版が入る |
 | build.zig.zon | zigjuiz のアーカイブの URL に版が入る(`scripts/dev.sh` が初回に書く) |
-| app/juizapp.yaml | `juiz: ">=0.3.3"`(C++・Haskell・Zig は `"=0.3.3"`) |
+| app/juizapp.yaml | `juiz: ">=0.3.4"`(C++・Haskell・Zig は `"=0.3.4"`) |
 
 C++・Haskell・Zig の .juizapp は libjuiz_sdk を同梱するので、動かす juiz と版が一致しないと読み込めません。そのため `juiz: "=<版>"` にしてあり、違う版の juiz で `juiz run` すると、最初に版の違いを示して止まります。
 juiz を上げたときは、雛形を作り直すか、上の表の版を手で直してください。

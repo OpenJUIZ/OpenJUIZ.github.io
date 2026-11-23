@@ -26,7 +26,7 @@ import { Tabs, TabItem, Aside, FileTree } from '@astrojs/starlight/components';
 </Aside>
 
 <Aside type="note" title="Windows では">
-Zig のチュートリアルは Linux と macOS の手順で書いています。`juiz pkg create` の Zig の雛形は、juiz 0.3.3 の次の版から Windows でも使えます([issue #588](https://github.com/OpenJUIZ/juiz/issues/588))。PowerShell で `scripts/dev.sh` の代わりに `scripts\dev.ps1`、`scripts/pack.sh` の代わりに `scripts\pack.ps1` を使い、ターゲットは `x86_64-pc-windows-msvc` です。
+Zig のチュートリアルは Linux と macOS の手順で書いています。`juiz pkg create` の Zig の雛形は、juiz 0.3.4 から Windows でも使えます([issue #588](https://github.com/OpenJUIZ/juiz/issues/588))。PowerShell で `scripts/dev.sh` の代わりに `scripts\dev.ps1`、`scripts/pack.sh` の代わりに `scripts\pack.ps1` を使い、ターゲットは `x86_64-pc-windows-msvc` です。
 zigjuiz そのものは Windows でも使えます。書き方は [言語ごとのパッケージの「Zig」](/ja/getting-started/packages/#zig) の「Windows」タブを見てください。
 </Aside>
 
@@ -48,7 +48,7 @@ zigjuiz は、雛形の `scripts/dev.sh` が初めてビルドするときに、
 
 ```sh
 juiz --version
-# => juiz 0.3.3
+# => juiz 0.3.4
 zig version
 # => 0.17.1
 juiz sdk install
@@ -61,7 +61,7 @@ ls "$(juiz sdk path)/lib"
 
 ```sh
 juiz --version
-# => juiz 0.3.3
+# => juiz 0.3.4
 zig version
 # => 0.17.1
 juiz sdk install
@@ -91,7 +91,7 @@ juiz pkg create my_juiz -b zig -t process
 作ると、次に打つコマンドが表示されます。
 
 ```text
-Created my_juiz (zig, process) in ./my_juiz  [zigjuiz 0.3.3]
+Created my_juiz (zig, process) in ./my_juiz  [zigjuiz 0.3.4]
 
 Next steps:
   cd my_juiz
@@ -190,7 +190,7 @@ comptime {
 
 ```sh
 scripts/dev.sh
-# => adding zigjuiz 0.3.3 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.3/zigjuiz-0.3.3.tar.gz
+# => adding zigjuiz 0.3.4 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.4/zigjuiz-0.3.4.tar.gz
 #    app/plugins/x86_64-unknown-linux-gnu/libjuiz_sdk.so
 #    app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so
 ```
@@ -200,7 +200,7 @@ scripts/dev.sh
 
 ```sh
 scripts/dev.sh
-# => adding zigjuiz 0.3.3 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.3/zigjuiz-0.3.3.tar.gz
+# => adding zigjuiz 0.3.4 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.4/zigjuiz-0.3.4.tar.gz
 #    app/plugins/aarch64-apple-darwin/libjuiz_sdk.dylib
 #    app/plugins/aarch64-apple-darwin/libmy_juiz.dylib
 ```
@@ -344,8 +344,8 @@ pub fn build(b: *std.Build) void {
     .minimum_zig_version = "0.17.0",
     .dependencies = .{
         .zigjuiz = .{
-            .url = "https://github.com/OpenJUIZ/juiz/releases/download/v0.3.3/zigjuiz-0.3.3.tar.gz",
-            .hash = "zigjuiz-0.3.3-...",
+            .url = "https://github.com/OpenJUIZ/juiz/releases/download/v0.3.4/zigjuiz-0.3.4.tar.gz",
+            .hash = "zigjuiz-0.3.4-...",
         },
     },
     .paths = .{

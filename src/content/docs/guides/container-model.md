@@ -404,7 +404,11 @@ def close(container) -> dict:
     return juiz.set_model(container, CLOSED_GLB, format='glb')   # the new model info
 ```
 
-- From a Rust ContainerProcess, use `container.set_model(&data, "glb", &Value::Null)` and `clear_model()`. C++, Haskell, Zig and Rust C ABI plugins cannot replace models yet.
+- From a Rust ContainerProcess, use `container.set_model(&data, "glb", &Value::Null)` and `clear_model()`. From juiz 0.3.4, C++, Haskell, Zig and Rust C ABI plugins can replace models too ([issue #564](https://github.com/OpenJUIZ/juiz/issues/564)).
+  - C++: `juiz::set_model(container, data, "glb", options)` and `juiz::clear_model(container)`. A wrong value gives `juiz::ContainerModelInvalidError`.
+  - Haskell: `setModel bytes "glb" options` and `clearModel` in `Juiz.Pose`. A wrong value gives `juizContainerModelInvalidError`.
+  - Zig: `juiz.setModel(self, allocator, data, "glb", options)` and `juiz.clearModel(self)`. A wrong value gives `error.ContainerModelInvalid`.
+  - Rust C ABI plugins: the same `set_model` and `clear_model` as native Rust.
 - Over HTTP, send `{"model": {"data": "<base64>", "format": "glb", ...}}` to `PATCH /api/container/set_model?identifier=…`. `scale`, `origin`, `up_axis`, `color` and `file_name` are the same as in the configuration file's `model:`. Sending `null` removes the model.
 - A wrong value gives `ContainerModelInvalidError` (400 over HTTP), and the current model stays.
 - A replaced model lives in memory and is gone when the System stops (the configuration file is not changed). After removing it, the Container does not go back to the configuration file's or the type's default model.
