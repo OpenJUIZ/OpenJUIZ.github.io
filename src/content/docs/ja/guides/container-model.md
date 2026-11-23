@@ -404,7 +404,11 @@ def close(container) -> dict:
     return juiz.set_model(container, CLOSED_GLB, format='glb')   # 差し替えた後のモデル情報
 ```
 
-- Rust の ContainerProcess からは `container.set_model(&data, "glb", &Value::Null)`・`clear_model()` です。C++・Haskell・Zig・Rust の C ABI プラグインからはまだ差し替えられません。
+- Rust の ContainerProcess からは `container.set_model(&data, "glb", &Value::Null)`・`clear_model()` です。juiz 0.3.4 から、C++・Haskell・Zig・Rust の C ABI プラグインからも差し替えられます([issue #564](https://github.com/OpenJUIZ/juiz/issues/564))。
+  - C++: `juiz::set_model(container, data, "glb", options)`・`juiz::clear_model(container)`。値の誤りは `juiz::ContainerModelInvalidError`。
+  - Haskell: `Juiz.Pose` の `setModel bytes "glb" options`・`clearModel`。値の誤りは `juizContainerModelInvalidError`。
+  - Zig: `juiz.setModel(self, allocator, data, "glb", options)`・`juiz.clearModel(self)`。値の誤りは `error.ContainerModelInvalid`。
+  - Rust の C ABI プラグイン: Rust ネイティブと同じ `set_model`・`clear_model`。
 - HTTP は `PATCH /api/container/set_model?identifier=…` に `{"model": {"data": "<base64>", "format": "glb", ...}}` を送ります。`scale`・`origin`・`up_axis`・`color`・`file_name` は設定ファイルの `model:` と同じです。`null` を送ると外します。
 - 値が正しくないときは `ContainerModelInvalidError`(HTTP では 400)で、今のモデルは変わりません。
 - 差し替えたモデルはメモリに持ち、System を止めると残りません(設定ファイルは書き換えません)。外した後は、設定ファイルや型の既定のモデルにも戻りません。

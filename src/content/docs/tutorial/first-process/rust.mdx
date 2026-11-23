@@ -32,7 +32,7 @@ On Windows, follow the steps in PowerShell. Where commands differ by OS, the tab
 
 ```sh
 juiz --version
-# => juiz 0.3.3
+# => juiz 0.3.4
 ```
 
 `juiz pkg` is available from juiz 0.2.6. If your version is older, reinstall it with `cargo install juiz_app`.
@@ -54,7 +54,7 @@ juiz pkg create my_juiz -b rust -t process
 When it is created, the next commands to run are shown.
 
 ```text
-Created my_juiz (rust, process) in ./my_juiz  [juiz_sdk =0.3.3]
+Created my_juiz (rust, process) in ./my_juiz  [juiz_sdk =0.3.4]
 
 Next steps:
   cd my_juiz
@@ -279,14 +279,14 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Same version as the juiz that made this skeleton (juiz --version)
-juiz_sdk = "=0.3.3"
+juiz_sdk = "=0.3.4"
 ```
 
 | Item | Meaning |
 | --- | --- |
 | `name` | The crate name. It becomes the file name of the shared library: `libmy_juiz.so` on Linux, `libmy_juiz.dylib` on macOS, and `my_juiz.dll` (no `lib` prefix) on Windows |
 | `crate-type` in `[lib]` | `"cdylib"` is a shared library that other languages can load (a C-style dynamic library); this is the form `juiz` can load. `"rlib"` is there for `cargo test` |
-| `juiz_sdk = "=0.3.3"` | The crate for writing Processes, and its version |
+| `juiz_sdk = "=0.3.4"` | The crate for writing Processes, and its version |
 
 **Keep the `juiz_sdk` version the same as the one `juiz --version` shows.** The skeleton pins it with `=` to the version of the `juiz` that created it.
 When you update `juiz`, change this line to the same version too.
