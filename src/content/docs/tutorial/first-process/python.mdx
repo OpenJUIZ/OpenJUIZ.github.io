@@ -41,7 +41,7 @@ mkdir juiz_tutorial
 cd juiz_tutorial
 python3 -m venv .venv
 source .venv/bin/activate
-pip install juiz-cli==0.3.4
+pip install juiz-cli==0.3.5
 ```
 
 </TabItem>
@@ -52,7 +52,7 @@ mkdir juiz_tutorial
 cd juiz_tutorial
 python3 -m venv .venv
 source .venv/bin/activate
-pip install juiz-cli==0.3.4
+pip install juiz-cli==0.3.5
 ```
 
 </TabItem>
@@ -63,7 +63,7 @@ mkdir juiz_tutorial
 cd juiz_tutorial
 python -m venv .venv
 .venv\Scripts\activate
-pip install juiz-cli==0.3.4
+pip install juiz-cli==0.3.5
 ```
 
 </TabItem>
@@ -71,13 +71,13 @@ pip install juiz-cli==0.3.4
 
 ```sh
 juiz --version
-# => juiz 0.3.4
+# => juiz 0.3.5
 ```
 
 Run the following steps in a terminal where this venv is active. When you open a new terminal, run `source .venv/bin/activate` (`.venv\Scripts\activate` on Windows) in `juiz_tutorial`.
 
 <Aside type="note" title="If you use juiz installed with cargo">
-If you use the `juiz` command installed with `cargo install juiz_app`, skip `pip install juiz-cli==0.3.4`. The `pip install -e .` below installs only pyjuiz, the package for writing Processes, into the venv.
+If you use the `juiz` command installed with `cargo install juiz_app`, skip `pip install juiz-cli==0.3.5`. The `pip install -e .` below installs only pyjuiz, the package for writing Processes, into the venv.
 Installing `juiz-cli` as well gives you two `juiz` commands, and which one runs depends on the order in PATH.
 </Aside>
 
@@ -98,7 +98,7 @@ juiz pkg create my_juiz -b python -t process
 When it is created, the next commands to run are shown (you already made the venv above, so you can skip the `python3 -m venv .venv` shown here).
 
 ```text
-Created my_juiz (python, process) in ./my_juiz  [pyjuiz ==0.3.4]
+Created my_juiz (python, process) in ./my_juiz  [pyjuiz ==0.3.5]
 
 Next steps:
   cd my_juiz
@@ -132,6 +132,7 @@ The skeleton contains the following files.
       - my_juiz.py the Process code
   - scripts/
     - pack.sh make the distribution package (pack.ps1 on Windows)
+  - juizdesign.yaml the design of the types (design document)
   - README.md how to use this skeleton
   - .gitignore
 </FileTree>
@@ -264,7 +265,7 @@ description = "my_juiz: a juiz component"
 requires-python = ">=3.10"
 dependencies = [
     # Same version as the juiz that made this skeleton (juiz --version)
-    "pyjuiz==0.3.4",
+    "pyjuiz==0.3.5",
 ]
 
 [build-system]
@@ -323,6 +324,8 @@ You can also create several instances with different names from the same type (c
 ### scripts and app/juizapp.yaml
 
 `scripts/pack.sh` and `app/juizapp.yaml` are for bundling the finished building block into a single `.juizapp` file to hand out (it runs with just `juiz run`). The tutorial does not use them; see [Distributing apps (.juizapp)](/guides/app-package/).
+
+`juizdesign.yaml` is a **design document** that describes the types of this skeleton (names, arguments, return values, the state of Containers) independently of the language. The tutorial does not need you to edit it (`juiz pkg add` in Chapter 2 adds to it). See [Starting from a skeleton (juiz pkg)](/guides/pkg/#design-documents-juizdesignyaml) for making skeletons from it.
 
 ## Try it yourself
 

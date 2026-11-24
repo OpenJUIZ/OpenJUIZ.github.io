@@ -35,7 +35,7 @@ juiz pkg add container counter
 
 ```text
 Added container counter to my_juiz (python): counter, counter_increment, counter_get
-Edited app/python/my_juiz.py, app/app.conf
+Edited app/python/my_juiz.py, app/app.conf, juizdesign.yaml
 
 Next steps:
   juiz -f app/app.conf -d         # restart juiz
@@ -50,7 +50,7 @@ Next steps:
 | ContainerProcess | `counter_increment` | Adds `step` to the Container's value and returns the new value |
 | ContainerProcess | `counter_get` | Returns the Container's value as is |
 
-Only `app/python/my_juiz.py` and `app/app.conf` change, and no new files appear.
+Only `app/python/my_juiz.py`, `app/app.conf` and the design document `juizdesign.yaml` change, and no new files appear.
 The added types go into the same file (Component) as the Process from chapter 1.
 
 Read the added parts in order.
@@ -205,7 +205,7 @@ You can also call ContainerProcesses from the web UI (`http://localhost:8000/ui/
 
 ## Summary
 
-- `juiz pkg add container <name>` adds a Container and the ContainerProcesses that read and write it to a project. Only the source and `app/app.conf` change.
+- `juiz pkg add container <name>` adds a Container and the ContainerProcesses that read and write it to a project. Only the source, `app/app.conf` and `juizdesign.yaml` change.
 - State lives in a Container. A Container only says "what to remember" and has no processing code.
 - Only the ContainerProcesses bound to a Container read and write its state. A ContainerProcess takes the Container as its first argument. Mark the ones that only read with `readonly=True`.
 - One Container can have several ContainerProcesses with different roles. They share the same state.

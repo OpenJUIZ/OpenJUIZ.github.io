@@ -35,7 +35,7 @@ juiz pkg add container counter
 
 ```text
 Added container counter to my_juiz (python): counter, counter_increment, counter_get
-Edited app/python/my_juiz.py, app/app.conf
+Edited app/python/my_juiz.py, app/app.conf, juizdesign.yaml
 
 Next steps:
   juiz -f app/app.conf -d         # restart juiz
@@ -50,7 +50,7 @@ Next steps:
 | ContainerProcess | `counter_increment` | Container の値に `step` を足して、足した後の値を返す |
 | ContainerProcess | `counter_get` | Container の値をそのまま返す |
 
-書き換わるのは `app/python/my_juiz.py` と `app/app.conf` の 2 つだけで、新しいファイルは増えません。
+書き換わるのは `app/python/my_juiz.py` と `app/app.conf`、それに設計文書 `juizdesign.yaml` の 3 つだけで、新しいファイルは増えません。
 足された型も、第 1 章の Process と同じ 1 つのファイル(Component)に入ります。
 
 足されたところを順に読んでいきます。
@@ -205,7 +205,7 @@ juiz container-process call "http://127.0.0.1:8000/container_process/counter_get
 
 ## まとめ
 
-- `juiz pkg add container <名前>` で、Container と、それを読み書きする ContainerProcess をプロジェクトに足せます。書き換わるのはソースと `app/app.conf` だけです。
+- `juiz pkg add container <名前>` で、Container と、それを読み書きする ContainerProcess をプロジェクトに足せます。書き換わるのはソースと `app/app.conf`、`juizdesign.yaml` だけです。
 - 状態は Container に置きます。Container には「何を覚えておくか」だけを書き、処理は書きません。
 - 状態を読み書きするのは、Container に結びついた ContainerProcess だけです。ContainerProcess は最初の引数で Container を受け取ります。読むだけのものには `readonly=True` を付けます。
 - 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられます。それらは同じ状態を共有します。

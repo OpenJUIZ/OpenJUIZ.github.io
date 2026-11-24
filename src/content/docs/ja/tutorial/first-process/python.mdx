@@ -41,7 +41,7 @@ mkdir juiz_tutorial
 cd juiz_tutorial
 python3 -m venv .venv
 source .venv/bin/activate
-pip install juiz-cli==0.3.4
+pip install juiz-cli==0.3.5
 ```
 
 </TabItem>
@@ -52,7 +52,7 @@ mkdir juiz_tutorial
 cd juiz_tutorial
 python3 -m venv .venv
 source .venv/bin/activate
-pip install juiz-cli==0.3.4
+pip install juiz-cli==0.3.5
 ```
 
 </TabItem>
@@ -63,7 +63,7 @@ mkdir juiz_tutorial
 cd juiz_tutorial
 python -m venv .venv
 .venv\Scripts\activate
-pip install juiz-cli==0.3.4
+pip install juiz-cli==0.3.5
 ```
 
 </TabItem>
@@ -71,13 +71,13 @@ pip install juiz-cli==0.3.4
 
 ```sh
 juiz --version
-# => juiz 0.3.4
+# => juiz 0.3.5
 ```
 
 以降の手順は、この venv を有効にしたターミナルで実行してください。新しいターミナルを開いたら、`juiz_tutorial` で `source .venv/bin/activate`(Windows では `.venv\Scripts\activate`)を実行します。
 
 <Aside type="note" title="cargo で入れた juiz を使うとき">
-`cargo install juiz_app` で入れた `juiz` コマンドを使う場合は、`pip install juiz-cli==0.3.4` を飛ばしてください。このあとの `pip install -e .` で、Process を書くための pyjuiz だけが venv に入ります。
+`cargo install juiz_app` で入れた `juiz` コマンドを使う場合は、`pip install juiz-cli==0.3.5` を飛ばしてください。このあとの `pip install -e .` で、Process を書くための pyjuiz だけが venv に入ります。
 `juiz-cli` も入れると `juiz` コマンドが 2 つになり、どちらが動くかが PATH の順番で決まってしまいます。
 </Aside>
 
@@ -98,7 +98,7 @@ juiz pkg create my_juiz -b python -t process
 作ると、次に打つコマンドが表示されます(venv は上で作ったので、ここに表示される `python3 -m venv .venv` は飛ばしてかまいません)。
 
 ```text
-Created my_juiz (python, process) in ./my_juiz  [pyjuiz ==0.3.4]
+Created my_juiz (python, process) in ./my_juiz  [pyjuiz ==0.3.5]
 
 Next steps:
   cd my_juiz
@@ -132,6 +132,7 @@ pip install -e .
       - my_juiz.py Process のコード
   - scripts/
     - pack.sh 配布用のパッケージを作る(Windows は pack.ps1)
+  - juizdesign.yaml 型の設計を書いた文書(設計文書)
   - README.md この雛形の使い方(英語)
   - .gitignore
 </FileTree>
@@ -264,7 +265,7 @@ description = "my_juiz: a juiz component"
 requires-python = ">=3.10"
 dependencies = [
     # Same version as the juiz that made this skeleton (juiz --version)
-    "pyjuiz==0.3.4",
+    "pyjuiz==0.3.5",
 ]
 
 [build-system]
@@ -323,6 +324,8 @@ py-modules = []
 ### scripts と app/juizapp.yaml
 
 `scripts/pack.sh` と `app/juizapp.yaml` は、できあがった部品を `.juizapp` というファイル 1 つにまとめて配る(`juiz run` だけで動かせる)ためのものです。チュートリアルでは使いません。使い方は [アプリの配布(.juizapp)](/ja/guides/app-package/) にあります。
+
+`juizdesign.yaml` は、この雛形の型(名前・引数・戻り値・Container の状態)を言語によらない形で書いた**設計文書**です。チュートリアルでは読むだけで、手で直す必要はありません(第 2 章の `juiz pkg add` が書き足します)。この文書から雛形を作る使い方は [雛形から始める(juiz pkg)](/ja/guides/pkg/#設計文書juizdesignyaml) にあります。
 
 ## やってみよう
 

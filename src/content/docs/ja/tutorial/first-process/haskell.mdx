@@ -49,13 +49,13 @@ hsjuiz は 0.2.6 から Hackage にもありますが([言語ごとのパッケ�
 
 ```sh
 juiz --version
-# => juiz 0.3.4
+# => juiz 0.3.5
 ghc --version
 # => The Glorious Glasgow Haskell Compilation System, version 9.6.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
-ls ~/.juiz/sdk/0.3.4/lib
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
+ls ~/.juiz/sdk/0.3.5/lib
 # => libjuiz_sdk.so  ...
-git clone --depth 1 --branch v0.3.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.4
+git clone --depth 1 --branch v0.3.5 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.5
 ```
 
 </TabItem>
@@ -63,13 +63,13 @@ git clone --depth 1 --branch v0.3.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-
 
 ```sh
 juiz --version
-# => juiz 0.3.4
+# => juiz 0.3.5
 ghc --version
 # => The Glorious Glasgow Haskell Compilation System, version 9.6.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
-ls ~/.juiz/sdk/0.3.4/lib
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
+ls ~/.juiz/sdk/0.3.5/lib
 # => libjuiz_sdk.dylib  ...
-git clone --depth 1 --branch v0.3.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.4
+git clone --depth 1 --branch v0.3.5 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.5
 ```
 
 </TabItem>
@@ -96,14 +96,14 @@ juiz pkg create my_juiz -b haskell -t process
 作ると、次に打つコマンドが表示されます(hsjuiz のソースと libjuiz_sdk は準備で用意したので、ここに表示される `git clone` と `curl` は飛ばしてかまいません)。
 
 ```text
-Created my_juiz (haskell, process) in ./my_juiz  [hsjuiz 0.3.4]
+Created my_juiz (haskell, process) in ./my_juiz  [hsjuiz 0.3.5]
 
 Next steps:
   cd my_juiz
-  # once: get hsjuiz 0.3.4 (the juiz source) in /home/me/juiz-0.3.4/bindings/hsjuiz
-  git clone --depth 1 --branch v0.3.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.4
-  # once: put libjuiz_sdk 0.3.4 in /home/me/.juiz/sdk/0.3.4
-  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
+  # once: get hsjuiz 0.3.5 (the juiz source) in /home/me/juiz-0.3.5/bindings/hsjuiz
+  git clone --depth 1 --branch v0.3.5 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.5
+  # once: put libjuiz_sdk 0.3.5 in /home/me/.juiz/sdk/0.3.5
+  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
   scripts/dev.sh                  # build and put the plugin in app/plugins/<target>/
   juiz -f app/app.conf -d         # start (keep it running)
   ...
@@ -135,6 +135,7 @@ cd my_juiz
     - dev.sh ビルドして app/plugins/ に置く
     - pack.sh 配布用のパッケージを作る
     - bundle-plugin-deps.sh pack.sh が使う
+  - juizdesign.yaml 型の設計を書いた文書(設計文書)
   - README.md この雛形の使い方(英語)
   - .gitignore
 </FileTree>
@@ -319,13 +320,13 @@ Process のコードのほかに、雛形にはビルドと起動のためのフ
 `cabal.project` には、一緒にビルドする hsjuiz と、libjuiz_sdk の場所が書かれています。
 
 ```txt title="cabal.project"
-packages: . /home/me/juiz-0.3.4/bindings/hsjuiz
+packages: . /home/me/juiz-0.3.5/bindings/hsjuiz
 
 active-repositories: :none
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.3.4/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.3.4/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.3.5/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.3.5/lib
 ```
 
 コメントは省いています。`/home/me` の所は、雛形を作ったときに自分のホームディレクトリが書かれます。
@@ -407,6 +408,8 @@ foreign-library my_juiz
 
 `scripts/dev.sh` は、上で使ったビルド用のスクリプトです。
 `scripts/pack.sh`・`scripts/bundle-plugin-deps.sh` と `app/juizapp.yaml` は、できあがった部品を `.juizapp` というファイル 1 つにまとめて配る(`juiz run` だけで動かせる)ためのものです。チュートリアルでは使いません。使い方は [アプリの配布(.juizapp)](/ja/guides/app-package/) にあります。
+
+`juizdesign.yaml` は、この雛形の型(名前・引数・戻り値・Container の状態)を言語によらない形で書いた**設計文書**です。チュートリアルでは読むだけで、手で直す必要はありません(第 2 章の `juiz pkg add` が書き足します)。この文書から雛形を作る使い方は [雛形から始める(juiz pkg)](/ja/guides/pkg/#設計文書juizdesignyaml) にあります。
 
 ## やってみよう
 

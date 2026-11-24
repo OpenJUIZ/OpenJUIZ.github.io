@@ -36,6 +36,7 @@ juiz pkg create <名前> -b <言語> [-t <種類>] [-o <ディレクトリ>]
 | `-b`, `--lang` | (必須) | `rust` / `python` / `cpp` / `haskell` / `zig` |
 | `-t`, `--template` | `component` | 入れる型の種類。`component` / `process` / `container`(下の表) |
 | `--idl <file.jidl>` | なし | 例の型の代わりに、JIDL の宣言から型付きの関数を作ります([下](#jidl-から型付きの雛形を作るidl)) |
+| `-d`, `--design <juizdesign.yaml>` | なし | 設計文書から雛形を作ります([下](#設計文書から雛形を作るcreate--d))。`<名前>`・`-t`・`--idl` の代わりに使います |
 | `-o`, `--output` | `./<名前>` | 作るディレクトリ。既にあって空でなければエラーになり、何も書きません |
 | `--license` | `none` | `mit-apache` で LICENSE-MIT・LICENSE-APACHE を置き、各ファイルのライセンスの欄に `MIT OR Apache-2.0` を書きます |
 | `--author` | `git config user.name` | `--license mit-apache` のときの著作権者 |
@@ -72,6 +73,7 @@ my_robot/
 ├─ scripts/
 │  ├─ dev.sh   dev.ps1     ビルドしてプラグインを app/plugins/<ターゲット>/ に置く
 │  └─ pack.sh  pack.ps1    dist/my_robot-0.1.0.juizapp を作る
+├─ juizdesign.yaml         設計文書。入っている型を言語によらない形で書いたもの([下](#設計文書juizdesignyaml))
 ├─ README.md               この雛形の使い方(英語)
 └─ .gitignore
 ```
@@ -124,13 +126,13 @@ Windows では `python -m venv .venv`、`.venv\Scripts\activate` です。juiz �
 juiz pkg create my_robot -b cpp
 cd my_robot
 # 初回だけ: libjuiz_sdk(juiz と同じ版)を ~/.juiz/sdk/<版> に置く
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
 scripts/dev.sh                  # cmake でビルドし、プラグインと libjuiz_sdk を app/plugins/<ターゲット>/ に置く
 juiz -f app/app.conf -d         # 起動(このままにしておく)
 ```
 
 cmake と C++ コンパイラが要ります。Windows では `install-juiz-sdk.ps1` と `scripts\dev.ps1` を使います(手順は [インストール](../../getting-started/install/) の C++ を見てください)。
-`juiz pkg create` は SDK が無いときに入れるコマンドを表示するので、`0.3.4` の所はその表示のとおりにしてください。
+`juiz pkg create` は SDK が無いときに入れるコマンドを表示するので、`0.3.5` の所はその表示のとおりにしてください。
 
 </TabItem>
 <TabItem label="Haskell">
@@ -139,8 +141,8 @@ cmake と C++ コンパイラが要ります。Windows では `install-juiz-sdk.
 juiz pkg create my_robot -b haskell
 cd my_robot
 # 初回だけ: hsjuiz のソースと libjuiz_sdk(どちらも juiz と同じ版)を用意する
-git clone --depth 1 --branch v0.3.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.4
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
+git clone --depth 1 --branch v0.3.5 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.5
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
 scripts/dev.sh                  # cabal build して app/plugins/<ターゲット>/ に置く
 juiz -f app/app.conf -d         # 起動(このままにしておく)
 ```
@@ -194,7 +196,7 @@ juiz pkg add container my_robot_arm       # Container my_robot_arm と my_robot_
 | `process <名前>` | Process `<名前>` | `my_robot_add` と同じ(`a + b`) |
 | `container <名前>` | Container `<名前>`、ContainerProcess `<名前>_increment`・`<名前>_get` | `my_robot` などと同じ |
 
-- 書き換えるのは **Component のソース 1 つと `app/app.conf` だけ**です。新しいファイルは作らず、Cargo.toml・CMakeLists.txt・.cabal・build.zig も直しません。
+- 書き換えるのは **Component のソース 1 つと `app/app.conf`、設計文書 `juizdesign.yaml` だけ**です。新しいファイルは作らず、Cargo.toml・CMakeLists.txt・.cabal・build.zig も直しません。
 - 言語と Component の名前は `app/app.conf` から読みます。別のディレクトリの雛形には `-C <ディレクトリ>` を付けます。
 - 同じ名前が conf やソースに既にあればエラーになり、何も変えません。ソースの形を大きく変えていて足す場所が見つからないときも、エラーになって手で足すよう案内されます。
 - README.md の型の表は直しません。
@@ -332,6 +334,131 @@ fn move_to(args: struct { target: types.juiz_std.geometry.Pose2D, speed: f64 = 1
 - 呼び出しの例(作ったときの表示と README)の引数は、既定値か、型から作った値(数は 0、文字列は `""` など)です。
 - 言語によっては作れない宣言があり、そのときはファイルを書く前にエラーになります。Python・C++ では `T?`・`bytes` の引数、Python では既定値のある引数の後ろに既定値のない record・enum の引数、Haskell では型のモジュール名が Component のモジュール名と同じになるとき(名前 `myrobot` と名前空間 `myrobot` など)です。
 
+## 設計文書(juizdesign.yaml)
+
+雛形の型(Process・Container・ContainerProcess の名前・引数・戻り値・Container の状態)は、言語によらない **設計文書** `juizdesign.yaml` に書かれています。juiz 0.3.5 から、`juiz pkg create` は雛形の直下にこの文書も置き、雛形のソースや `app/app.conf`・README の型の表もこの文書から作ります。
+
+設計文書は、次の 3 つの使い方ができます。
+
+| 使い方 | コマンド |
+| --- | --- |
+| 今までどおり雛形を作る(設計文書も一緒にできる) | `juiz pkg create <名前> -b <言語> [-t …\|--idl …]` |
+| 設計文書だけを書く | `juiz pkg design <名前> [-t …\|--idl …] [-b <言語>] [-o <ファイル>]` |
+| 設計文書から雛形を作る | `juiz pkg create -d <juizdesign.yaml> [-b <言語>] [-o <ディレクトリ>]` |
+
+先に型を設計してから、その文書を雛形にするのが 2 つめと 3 つめの使い方です。同じ文書から別の言語の雛形も作れます。
+
+<Aside type="caution" title="juiz 0.3.5 以降が必要です">
+設計文書(`juiz pkg design`・`create -d`)は juiz 0.3.5 から使えます。0.3.4 までの juiz で作った雛形には `juizdesign.yaml` がありません。
+</Aside>
+
+### 文書の形
+
+`juiz pkg design my_robot` で書かれる文書(`-t component` と同じ型)です。
+
+```yaml title="juizdesign.yaml"
+# yaml-language-server: $schema=https://raw.githubusercontent.com/OpenJUIZ/juiz/v0.3.5/juiz_pkg/schema/juizdesign.schema.json
+# my_robot: design of the juiz component my_robot (juiz docs/spec/design.md)
+#   check:    juiz pkg design check juizdesign.yaml
+#   scaffold: juiz pkg create -d juizdesign.yaml -b <rust|python|cpp|haskell|zig>
+format: 1
+component:
+  name: my_robot
+  description: "my_robot: a juiz component"
+processes:
+  - name: my_robot_add
+    description: "Returns a + b."
+    arguments:
+      - { name: a, type: long, default: 0, description: "the first value" }
+      - { name: b, type: long, default: 0, description: "the second value" }
+    returns: long
+containers:
+  - name: my_robot
+    description: "Holds an integer value."
+    arguments:
+      - { name: initial_value, type: long, default: 0, description: "the initial value" }
+    state:
+      - { name: value, type: long, init: initial_value }
+    processes:
+      - name: my_robot_increment
+        description: "Adds step to the value and returns it."
+        arguments:
+          - { name: step, type: long, default: 1, description: "the value to add" }
+        returns: long
+      - name: my_robot_get
+        description: "Returns the value."
+        returns: long
+        readonly: true
+```
+
+| キー | 意味 |
+| --- | --- |
+| `component` | Component の `name`(雛形の名前)、`description`、`language`(任意。`create -d` の `-b` を省いたときの言語) |
+| `idl` | 任意。record・enum の型を書いた .jidl の場所(この文書からの相対パス)。`juiz_std/geometry.jidl` などの組み込みの型は名前だけで読めます |
+| `processes` | Process の型。`name`・`description`・`arguments`・`returns`(省くと戻り値なし) |
+| `containers` | Container の型。`arguments` は Container を作るときの引数(`app/app.conf` の `containers` の値)、`state` は Container が持つ値、`processes` はその Container の ContainerProcess |
+| `arguments[]` | `name`・`type`・`default`(任意)・`description`(任意) |
+| `state[]` | `name`・`type`・`init`(任意。初期値にする Container の引数の名前。省くと型の 0 値) |
+| `readonly` | ContainerProcess だけ。`true` なら Container の状態を変えない ContainerProcess になります |
+
+型は [データ型](../datatype/) の JIDL と同じ書き方です(`boolean`・`int`・`long`・`float`・`double`・`string`・`array<double>`・`image`・`T?`・`juiz_std.geometry.Pose2D` など)。record・enum を自分で定義するときは .jidl に書いて `idl:` で読みます。
+1 行目のコメントは JSON Schema の場所なので、VS Code の YAML 拡張などでは、書いている途中から補完と形の検査が効きます。
+
+### 検査する(juiz pkg design check)
+
+```sh
+juiz pkg design check juizdesign.yaml -b rust
+# => ok: juizdesign.yaml (component my_robot: 1 process, 1 container, 2 container processes)
+```
+
+形・名前(重なり、言語のキーワード)・型(`idl:` の .jidl で解けるか)・既定値を確かめ、誤りはすべて場所付きで表示します。
+
+```text
+bad.yaml:12:24: error: containers[0].arguments[0].type: unknown type 'dobule' (it is not in the .jidl files in idl:)
+error: bad.yaml is not a valid design document (1 error)
+```
+
+`-b` を省くと `component.language` の言語の規則で確かめます。どちらも無いときは、言語によらない検査だけをして警告を出します。`juiz pkg design`・`create -d` も、書く前に同じ検査をします。
+
+### 設計文書から雛形を作る(create -d)
+
+```sh
+juiz pkg design my_robot              # juizdesign.yaml だけを書く
+# juizdesign.yaml を書き直す
+juiz pkg create -d juizdesign.yaml -b python
+```
+
+- 雛形の名前は `component.name` です(`<名前>`・`-t`・`--idl` とは一緒に使えません)。言語は `-b`、無ければ `component.language` です。
+- 作り先は `-o`、省けば `./<component.name>` です。`-o .` のように、文書のあるディレクトリにそのまま雛形を作ることもできます(文書と `idl:` の .jidl だけがあるディレクトリなら作れます)。
+- 雛形の直下に文書を `juizdesign.yaml` として写し、`idl:` の .jidl も同じ相対パスで写します。
+- 関数の本体は書かれていません。Rust は `todo!()`、Python は `raise NotImplementedError`、C++ は `throw std::runtime_error`、Haskell は `error`、Zig は `return error.NotImplemented` が入っているので、書き換えてください。型・引数の既定値と説明・Container の状態の型と初期値・`readonly` は文書のとおりに書かれます。
+
+`-t` で作る雛形も、中では組み込みの設計文書を通して作っています。`-t` と同じ文書を `create -d` に渡すと、型は同じで本体だけが空の雛形になります。
+`--idl` で作るときは、.jidl の宣言から設計文書を作り、それを通して雛形を作ります(雛形の `juizdesign.yaml` の `idl:` に .jidl が書かれます)。`juiz pkg design <名前> --idl arm.jidl` で、.jidl から文書だけを書くこともできます。
+
+### 型を足したとき
+
+`juiz pkg add process|container` は、ソースと `app/app.conf` に加えて `juizdesign.yaml` にも、足した型を書き足します。0.3.4 までに作った雛形のように文書が無いときは、文書を直さずに警告だけ出します。
+
+雛形を作った後で設計文書を書き換えても、雛形のソースは直りません。作り直すか、ソースを手で合わせてください。
+
+### ビルドしたプラグインと突き合わせる
+
+ビルドしたプラグインを開いて、中の型(manifest)が設計文書のとおりかを確かめられます。設計文書の無いプラグインから、文書を起こすこともできます。
+
+```sh
+juiz pkg design check juizdesign.yaml --plugin app/plugins/<ターゲット>/libmy_robot.so
+juiz pkg design --from-plugin app/plugins/<ターゲット>/libmy_robot.so -b rust -o juizdesign.yaml
+```
+
+- `--plugin`: 型名・引数の名前と型と既定値・戻り値の型・`readonly` が違えばエラーにします。説明の違いは警告です。
+- `--from-plugin`: プラグインの型から文書を書きます。Container の状態はプラグインに無いので書かれません(表示に従って `state:` を足してください)。record・enum は文書の隣の `idl/<名前>.jidl` に書かれます。
+- プラグインの言語は `-b`、無ければ `component.language` です。`.py` なら Python と分かりますが、`.so`・`.dylib`・`.dll` では `-b` が要ります。
+- プラグインを開くので、`juiz pkg` で打ってください(単体の `juiz-pkg` では使えません)。
+- C++ のプラグインでは、Container の引数が manifest に載らないため比べられず、また `create -d` の雛形の `long`・`double` の引数や戻り値は型が manifest に載らないので、「比べなかった」という警告が出ます(エラーにはなりません)。
+
+文書の細かい決まりは、juiz のリポジトリの [docs/spec/design.md](https://github.com/OpenJUIZ/juiz/blob/main/docs/spec/design.md) にあります。
+
 ## 配布する
 
 `scripts/pack.sh`(Windows は `scripts\pack.ps1`)で release ビルドをして、`dist/<名前>-0.1.0.juizapp` を作ります。受け取った人は `juiz run` だけで動かせます。
@@ -354,12 +481,12 @@ juiz run dist/my_robot-0.1.0.juizapp
 
 | ファイル | 書き方 |
 | --- | --- |
-| Cargo.toml | `juiz_sdk = "=0.3.4"` |
-| pyproject.toml | `pyjuiz==0.3.4` |
-| CMakeLists.txt | `JUIZ_VERSION "0.3.4"`(`find_package(... EXACT)`) |
+| Cargo.toml | `juiz_sdk = "=0.3.5"` |
+| pyproject.toml | `pyjuiz==0.3.5` |
+| CMakeLists.txt | `JUIZ_VERSION "0.3.5"`(`find_package(... EXACT)`) |
 | cabal.project | hsjuiz・libjuiz_sdk のパスに版が入る |
 | build.zig.zon | zigjuiz のアーカイブの URL に版が入る(`scripts/dev.sh` が初回に書く) |
-| app/juizapp.yaml | `juiz: ">=0.3.4"`(C++・Haskell・Zig は `"=0.3.4"`) |
+| app/juizapp.yaml | `juiz: ">=0.3.5"`(C++・Haskell・Zig は `"=0.3.5"`) |
 
 C++・Haskell・Zig の .juizapp は libjuiz_sdk を同梱するので、動かす juiz と版が一致しないと読み込めません。そのため `juiz: "=<版>"` にしてあり、違う版の juiz で `juiz run` すると、最初に版の違いを示して止まります。
 juiz を上げたときは、雛形を作り直すか、上の表の版を手で直してください。

@@ -39,7 +39,7 @@ cd juiz_examples_zig
 ```
 
 サンプル集の `build.sh` は、`juiz` と同じ版の zigjuiz と libjuiz_sdk を juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から取得して、サンプルをビルドします(第 1 章のように `juiz sdk install` しておく必要はありません)。初回は少し時間がかかります。
-取得する juiz の版は `build.sh` の `JUIZ_GIT_REF` で決まります(既定は `v0.3.4`)。`juiz --version` と違う版を使っているときは、サンプル集の [README](https://github.com/OpenJUIZ/juiz_examples_zig#readme) の「juiz の版について」のとおりに合わせてください。
+取得する juiz の版は `build.sh` の `JUIZ_GIT_REF` で決まります(既定は `v0.3.5`)。`juiz --version` と違う版を使っているときは、サンプル集の [README](https://github.com/OpenJUIZ/juiz_examples_zig#readme) の「juiz の版について」のとおりに合わせてください。
 `pip install ziglang==0.17.1` で入れた Zig を使うときは、`ZIG="python3 -m ziglang" ./build.sh` で実行します。
 
 各サンプルは共有ライブラリとして `build/plugins` にビルドされ、libjuiz_sdk も同じ場所に置かれます。ファイル名は OS によって違います。

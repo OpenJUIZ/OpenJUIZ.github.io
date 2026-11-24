@@ -48,7 +48,7 @@ zigjuiz は、雛形の `scripts/dev.sh` が初めてビルドするときに、
 
 ```sh
 juiz --version
-# => juiz 0.3.4
+# => juiz 0.3.5
 zig version
 # => 0.17.1
 juiz sdk install
@@ -61,7 +61,7 @@ ls "$(juiz sdk path)/lib"
 
 ```sh
 juiz --version
-# => juiz 0.3.4
+# => juiz 0.3.5
 zig version
 # => 0.17.1
 juiz sdk install
@@ -91,7 +91,7 @@ juiz pkg create my_juiz -b zig -t process
 作ると、次に打つコマンドが表示されます。
 
 ```text
-Created my_juiz (zig, process) in ./my_juiz  [zigjuiz 0.3.4]
+Created my_juiz (zig, process) in ./my_juiz  [zigjuiz 0.3.5]
 
 Next steps:
   cd my_juiz
@@ -122,6 +122,7 @@ cd my_juiz
   - scripts/
     - dev.sh ビルドして app/plugins/ に置く
     - pack.sh 配布用のパッケージを作る
+  - juizdesign.yaml 型の設計を書いた文書(設計文書)
   - README.md この雛形の使い方(英語)
   - .gitignore
 </FileTree>
@@ -144,12 +145,12 @@ fn my_juiz_add(args: struct { a: i64 = 0, b: i64 = 0 }) !i64 {
 comptime {
     juiz.exportComponent(.{
         .type_name = "my_juiz",
-        .description = "my_juiz: a juiz component.",
+        .description = "my_juiz: a juiz component",
         .parts = .{
             juiz.processPart(my_juiz_add, .{
                 .type_name = "my_juiz_add",
                 .description = "Returns a + b.",
-                .args = .{ .a = "first value", .b = "second value" },
+                .args = .{ .a = "the first value", .b = "the second value" },
             }),
         },
     });
@@ -190,7 +191,7 @@ comptime {
 
 ```sh
 scripts/dev.sh
-# => adding zigjuiz 0.3.4 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.4/zigjuiz-0.3.4.tar.gz
+# => adding zigjuiz 0.3.5 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.5/zigjuiz-0.3.5.tar.gz
 #    app/plugins/x86_64-unknown-linux-gnu/libjuiz_sdk.so
 #    app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so
 ```
@@ -200,7 +201,7 @@ scripts/dev.sh
 
 ```sh
 scripts/dev.sh
-# => adding zigjuiz 0.3.4 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.4/zigjuiz-0.3.4.tar.gz
+# => adding zigjuiz 0.3.5 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.5/zigjuiz-0.3.5.tar.gz
 #    app/plugins/aarch64-apple-darwin/libjuiz_sdk.dylib
 #    app/plugins/aarch64-apple-darwin/libmy_juiz.dylib
 ```
@@ -344,8 +345,8 @@ pub fn build(b: *std.Build) void {
     .minimum_zig_version = "0.17.0",
     .dependencies = .{
         .zigjuiz = .{
-            .url = "https://github.com/OpenJUIZ/juiz/releases/download/v0.3.4/zigjuiz-0.3.4.tar.gz",
-            .hash = "zigjuiz-0.3.4-...",
+            .url = "https://github.com/OpenJUIZ/juiz/releases/download/v0.3.5/zigjuiz-0.3.5.tar.gz",
+            .hash = "zigjuiz-0.3.5-...",
         },
     },
     .paths = .{
@@ -400,6 +401,8 @@ pub fn build(b: *std.Build) void {
 
 `scripts/dev.sh` は、上で使ったビルド用のスクリプトです。`--target <ターゲット>` を付けると、別の CPU・OS 向けにもビルドできます(Zig は 1 台から別のマシン向けにビルドできます)。
 `scripts/pack.sh` と `app/juizapp.yaml` は、できあがった部品を `.juizapp` というファイル 1 つにまとめて配る(`juiz run` だけで動かせる)ためのものです。チュートリアルでは使いません。使い方は [アプリの配布(.juizapp)](/ja/guides/app-package/) にあります。
+
+`juizdesign.yaml` は、この雛形の型(名前・引数・戻り値・Container の状態)を言語によらない形で書いた**設計文書**です。チュートリアルでは読むだけで、手で直す必要はありません(第 2 章の `juiz pkg add` が書き足します)。この文書から雛形を作る使い方は [雛形から始める(juiz pkg)](/ja/guides/pkg/#設計文書juizdesignyaml) にあります。
 
 ## やってみよう
 
