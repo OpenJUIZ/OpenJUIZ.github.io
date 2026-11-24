@@ -35,7 +35,7 @@ juiz pkg add container counter
 
 ```text
 Added container counter to my_juiz (rust): counter, counter_increment, counter_get
-Edited src/lib.rs, app/app.conf
+Edited src/lib.rs, app/app.conf, juizdesign.yaml
 
 Next steps:
   scripts/dev.sh                  # rebuild the plugin
@@ -51,7 +51,7 @@ Next steps:
 | ContainerProcess | `counter_increment` | Container の値に `step` を足して、足した後の値を返す |
 | ContainerProcess | `counter_get` | Container の値をそのまま返す |
 
-書き換わるのは `src/lib.rs` と `app/app.conf` の 2 つだけで、新しいファイルは増えません。
+書き換わるのは `src/lib.rs` と `app/app.conf`、それに設計文書 `juizdesign.yaml` の 3 つだけで、新しいファイルは増えません。
 足された型も、第 1 章の Process と同じ 1 つのライブラリ(Component)に入ります。`Cargo.toml` を直す必要もありません。
 
 足されたところを順に読んでいきます。
@@ -68,8 +68,14 @@ pub struct Counter {
 }
 
 #[juiz_component_container(
+    typed = "all"
     description = "Holds an integer value."
-    arguments = { default = { initial_value = 0 } }
+    arguments = {
+        default = { initial_value = 0 }
+        description = {
+            initial_value = "the initial value"
+        }
+    }
 )]
 fn counter(initial_value: i64) -> JuizResult<Box<Counter>> {
     Ok(Box::new(Counter {
@@ -97,8 +103,14 @@ ContainerProcess は、**最初の引数に Container を受け取る** Process 
 ```rust title="src/lib.rs(足された部分)"
 #[juiz_component_container_process(
     container_type = "counter"
+    typed = "all"
     description = "Adds step to the value and returns it."
-    arguments = { default = { step = 1 } }
+    arguments = {
+        default = { step = 1 }
+        description = {
+            step = "the value to add"
+        }
+    }
 )]
 fn counter_increment(container: &mut ContainerImpl<Counter>, step: i64) -> JuizResult<i64> {
     container.value += step;
@@ -110,7 +122,7 @@ fn counter_increment(container: &mut ContainerImpl<Counter>, step: i64) -> JuizR
 | --- | --- |
 | `#[juiz_component_container_process(...)]` | この関数を ContainerProcess にします。関数名 `counter_increment` が型名になります |
 | `container_type = "counter"` | 結びつける Container の型名です |
-| `arguments = { default = { step = 1 } }` | 引数 `step` の既定値です |
+| `typed = "all"`、`arguments = { default = { ... } description = { ... } }` | 第 1 章の Process と同じく、型を manifest に載せる指定と、引数 `step` の既定値・説明です |
 | `container: &mut ContainerImpl<Counter>` | 最初の引数で Container を受け取ります。`container.value` のように中の値を読み書きできます |
 | `step: i64` | 2 番目以降の引数は、第 1 章の Process と同じように呼び出すときに渡します |
 
@@ -120,6 +132,7 @@ fn counter_increment(container: &mut ContainerImpl<Counter>, step: i64) -> JuizR
 /// Receiving the container as `&ContainerImpl` (not `&mut`) makes this ContainerProcess readonly.
 #[juiz_component_container_process(
     container_type = "counter"
+    typed = "all"
     description = "Returns the value."
 )]
 fn counter_get(container: &ContainerImpl<Counter>) -> JuizResult<i64> {
@@ -248,7 +261,7 @@ juiz container-process call "http://127.0.0.1:8000/container_process/counter_get
 
 ## まとめ
 
-- `juiz pkg add container <名前>` で、Container と、それを読み書きする ContainerProcess をプロジェクトに足せます。書き換わるのはソースと `app/app.conf` だけです。
+- `juiz pkg add container <名前>` で、Container と、それを読み書きする ContainerProcess をプロジェクトに足せます。書き換わるのはソースと `app/app.conf`、`juizdesign.yaml` だけです。
 - 状態は Container に置きます。Container には「何を覚えておくか」だけを書き、処理は書きません。
 - 状態を読み書きするのは、Container に結びついた ContainerProcess だけです。ContainerProcess は最初の引数で Container を受け取ります。Rust では、`&ContainerImpl` で受け取ると readonly になります。
 - 1 つの Container に、役割の違う ContainerProcess をいくつも結びつけられます。それらは同じ状態を共有します。

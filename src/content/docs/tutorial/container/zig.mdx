@@ -35,7 +35,7 @@ juiz pkg add container counter
 
 ```text
 Added container counter to my_juiz (zig): counter, counter_increment, counter_get
-Edited src/my_juiz.zig, app/app.conf
+Edited src/my_juiz.zig, app/app.conf, juizdesign.yaml
 
 Next steps:
   scripts/dev.sh                  # rebuild the plugin
@@ -51,7 +51,7 @@ Next steps:
 | ContainerProcess | `counter_increment` | Adds `step` to the Container's value and returns the new value |
 | ContainerProcess | `counter_get` | Returns the Container's value as is |
 
-Only `src/my_juiz.zig` and `app/app.conf` change, and no new files appear.
+Only `src/my_juiz.zig`, `app/app.conf` and the design document `juizdesign.yaml` change, and no new files appear.
 The added types go into the same library (Component) as the Process from chapter 1. You do not need to touch `build.zig` either.
 
 Read the added parts in order.
@@ -129,7 +129,7 @@ When you want to know "where does this value change?", you only need to look at 
             juiz.processPart(my_juiz_add, .{
                 .type_name = "my_juiz_add",
                 .description = "Returns a + b.",
-                .args = .{ .a = "first value", .b = "second value" },
+                .args = .{ .a = "the first value", .b = "the second value" },
             }),
             juiz.containerPart(counter_create, .{
                 .type_name = "counter",
@@ -233,7 +233,7 @@ You can also call ContainerProcesses from the web UI (`http://localhost:8000/ui/
 
 ## Summary
 
-- `juiz pkg add container <name>` adds a Container and the ContainerProcesses that read and write it to a project. Only the source and `app/app.conf` change.
+- `juiz pkg add container <name>` adds a Container and the ContainerProcesses that read and write it to a project. Only the source, `app/app.conf` and `juizdesign.yaml` change.
 - State lives in a Container. A Container only says "what to remember" (the state struct and the function that makes it) and has no processing code.
 - Only the ContainerProcesses bound to a Container read and write its state. A ContainerProcess takes the state as its first argument `self`. Taking it as `*const` makes it readonly.
 - One Container can have several ContainerProcesses with different roles. They share the same state.

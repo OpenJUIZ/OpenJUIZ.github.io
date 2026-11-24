@@ -36,6 +36,7 @@ juiz pkg create <name> -b <lang> [-t <template>] [-o <dir>]
 | `-b`, `--lang` | (required) | `rust` / `python` / `cpp` / `haskell` / `zig` |
 | `-t`, `--template` | `component` | Which types to put in: `component` / `process` / `container` (table below) |
 | `--idl <file.jidl>` | none | Make typed functions from the declarations of a JIDL file instead of the example types ([below](#make-a-typed-skeleton-from-jidl-idl)) |
+| `-d`, `--design <juizdesign.yaml>` | none | Make the skeleton from a design document ([below](#make-a-skeleton-from-a-design-document-create--d)). Used instead of `<name>`, `-t` and `--idl` |
 | `-o`, `--output` | `./<name>` | The directory to create. If it exists and is not empty, it is an error and nothing is written |
 | `--license` | `none` | `mit-apache` puts LICENSE-MIT and LICENSE-APACHE and writes `MIT OR Apache-2.0` in the license field of each file |
 | `--author` | `git config user.name` | The copyright holder for `--license mit-apache` |
@@ -72,6 +73,7 @@ my_robot/
 ├─ scripts/
 │  ├─ dev.sh   dev.ps1     build and put the plugin in app/plugins/<target>/
 │  └─ pack.sh  pack.ps1    make dist/my_robot-0.1.0.juizapp
+├─ juizdesign.yaml         the design document: the types inside, independent of the language ([below](#design-documents-juizdesignyaml))
 ├─ README.md               how to use this skeleton
 └─ .gitignore
 ```
@@ -123,13 +125,13 @@ On Windows, use `python -m venv .venv` and `.venv\Scripts\activate`. If you inst
 juiz pkg create my_robot -b cpp
 cd my_robot
 # once: put libjuiz_sdk (same version as juiz) in ~/.juiz/sdk/<version>
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
 scripts/dev.sh                  # build with cmake and put the plugin and libjuiz_sdk in app/plugins/<target>/
 juiz -f app/app.conf -d         # start (keep it running)
 ```
 
 You need cmake and a C++ compiler. On Windows, use `install-juiz-sdk.ps1` and `scripts\dev.ps1` (see C++ in [Installation](../../getting-started/install/)).
-When the SDK is missing, `juiz pkg create` prints the command to install it. Use the version it prints instead of `0.3.4`.
+When the SDK is missing, `juiz pkg create` prints the command to install it. Use the version it prints instead of `0.3.5`.
 
 </TabItem>
 <TabItem label="Haskell">
@@ -138,8 +140,8 @@ When the SDK is missing, `juiz pkg create` prints the command to install it. Use
 juiz pkg create my_robot -b haskell
 cd my_robot
 # once: get the hsjuiz source and libjuiz_sdk (both the same version as juiz)
-git clone --depth 1 --branch v0.3.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.4
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
+git clone --depth 1 --branch v0.3.5 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.5
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
 scripts/dev.sh                  # cabal build and put the plugin in app/plugins/<target>/
 juiz -f app/app.conf -d         # start (keep it running)
 ```
@@ -193,7 +195,7 @@ juiz pkg add container my_robot_arm       # Container my_robot_arm with my_robot
 | `process <name>` | Process `<name>` | Same as `my_robot_add` (`a + b`) |
 | `container <name>` | Container `<name>`, ContainerProcess `<name>_increment` and `<name>_get` | Same as `my_robot` and its ContainerProcesses |
 
-- It edits **only the Component source and `app/app.conf`**. It creates no new files and does not touch Cargo.toml, CMakeLists.txt, the .cabal file or build.zig.
+- It edits **only the Component source, `app/app.conf` and the design document `juizdesign.yaml`**. It creates no new files and does not touch Cargo.toml, CMakeLists.txt, the .cabal file or build.zig.
 - The language and the Component name are read from `app/app.conf`. For a skeleton in another directory, add `-C <dir>`.
 - If the name is already in the conf or the source, it is an error and nothing changes. If you have reshaped the source so much that the place to add is not found, it is also an error that tells you to add it by hand.
 - It does not update the type table in README.md.
@@ -331,6 +333,131 @@ Each `zig build` makes the types with `juiz-idl -g zig` (or `juiz idl -g zig` if
 - The arguments in the call examples (printed on creation and in the README) are the defaults, or values made from the types (0 for numbers, `""` for strings and so on).
 - Some declarations cannot be made in some languages, and then you get an error before any file is written: `T?` and `bytes` arguments in Python and C++, a record or enum argument without a default after an argument with a default in Python, and in Haskell a type module whose name is the same as the Component module (name `myrobot` and namespace `myrobot`, for example).
 
+## Design documents (juizdesign.yaml)
+
+The types of a skeleton (the names, arguments and return values of its Processes, Containers and ContainerProcesses, and the state of its Containers) are written in a language-independent **design document**, `juizdesign.yaml`. From juiz 0.3.5, `juiz pkg create` puts this document at the top of the skeleton, and makes the source, `app/app.conf` and the type table of the README from it.
+
+You can use the design document in three ways.
+
+| Use | Command |
+| --- | --- |
+| Make a skeleton as before (the design document comes with it) | `juiz pkg create <name> -b <lang> [-t …\|--idl …]` |
+| Write only the design document | `juiz pkg design <name> [-t …\|--idl …] [-b <lang>] [-o <file>]` |
+| Make a skeleton from a design document | `juiz pkg create -d <juizdesign.yaml> [-b <lang>] [-o <dir>]` |
+
+The second and third let you design the types first and then turn the document into a skeleton. The same document can make skeletons in other languages too.
+
+<Aside type="caution" title="Requires juiz 0.3.5 or later">
+Design documents (`juiz pkg design`, `create -d`) are available from juiz 0.3.5. Skeletons made with juiz 0.3.4 or earlier have no `juizdesign.yaml`.
+</Aside>
+
+### The shape of the document
+
+This is what `juiz pkg design my_robot` writes (the same types as `-t component`).
+
+```yaml title="juizdesign.yaml"
+# yaml-language-server: $schema=https://raw.githubusercontent.com/OpenJUIZ/juiz/v0.3.5/juiz_pkg/schema/juizdesign.schema.json
+# my_robot: design of the juiz component my_robot (juiz docs/spec/design.md)
+#   check:    juiz pkg design check juizdesign.yaml
+#   scaffold: juiz pkg create -d juizdesign.yaml -b <rust|python|cpp|haskell|zig>
+format: 1
+component:
+  name: my_robot
+  description: "my_robot: a juiz component"
+processes:
+  - name: my_robot_add
+    description: "Returns a + b."
+    arguments:
+      - { name: a, type: long, default: 0, description: "the first value" }
+      - { name: b, type: long, default: 0, description: "the second value" }
+    returns: long
+containers:
+  - name: my_robot
+    description: "Holds an integer value."
+    arguments:
+      - { name: initial_value, type: long, default: 0, description: "the initial value" }
+    state:
+      - { name: value, type: long, init: initial_value }
+    processes:
+      - name: my_robot_increment
+        description: "Adds step to the value and returns it."
+        arguments:
+          - { name: step, type: long, default: 1, description: "the value to add" }
+        returns: long
+      - name: my_robot_get
+        description: "Returns the value."
+        returns: long
+        readonly: true
+```
+
+| Key | Meaning |
+| --- | --- |
+| `component` | The Component's `name` (the name of the skeleton), `description` and `language` (optional; the language used when `create -d` has no `-b`) |
+| `idl` | Optional. The .jidl files that define record and enum types (paths relative to this document). Built-in types such as `juiz_std/geometry.jidl` are read by name |
+| `processes` | Process types: `name`, `description`, `arguments`, `returns` (leave it out for no return value) |
+| `containers` | Container types. `arguments` are the arguments for creating the Container (the values in `containers` of `app/app.conf`), `state` the values the Container holds, and `processes` its ContainerProcesses |
+| `arguments[]` | `name`, `type`, `default` (optional), `description` (optional) |
+| `state[]` | `name`, `type`, `init` (optional; the name of the Container argument used as the initial value. Without it, the zero value of the type) |
+| `readonly` | ContainerProcesses only. `true` makes a ContainerProcess that does not change the state of the Container |
+
+Types are written the same way as in the JIDL of [Data types](../datatype/) (`boolean`, `int`, `long`, `float`, `double`, `string`, `array<double>`, `image`, `T?`, `juiz_std.geometry.Pose2D` and so on). To define your own records and enums, write them in a .jidl file and read it with `idl:`.
+The first comment line points to the JSON Schema, so editors such as VS Code with the YAML extension complete and check the document as you write it.
+
+### Check (juiz pkg design check)
+
+```sh
+juiz pkg design check juizdesign.yaml -b rust
+# => ok: juizdesign.yaml (component my_robot: 1 process, 1 container, 2 container processes)
+```
+
+It checks the shape, the names (duplicates, keywords of the language), the types (whether the .jidl files in `idl:` resolve them) and the default values, and prints every error with its place.
+
+```text
+bad.yaml:12:24: error: containers[0].arguments[0].type: unknown type 'dobule' (it is not in the .jidl files in idl:)
+error: bad.yaml is not a valid design document (1 error)
+```
+
+Without `-b`, the rules of `component.language` are checked. With neither, only the language-independent checks run, with a warning. `juiz pkg design` and `create -d` run the same checks before they write anything.
+
+### Make a skeleton from a design document (create -d)
+
+```sh
+juiz pkg design my_robot              # write only juizdesign.yaml
+# edit juizdesign.yaml
+juiz pkg create -d juizdesign.yaml -b python
+```
+
+- The name of the skeleton is `component.name` (it cannot be used with `<name>`, `-t` or `--idl`). The language is `-b`, or `component.language` without it.
+- The skeleton goes to `-o`, or `./<component.name>` without it. With `-o .` you can make the skeleton in the directory of the document itself (when it holds only the document and the .jidl files of `idl:`).
+- The document is copied to the top of the skeleton as `juizdesign.yaml`, and the .jidl files of `idl:` are copied to the same relative paths.
+- The bodies of the functions are not written. Replace `todo!()` in Rust, `raise NotImplementedError` in Python, `throw std::runtime_error` in C++, `error` in Haskell and `return error.NotImplemented` in Zig. The types, the default values and descriptions of the arguments, the types and initial values of the Container state, and `readonly` are written as in the document.
+
+Skeletons made with `-t` also go through a built-in design document inside. Passing the same document to `create -d` gives the same types with empty bodies.
+With `--idl`, a design document is made from the declarations of the .jidl file, and the skeleton is made through it (the .jidl file is listed in `idl:` of the skeleton's `juizdesign.yaml`). `juiz pkg design <name> --idl arm.jidl` writes only the document from a .jidl file.
+
+### When you add types
+
+`juiz pkg add process|container` adds the new types to `juizdesign.yaml` as well as to the source and `app/app.conf`. When there is no document, as in skeletons made with juiz 0.3.4 or earlier, it leaves the document alone and only prints a warning.
+
+Editing the design document after making a skeleton does not change the source of the skeleton. Make the skeleton again, or change the source by hand to match.
+
+### Compare with a built plugin
+
+You can open a built plugin and check that its types (the manifest) match the design document. You can also write a document from a plugin that has none.
+
+```sh
+juiz pkg design check juizdesign.yaml --plugin app/plugins/<target>/libmy_robot.so
+juiz pkg design --from-plugin app/plugins/<target>/libmy_robot.so -b rust -o juizdesign.yaml
+```
+
+- `--plugin`: differences in type names, argument names, types and default values, return types or `readonly` are errors. Differences in descriptions are warnings.
+- `--from-plugin`: writes a document from the types of the plugin. The state of Containers is not in the plugin, so it is not written (add `state:` as the output tells you). Records and enums are written in `idl/<name>.jidl` next to the document.
+- The language of the plugin is `-b`, or `component.language` without it. A `.py` file is known to be Python, but `.so`, `.dylib` and `.dll` need `-b`.
+- It opens the plugin, so type it as `juiz pkg` (the standalone `juiz-pkg` cannot do it).
+- With C++ plugins, the arguments of Containers are not in the manifest and cannot be compared, and the `long` and `double` arguments and return values of skeletons made with `create -d` have no type in the manifest, so you get "not compared" warnings (not errors).
+
+The details of the document are in [docs/spec/design.md](https://github.com/OpenJUIZ/juiz/blob/main/docs/spec/design.md) of the juiz repository.
+
 ## Distribute
 
 `scripts/pack.sh` (`scripts\pack.ps1` on Windows) makes a release build and `dist/<name>-0.1.0.juizapp`. The receiver can start it with nothing but `juiz run`.
@@ -353,12 +480,12 @@ The skeleton has the version of the juiz that ran `juiz pkg`.
 
 | File | What is written |
 | --- | --- |
-| Cargo.toml | `juiz_sdk = "=0.3.4"` |
-| pyproject.toml | `pyjuiz==0.3.4` |
-| CMakeLists.txt | `JUIZ_VERSION "0.3.4"` (`find_package(... EXACT)`) |
+| Cargo.toml | `juiz_sdk = "=0.3.5"` |
+| pyproject.toml | `pyjuiz==0.3.5` |
+| CMakeLists.txt | `JUIZ_VERSION "0.3.5"` (`find_package(... EXACT)`) |
 | cabal.project | the version is in the paths of hsjuiz and libjuiz_sdk |
 | build.zig.zon | the version is in the URL of the zigjuiz archive (`scripts/dev.sh` writes it the first time) |
-| app/juizapp.yaml | `juiz: ">=0.3.4"` (`"=0.3.4"` for C++, Haskell and Zig) |
+| app/juizapp.yaml | `juiz: ">=0.3.5"` (`"=0.3.5"` for C++, Haskell and Zig) |
 
 A C++, Haskell or Zig .juizapp bundles libjuiz_sdk, which only loads into a juiz of the same version. So it has `juiz: "=<version>"`, and `juiz run` with a different juiz version stops first and shows the version mismatch.
 When you upgrade juiz, create the skeleton again or update the versions in the table above by hand.

@@ -32,7 +32,7 @@ Windows では PowerShell で進めます。OS によってコマンドが違う
 
 ```sh
 juiz --version
-# => juiz 0.3.4
+# => juiz 0.3.5
 ```
 
 `juiz pkg` は juiz 0.2.6 から使えます。版が古いときは、`cargo install juiz_app` で入れ直してください。
@@ -54,7 +54,7 @@ juiz pkg create my_juiz -b rust -t process
 作ると、次に打つコマンドが表示されます。
 
 ```text
-Created my_juiz (rust, process) in ./my_juiz  [juiz_sdk =0.3.4]
+Created my_juiz (rust, process) in ./my_juiz  [juiz_sdk =0.3.5]
 
 Next steps:
   cd my_juiz
@@ -84,6 +84,7 @@ cd my_juiz
   - scripts/
     - dev.sh ビルドして app/plugins/ に置く(Windows は dev.ps1)
     - pack.sh 配布用のパッケージを作る(Windows は pack.ps1)
+  - juizdesign.yaml 型の設計を書いた文書(設計文書)
   - README.md この雛形の使い方(英語)
   - .gitignore
 </FileTree>
@@ -98,8 +99,15 @@ juiz では、Process を共有ライブラリ(`.so`・`.dylib`・`.dll`)とし�
 use juiz_sdk::prelude::*;
 
 #[juiz_component_process(
+    typed = "all"
     description = "Returns a + b."
-    arguments = { default = { a = 0 b = 0 } }
+    arguments = {
+        default = { a = 0 b = 0 }
+        description = {
+            a = "the first value"
+            b = "the second value"
+        }
+    }
 )]
 fn my_juiz_add(a: i64, b: i64) -> JuizResult<i64> {
     Ok(a + b)
@@ -117,8 +125,9 @@ juiz_component_manifest!(
 | --- | --- |
 | `use juiz_sdk::prelude::*;` | Process を書くのに使うマクロや型(`juiz_component_process`・`JuizResult` など)をまとめて読み込みます |
 | `#[juiz_component_process(...)]` | この関数を Process にします |
+| `typed = "all"` | 引数と戻り値の Rust の型(ここでは `i64`)を、juiz の型として manifest に載せます。管理画面の呼び出しフォームや、つなぐときの型の検査に使われます |
 | `description` | Process の説明です。管理画面などに表示されます |
-| `arguments = { default = { a = 0 b = 0 } }` | 引数の既定値です。呼び出すときに省いた引数には、この値が使われます |
+| `arguments = { default = { ... } description = { ... } }` | `default` は引数の既定値です。呼び出すときに省いた引数には、この値が使われます。`description` は引数ごとの説明です |
 | `fn my_juiz_add(a: i64, b: i64)` | 関数名 `my_juiz_add` が Process の**型名**、引数名 `a`・`b` がそのまま引数の名前になります |
 | `-> JuizResult<i64>` | 戻り値です。成功したら `Ok(値)` を、失敗したら `Err(...)` を返します |
 | `juiz_component_manifest!(...)` | このライブラリに入っている型の一覧です。`component_name` はライブラリの名前で、`processes` に Process の関数名を並べます |
@@ -279,14 +288,14 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # Same version as the juiz that made this skeleton (juiz --version)
-juiz_sdk = "=0.3.4"
+juiz_sdk = "=0.3.5"
 ```
 
 | 項目 | 意味 |
 | --- | --- |
 | `name` | クレートの名前です。ビルドしてできる共有ライブラリのファイル名になります。Linux では `libmy_juiz.so`、macOS では `libmy_juiz.dylib`、Windows では先頭に `lib` が付かず `my_juiz.dll` です |
 | `[lib]` の `crate-type` | `"cdylib"` は、ほかの言語からも読み込める共有ライブラリ(C 形式の動的ライブラリ)です。`juiz` が読み込めるのはこの形式です。`"rlib"` は `cargo test` のために付いています |
-| `juiz_sdk = "=0.3.4"` | Process を書くためのクレートと、その版です |
+| `juiz_sdk = "=0.3.5"` | Process を書くためのクレートと、その版です |
 
 **`juiz_sdk` の版は、`juiz --version` で表示される版と同じにしておくのがおすすめです。** 雛形では、雛形を作った `juiz` と同じ版が `=` で固定して書かれています。
 `juiz` を新しい版にしたときは、この 1 行も同じ版に書き換えてください。
@@ -327,10 +336,12 @@ juiz_sdk = "=0.3.4"
 `scripts/dev.sh`(Windows は `scripts\dev.ps1`)は、上で使ったビルド用のスクリプトです。
 `scripts/pack.sh` と `app/juizapp.yaml` は、できあがった部品を `.juizapp` というファイル 1 つにまとめて配る(`juiz run` だけで動かせる)ためのものです。チュートリアルでは使いません。使い方は [アプリの配布(.juizapp)](/ja/guides/app-package/) にあります。
 
+`juizdesign.yaml` は、この雛形の型(名前・引数・戻り値・Container の状態)を言語によらない形で書いた**設計文書**です。チュートリアルでは読むだけで、手で直す必要はありません(第 2 章の `juiz pkg add` が書き足します)。この文書から雛形を作る使い方は [雛形から始める(juiz pkg)](/ja/guides/pkg/#設計文書juizdesignyaml) にあります。
+
 ## やってみよう
 
 - `src/lib.rs` を書き換えて、足す代わりに掛け算(`a * b`)を返すようにしてみましょう。`scripts/dev.sh` でビルドし直して `juiz` を起動し直すと、`{"a": 3, "b": 4}` に対して `12` が返ってくるはずです。
-- `juiz pkg add process my_juiz_sub` を打つと、`src/lib.rs` と `app/app.conf` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `a - b` に書き換え、ビルドし直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
+- `juiz pkg add process my_juiz_sub` を打つと、`src/lib.rs`・`app/app.conf`・`juizdesign.yaml` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `a - b` に書き換え、ビルドし直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
 
 ## まとめ
 

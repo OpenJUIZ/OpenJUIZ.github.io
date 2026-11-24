@@ -35,7 +35,7 @@ juiz pkg add container counter
 
 ```text
 Added container counter to my_juiz (haskell): counter, counter_increment, counter_get
-Edited src/MyJuiz.hs, app/app.conf
+Edited src/MyJuiz.hs, app/app.conf, juizdesign.yaml
 
 Next steps:
   scripts/dev.sh                  # rebuild the plugin
@@ -51,7 +51,7 @@ Next steps:
 | ContainerProcess | `counter_increment` | Adds `step` to the Container's value and returns the new value |
 | ContainerProcess | `counter_get` | Returns the Container's value as is |
 
-Only `src/MyJuiz.hs` and `app/app.conf` change, and no new files appear.
+Only `src/MyJuiz.hs`, `app/app.conf` and the design document `juizdesign.yaml` change, and no new files appear.
 The added types go into the same library (Component) as the Process from chapter 1. You do not need to touch the `.cabal` file either.
 
 Read the added parts in order.
@@ -220,7 +220,7 @@ You can also call ContainerProcesses from the web UI (`http://localhost:8000/ui/
 
 ## Summary
 
-- `juiz pkg add container <name>` adds a Container and the ContainerProcesses that read and write it to a project. Only the source and `app/app.conf` change.
+- `juiz pkg add container <name>` adds a Container and the ContainerProcesses that read and write it to a project. Only the source, `app/app.conf` and `juizdesign.yaml` change.
 - State lives in a Container. A Container only says "what to remember" and has no processing code.
 - Only the ContainerProcesses bound to a Container read and write its state. A ContainerProcess takes the Container as its first argument. For one that only reads, add `readonly True` to the manifest.
 - One Container can have several ContainerProcesses with different roles. They share the same state.

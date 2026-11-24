@@ -48,7 +48,7 @@ Check the versions of `juiz` and Zig, then install libjuiz_sdk of the same versi
 
 ```sh
 juiz --version
-# => juiz 0.3.4
+# => juiz 0.3.5
 zig version
 # => 0.17.1
 juiz sdk install
@@ -61,7 +61,7 @@ ls "$(juiz sdk path)/lib"
 
 ```sh
 juiz --version
-# => juiz 0.3.4
+# => juiz 0.3.5
 zig version
 # => 0.17.1
 juiz sdk install
@@ -91,7 +91,7 @@ juiz pkg create my_juiz -b zig -t process
 It prints the commands to run next.
 
 ```text
-Created my_juiz (zig, process) in ./my_juiz  [zigjuiz 0.3.4]
+Created my_juiz (zig, process) in ./my_juiz  [zigjuiz 0.3.5]
 
 Next steps:
   cd my_juiz
@@ -122,6 +122,7 @@ The skeleton has these files.
   - scripts/
     - dev.sh build and put the plugin in app/plugins/
     - pack.sh make the distribution package
+  - juizdesign.yaml the design of the types (design document)
   - README.md how to use this skeleton
   - .gitignore
 </FileTree>
@@ -144,12 +145,12 @@ fn my_juiz_add(args: struct { a: i64 = 0, b: i64 = 0 }) !i64 {
 comptime {
     juiz.exportComponent(.{
         .type_name = "my_juiz",
-        .description = "my_juiz: a juiz component.",
+        .description = "my_juiz: a juiz component",
         .parts = .{
             juiz.processPart(my_juiz_add, .{
                 .type_name = "my_juiz_add",
                 .description = "Returns a + b.",
-                .args = .{ .a = "first value", .b = "second value" },
+                .args = .{ .a = "the first value", .b = "the second value" },
             }),
         },
     });
@@ -190,7 +191,7 @@ Build with `scripts/dev.sh`. On the first run it first adds zigjuiz to `build.zi
 
 ```sh
 scripts/dev.sh
-# => adding zigjuiz 0.3.4 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.4/zigjuiz-0.3.4.tar.gz
+# => adding zigjuiz 0.3.5 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.5/zigjuiz-0.3.5.tar.gz
 #    app/plugins/x86_64-unknown-linux-gnu/libjuiz_sdk.so
 #    app/plugins/x86_64-unknown-linux-gnu/libmy_juiz.so
 ```
@@ -200,7 +201,7 @@ scripts/dev.sh
 
 ```sh
 scripts/dev.sh
-# => adding zigjuiz 0.3.4 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.4/zigjuiz-0.3.4.tar.gz
+# => adding zigjuiz 0.3.5 to build.zig.zon: zig fetch --save=zigjuiz https://github.com/OpenJUIZ/juiz/releases/download/v0.3.5/zigjuiz-0.3.5.tar.gz
 #    app/plugins/aarch64-apple-darwin/libjuiz_sdk.dylib
 #    app/plugins/aarch64-apple-darwin/libmy_juiz.dylib
 ```
@@ -344,8 +345,8 @@ The comment at the top is left out.
     .minimum_zig_version = "0.17.0",
     .dependencies = .{
         .zigjuiz = .{
-            .url = "https://github.com/OpenJUIZ/juiz/releases/download/v0.3.4/zigjuiz-0.3.4.tar.gz",
-            .hash = "zigjuiz-0.3.4-...",
+            .url = "https://github.com/OpenJUIZ/juiz/releases/download/v0.3.5/zigjuiz-0.3.5.tar.gz",
+            .hash = "zigjuiz-0.3.5-...",
         },
     },
     .paths = .{
@@ -401,11 +402,13 @@ You can also make many instances with different names from the same type (covere
 `scripts/dev.sh` is the build script you used above. With `--target <target>` it also builds for another CPU or OS (Zig can build for other machines from one machine).
 `scripts/pack.sh` and `app/juizapp.yaml` are for bundling what you made into a single `.juizapp` file to distribute (it runs with just `juiz run`). The tutorial does not use them. See [App packages (.juizapp)](/guides/app-package/) for how to use them.
 
+`juizdesign.yaml` is a **design document** that describes the types of this skeleton (names, arguments, return values, the state of Containers) independently of the language. The tutorial does not need you to edit it (`juiz pkg add` in Chapter 2 adds to it). See [Starting from a skeleton (juiz pkg)](/guides/pkg/#design-documents-juizdesignyaml) for making skeletons from it.
+
 ## Try it yourself
 
 - Change `src/my_juiz.zig` to return the product instead of the sum (`std.math.mul(i64, args.a, args.b)`). Rebuild with `scripts/dev.sh` and restart `juiz`, and `{"a": 3, "b": 4}` should return `12`.
 - Remove the description of `.b` from `.args` and run `scripts/dev.sh`. An argument without a description is a compile error.
-- Run `juiz pkg add process my_juiz_sub` to add a Process `my_juiz_sub` to `src/my_juiz.zig` and `app/app.conf` (its body is the same `a + b` as `my_juiz_add`). Change the new function to `std.math.sub`, rebuild and call it. `juiz process list` shows two Processes.
+- Run `juiz pkg add process my_juiz_sub` to add a Process `my_juiz_sub` to `src/my_juiz.zig`, `app/app.conf` and `juizdesign.yaml` (its body is the same `a + b` as `my_juiz_add`). Change the new function to `std.math.sub`, rebuild and call it. `juiz process list` shows two Processes.
 
 ## Summary
 

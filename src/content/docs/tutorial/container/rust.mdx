@@ -35,7 +35,7 @@ juiz pkg add container counter
 
 ```text
 Added container counter to my_juiz (rust): counter, counter_increment, counter_get
-Edited src/lib.rs, app/app.conf
+Edited src/lib.rs, app/app.conf, juizdesign.yaml
 
 Next steps:
   scripts/dev.sh                  # rebuild the plugin
@@ -51,7 +51,7 @@ Next steps:
 | ContainerProcess | `counter_increment` | Adds `step` to the Container's value and returns the new value |
 | ContainerProcess | `counter_get` | Returns the Container's value as is |
 
-Only `src/lib.rs` and `app/app.conf` change, and no new files appear.
+Only `src/lib.rs`, `app/app.conf` and the design document `juizdesign.yaml` change, and no new files appear.
 The added types go into the same library (Component) as the Process from chapter 1. You do not need to touch `Cargo.toml` either.
 
 Read the added parts in order.
@@ -68,8 +68,14 @@ pub struct Counter {
 }
 
 #[juiz_component_container(
+    typed = "all"
     description = "Holds an integer value."
-    arguments = { default = { initial_value = 0 } }
+    arguments = {
+        default = { initial_value = 0 }
+        description = {
+            initial_value = "the initial value"
+        }
+    }
 )]
 fn counter(initial_value: i64) -> JuizResult<Box<Counter>> {
     Ok(Box::new(Counter {
@@ -97,8 +103,14 @@ A ContainerProcess is a Process that **takes the Container as its first argument
 ```rust title="src/lib.rs (added)"
 #[juiz_component_container_process(
     container_type = "counter"
+    typed = "all"
     description = "Adds step to the value and returns it."
-    arguments = { default = { step = 1 } }
+    arguments = {
+        default = { step = 1 }
+        description = {
+            step = "the value to add"
+        }
+    }
 )]
 fn counter_increment(container: &mut ContainerImpl<Counter>, step: i64) -> JuizResult<i64> {
     container.value += step;
@@ -110,7 +122,7 @@ fn counter_increment(container: &mut ContainerImpl<Counter>, step: i64) -> JuizR
 | --- | --- |
 | `#[juiz_component_container_process(...)]` | Makes this function a ContainerProcess. The function name `counter_increment` becomes the type name |
 | `container_type = "counter"` | The type name of the Container to bind to |
-| `arguments = { default = { step = 1 } }` | The default value of the argument `step` |
+| `typed = "all"`, `arguments = { default = { ... } description = { ... } }` | As in the Process of Chapter 1: put the types in the manifest, and give the default value and description of the argument `step` |
 | `container: &mut ContainerImpl<Counter>` | Takes the Container as the first argument. You can read and write the value inside, as in `container.value` |
 | `step: i64` | The second and later arguments are passed when calling, just like the Process in chapter 1 |
 
@@ -120,6 +132,7 @@ fn counter_increment(container: &mut ContainerImpl<Counter>, step: i64) -> JuizR
 /// Receiving the container as `&ContainerImpl` (not `&mut`) makes this ContainerProcess readonly.
 #[juiz_component_container_process(
     container_type = "counter"
+    typed = "all"
     description = "Returns the value."
 )]
 fn counter_get(container: &ContainerImpl<Counter>) -> JuizResult<i64> {
@@ -248,7 +261,7 @@ You can also call ContainerProcesses from the web UI (`http://localhost:8000/ui/
 
 ## Summary
 
-- `juiz pkg add container <name>` adds a Container and the ContainerProcesses that read and write it to a project. Only the source and `app/app.conf` change.
+- `juiz pkg add container <name>` adds a Container and the ContainerProcesses that read and write it to a project. Only the source, `app/app.conf` and `juizdesign.yaml` change.
 - State lives in a Container. A Container only says "what to remember" and has no processing code.
 - Only the ContainerProcesses bound to a Container read and write its state. A ContainerProcess takes the Container as its first argument. In Rust, taking it as `&ContainerImpl` makes it readonly.
 - One Container can have several ContainerProcesses with different roles. They share the same state.

@@ -41,9 +41,9 @@ C++ の Process は、libjuiz_sdk(juiz と値を受け渡す関数の共有ラ�
 
 ```sh
 juiz --version
-# => juiz 0.3.4
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
-ls ~/.juiz/sdk/0.3.4
+# => juiz 0.3.5
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
+ls ~/.juiz/sdk/0.3.5
 # => cjuiz  cppjuiz  lib  ...
 ```
 
@@ -52,9 +52,9 @@ ls ~/.juiz/sdk/0.3.4
 
 ```sh
 juiz --version
-# => juiz 0.3.4
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
-ls ~/.juiz/sdk/0.3.4
+# => juiz 0.3.5
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
+ls ~/.juiz/sdk/0.3.5
 # => cjuiz  cppjuiz  lib  ...
 ```
 
@@ -65,9 +65,9 @@ PowerShell で実行します。
 
 ```powershell
 juiz --version
-# => juiz 0.3.4
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.3.4
-ls $env:USERPROFILE\.juiz\sdk\0.3.4
+# => juiz 0.3.5
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.3.5
+ls $env:USERPROFILE\.juiz\sdk\0.3.5
 # => bin  cjuiz  cppjuiz  lib  ...
 ```
 
@@ -95,12 +95,12 @@ juiz pkg create my_juiz -b cpp -t process
 作ると、次に打つコマンドが表示されます(libjuiz_sdk は準備で入れたので、ここに表示される `curl ... install-juiz-sdk.sh` は飛ばしてかまいません)。
 
 ```text
-Created my_juiz (cpp, process) in ./my_juiz  [libjuiz_sdk 0.3.4]
+Created my_juiz (cpp, process) in ./my_juiz  [libjuiz_sdk 0.3.5]
 
 Next steps:
   cd my_juiz
-  # once: put libjuiz_sdk 0.3.4 in ~/.juiz/sdk/0.3.4
-  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
+  # once: put libjuiz_sdk 0.3.5 in ~/.juiz/sdk/0.3.5
+  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
   scripts/dev.sh                  # build and put the plugin and libjuiz_sdk in app/plugins/<target>/
   juiz -f app/app.conf -d         # start (keep it running)
   ...
@@ -127,6 +127,7 @@ cd my_juiz
   - scripts/
     - dev.sh ビルドして app/plugins/ に置く(Windows は dev.ps1)
     - pack.sh 配布用のパッケージを作る(Windows は pack.ps1)
+  - juizdesign.yaml 型の設計を書いた文書(設計文書)
   - README.md この雛形の使い方(英語)
   - .gitignore
 </FileTree>
@@ -333,7 +334,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(JUIZ_VERSION "0.3.4")
+set(JUIZ_VERSION "0.3.5")
 if(WIN32)
   file(TO_CMAKE_PATH "$ENV{USERPROFILE}/.juiz/sdk/${JUIZ_VERSION}" JUIZ_SDK_DEFAULT_DIR)
 else()
@@ -402,10 +403,12 @@ juiz_sdk_bundle(my_juiz)
 `scripts/dev.sh`(Windows は `scripts\dev.ps1`)は、上で使ったビルド用のスクリプトです。
 `scripts/pack.sh` と `app/juizapp.yaml` は、できあがった部品を `.juizapp` というファイル 1 つにまとめて配る(`juiz run` だけで動かせる)ためのものです。チュートリアルでは使いません。使い方は [アプリの配布(.juizapp)](/ja/guides/app-package/) にあります。
 
+`juizdesign.yaml` は、この雛形の型(名前・引数・戻り値・Container の状態)を言語によらない形で書いた**設計文書**です。チュートリアルでは読むだけで、手で直す必要はありません(第 2 章の `juiz pkg add` が書き足します)。この文書から雛形を作る使い方は [雛形から始める(juiz pkg)](/ja/guides/pkg/#設計文書juizdesignyaml) にあります。
+
 ## やってみよう
 
 - `src/my_juiz.cpp` を書き換えて、足す代わりに掛け算(`a * b`)を返すようにしてみましょう。`scripts/dev.sh` でビルドし直して `juiz` を起動し直すと、`{"a": 3, "b": 4}` に対して `12` が返ってくるはずです。
-- `juiz pkg add process my_juiz_sub` を打つと、`src/my_juiz.cpp` と `app/app.conf` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `a - b` に書き換え、ビルドし直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
+- `juiz pkg add process my_juiz_sub` を打つと、`src/my_juiz.cpp`・`app/app.conf`・`juizdesign.yaml` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `a - b` に書き換え、ビルドし直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
 
 ## まとめ
 

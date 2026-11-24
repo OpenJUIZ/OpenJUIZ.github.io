@@ -41,9 +41,9 @@ Check the version of `juiz`, then extract libjuiz_sdk of the same version into `
 
 ```sh
 juiz --version
-# => juiz 0.3.4
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
-ls ~/.juiz/sdk/0.3.4
+# => juiz 0.3.5
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
+ls ~/.juiz/sdk/0.3.5
 # => cjuiz  cppjuiz  lib  ...
 ```
 
@@ -52,9 +52,9 @@ ls ~/.juiz/sdk/0.3.4
 
 ```sh
 juiz --version
-# => juiz 0.3.4
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
-ls ~/.juiz/sdk/0.3.4
+# => juiz 0.3.5
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
+ls ~/.juiz/sdk/0.3.5
 # => cjuiz  cppjuiz  lib  ...
 ```
 
@@ -65,9 +65,9 @@ Run these in PowerShell.
 
 ```powershell
 juiz --version
-# => juiz 0.3.4
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.3.4
-ls $env:USERPROFILE\.juiz\sdk\0.3.4
+# => juiz 0.3.5
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.ps1))) 0.3.5
+ls $env:USERPROFILE\.juiz\sdk\0.3.5
 # => bin  cjuiz  cppjuiz  lib  ...
 ```
 
@@ -95,12 +95,12 @@ juiz pkg create my_juiz -b cpp -t process
 When it is created, the next commands to run are shown (you installed libjuiz_sdk in "Before you start", so you can skip the `curl ... install-juiz-sdk.sh` shown here).
 
 ```text
-Created my_juiz (cpp, process) in ./my_juiz  [libjuiz_sdk 0.3.4]
+Created my_juiz (cpp, process) in ./my_juiz  [libjuiz_sdk 0.3.5]
 
 Next steps:
   cd my_juiz
-  # once: put libjuiz_sdk 0.3.4 in ~/.juiz/sdk/0.3.4
-  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
+  # once: put libjuiz_sdk 0.3.5 in ~/.juiz/sdk/0.3.5
+  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
   scripts/dev.sh                  # build and put the plugin and libjuiz_sdk in app/plugins/<target>/
   juiz -f app/app.conf -d         # start (keep it running)
   ...
@@ -127,6 +127,7 @@ The skeleton contains the following files.
   - scripts/
     - dev.sh build and put the plugin in app/plugins/ (dev.ps1 on Windows)
     - pack.sh make the distribution package (pack.ps1 on Windows)
+  - juizdesign.yaml the design of the types (design document)
   - README.md how to use this skeleton
   - .gitignore
 </FileTree>
@@ -333,7 +334,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(JUIZ_VERSION "0.3.4")
+set(JUIZ_VERSION "0.3.5")
 if(WIN32)
   file(TO_CMAKE_PATH "$ENV{USERPROFILE}/.juiz/sdk/${JUIZ_VERSION}" JUIZ_SDK_DEFAULT_DIR)
 else()
@@ -402,10 +403,12 @@ You can also create several instances with different names from the same type (c
 `scripts/dev.sh` (`scripts\dev.ps1` on Windows) is the build script you used above.
 `scripts/pack.sh` and `app/juizapp.yaml` are for bundling the finished building block into a single `.juizapp` file to hand out (it runs with just `juiz run`). The tutorial does not use them; see [Distributing apps (.juizapp)](/guides/app-package/).
 
+`juizdesign.yaml` is a **design document** that describes the types of this skeleton (names, arguments, return values, the state of Containers) independently of the language. The tutorial does not need you to edit it (`juiz pkg add` in Chapter 2 adds to it). See [Starting from a skeleton (juiz pkg)](/guides/pkg/#design-documents-juizdesignyaml) for making skeletons from it.
+
 ## Try it yourself
 
 - Change `src/my_juiz.cpp` to return the product (`a * b`) instead of the sum. Rebuild with `scripts/dev.sh` and restart `juiz`; `{"a": 3, "b": 4}` should now give `12`.
-- Run `juiz pkg add process my_juiz_sub`. It adds a Process `my_juiz_sub` to `src/my_juiz.cpp` and `app/app.conf` (its body is `a + b`, the same as `my_juiz_add`). Change the added function to `a - b`, rebuild, and call it. `juiz process list` shows two Processes.
+- Run `juiz pkg add process my_juiz_sub`. It adds a Process `my_juiz_sub` to `src/my_juiz.cpp`, `app/app.conf` and `juizdesign.yaml` (its body is `a + b`, the same as `my_juiz_add`). Change the added function to `a - b`, rebuild, and call it. `juiz process list` shows two Processes.
 
 ## Summary
 

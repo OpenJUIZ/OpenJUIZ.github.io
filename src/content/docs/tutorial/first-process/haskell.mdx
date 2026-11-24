@@ -49,13 +49,13 @@ Check the version of `juiz`, then extract libjuiz_sdk of the same version into `
 
 ```sh
 juiz --version
-# => juiz 0.3.4
+# => juiz 0.3.5
 ghc --version
 # => The Glorious Glasgow Haskell Compilation System, version 9.6.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
-ls ~/.juiz/sdk/0.3.4/lib
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
+ls ~/.juiz/sdk/0.3.5/lib
 # => libjuiz_sdk.so  ...
-git clone --depth 1 --branch v0.3.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.4
+git clone --depth 1 --branch v0.3.5 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.5
 ```
 
 </TabItem>
@@ -63,13 +63,13 @@ git clone --depth 1 --branch v0.3.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-
 
 ```sh
 juiz --version
-# => juiz 0.3.4
+# => juiz 0.3.5
 ghc --version
 # => The Glorious Glasgow Haskell Compilation System, version 9.6.7
-curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
-ls ~/.juiz/sdk/0.3.4/lib
+curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
+ls ~/.juiz/sdk/0.3.5/lib
 # => libjuiz_sdk.dylib  ...
-git clone --depth 1 --branch v0.3.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.4
+git clone --depth 1 --branch v0.3.5 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.5
 ```
 
 </TabItem>
@@ -96,14 +96,14 @@ juiz pkg create my_juiz -b haskell -t process
 When it is created, the next commands to run are shown (you prepared the hsjuiz source and libjuiz_sdk in "Before you start", so you can skip the `git clone` and `curl` shown here).
 
 ```text
-Created my_juiz (haskell, process) in ./my_juiz  [hsjuiz 0.3.4]
+Created my_juiz (haskell, process) in ./my_juiz  [hsjuiz 0.3.5]
 
 Next steps:
   cd my_juiz
-  # once: get hsjuiz 0.3.4 (the juiz source) in /home/me/juiz-0.3.4/bindings/hsjuiz
-  git clone --depth 1 --branch v0.3.4 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.4
-  # once: put libjuiz_sdk 0.3.4 in /home/me/.juiz/sdk/0.3.4
-  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.4
+  # once: get hsjuiz 0.3.5 (the juiz source) in /home/me/juiz-0.3.5/bindings/hsjuiz
+  git clone --depth 1 --branch v0.3.5 https://github.com/OpenJUIZ/juiz.git ~/juiz-0.3.5
+  # once: put libjuiz_sdk 0.3.5 in /home/me/.juiz/sdk/0.3.5
+  curl -fsSL https://raw.githubusercontent.com/OpenJUIZ/juiz/main/scripts/install-juiz-sdk.sh | sh -s -- 0.3.5
   scripts/dev.sh                  # build and put the plugin in app/plugins/<target>/
   juiz -f app/app.conf -d         # start (keep it running)
   ...
@@ -135,6 +135,7 @@ The skeleton contains the following files.
     - dev.sh build and put the plugin in app/plugins/
     - pack.sh make the distribution package
     - bundle-plugin-deps.sh used by pack.sh
+  - juizdesign.yaml the design of the types (design document)
   - README.md how to use this skeleton
   - .gitignore
 </FileTree>
@@ -319,13 +320,13 @@ Besides the Process code, the skeleton contains files for building and starting 
 `cabal.project` says where hsjuiz, built together with the project, and libjuiz_sdk are.
 
 ```txt title="cabal.project"
-packages: . /home/me/juiz-0.3.4/bindings/hsjuiz
+packages: . /home/me/juiz-0.3.5/bindings/hsjuiz
 
 active-repositories: :none
 
 package hsjuiz
-  extra-lib-dirs: /home/me/.juiz/sdk/0.3.4/lib
-  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.3.4/lib
+  extra-lib-dirs: /home/me/.juiz/sdk/0.3.5/lib
+  ghc-options: -optl-Wl,-rpath,/home/me/.juiz/sdk/0.3.5/lib
 ```
 
 The comments are left out. `/home/me` is your own home directory, written when the skeleton was created.
@@ -408,10 +409,12 @@ You can also create several instances with different names from the same type (c
 `scripts/dev.sh` is the build script you used above.
 `scripts/pack.sh`, `scripts/bundle-plugin-deps.sh` and `app/juizapp.yaml` are for bundling the finished building block into a single `.juizapp` file to hand out (it runs with just `juiz run`). The tutorial does not use them; see [Distributing apps (.juizapp)](/guides/app-package/).
 
+`juizdesign.yaml` is a **design document** that describes the types of this skeleton (names, arguments, return values, the state of Containers) independently of the language. The tutorial does not need you to edit it (`juiz pkg add` in Chapter 2 adds to it). See [Starting from a skeleton (juiz pkg)](/guides/pkg/#design-documents-juizdesignyaml) for making skeletons from it.
+
 ## Try it yourself
 
 - Change `src/MyJuiz.hs` to return the product (`a * b`) instead of the sum. Rebuild with `scripts/dev.sh` and restart `juiz`; `{"a": 3, "b": 4}` should now give `12`.
-- Run `juiz pkg add process my_juiz_sub`. It adds a Process `my_juiz_sub` to `src/MyJuiz.hs` and `app/app.conf` (its body is `a + b`, the same as `my_juiz_add`). Change the added function to `a - b`, rebuild, and call it. `juiz process list` shows two Processes.
+- Run `juiz pkg add process my_juiz_sub`. It adds a Process `my_juiz_sub` to `src/MyJuiz.hs`, `app/app.conf` and `juizdesign.yaml` (its body is `a + b`, the same as `my_juiz_add`). Change the added function to `a - b`, rebuild, and call it. `juiz process list` shows two Processes.
 
 ## Summary
 
