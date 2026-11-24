@@ -408,7 +408,7 @@ You can also make many instances with different names from the same type (covere
 
 - Change `src/my_juiz.zig` to return the product instead of the sum (`std.math.mul(i64, args.a, args.b)`). Rebuild with `scripts/dev.sh` and restart `juiz`, and `{"a": 3, "b": 4}` should return `12`.
 - Remove the description of `.b` from `.args` and run `scripts/dev.sh`. An argument without a description is a compile error.
-- Run `juiz pkg add process my_juiz_sub` to add a Process `my_juiz_sub` to `src/my_juiz.zig` and `app/app.conf` (its body is the same `a + b` as `my_juiz_add`). Change the new function to `std.math.sub`, rebuild and call it. `juiz process list` shows two Processes.
+- Run `juiz pkg add process my_juiz_sub` to add a Process `my_juiz_sub` to `src/my_juiz.zig`, `app/app.conf` and `juizdesign.yaml` (its body is the same `a + b` as `my_juiz_add`). Change the new function to `std.math.sub`, rebuild and call it. `juiz process list` shows two Processes.
 
 ## Summary
 

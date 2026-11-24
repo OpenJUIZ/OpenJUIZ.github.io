@@ -330,7 +330,7 @@ You can also create several instances with different names from the same type (c
 ## Try it yourself
 
 - Change `app/python/my_juiz.py` to return the product (`a * b`) instead of the sum. Python needs no build, so just restart `juiz`; `{"a": 3, "b": 4}` should now give `12`.
-- Run `juiz pkg add process my_juiz_sub`. It adds a Process `my_juiz_sub` to `app/python/my_juiz.py` and `app/app.conf` (its body is `a + b`, the same as `my_juiz_add`). Change the added function to `a - b`, restart `juiz`, and call it. `juiz process list` shows two Processes.
+- Run `juiz pkg add process my_juiz_sub`. It adds a Process `my_juiz_sub` to `app/python/my_juiz.py`, `app/app.conf` and `juizdesign.yaml` (its body is `a + b`, the same as `my_juiz_add`). Change the added function to `a - b`, restart `juiz`, and call it. `juiz process list` shows two Processes.
 
 ## Summary
 

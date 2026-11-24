@@ -341,7 +341,7 @@ You can also create several instances with different names from the same type (c
 ## Try it yourself
 
 - Change `src/lib.rs` to return the product (`a * b`) instead of the sum. Rebuild with `scripts/dev.sh` and restart `juiz`; `{"a": 3, "b": 4}` should now give `12`.
-- Run `juiz pkg add process my_juiz_sub`. It adds a Process `my_juiz_sub` to `src/lib.rs` and `app/app.conf` (its body is `a + b`, the same as `my_juiz_add`). Change the added function to `a - b`, rebuild, and call it. `juiz process list` shows two Processes.
+- Run `juiz pkg add process my_juiz_sub`. It adds a Process `my_juiz_sub` to `src/lib.rs`, `app/app.conf` and `juizdesign.yaml` (its body is `a + b`, the same as `my_juiz_add`). Change the added function to `a - b`, rebuild, and call it. `juiz process list` shows two Processes.
 
 ## Summary
 

@@ -408,7 +408,7 @@ pub fn build(b: *std.Build) void {
 
 - `src/my_juiz.zig` を書き換えて、足す代わりに掛け算を返すようにしてみましょう(`std.math.mul(i64, args.a, args.b)`)。`scripts/dev.sh` でビルドし直して `juiz` を起動し直すと、`{"a": 3, "b": 4}` に対して `12` が返ってくるはずです。
 - `.args` から `.b` の説明を消して、`scripts/dev.sh` を打ってみましょう。説明の無い引数がコンパイルエラーになります。
-- `juiz pkg add process my_juiz_sub` を打つと、`src/my_juiz.zig` と `app/app.conf` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `std.math.sub` に書き換え、ビルドし直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
+- `juiz pkg add process my_juiz_sub` を打つと、`src/my_juiz.zig`・`app/app.conf`・`juizdesign.yaml` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `std.math.sub` に書き換え、ビルドし直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
 
 ## まとめ
 

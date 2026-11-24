@@ -68,8 +68,14 @@ pub struct Counter {
 }
 
 #[juiz_component_container(
+    typed = "all"
     description = "Holds an integer value."
-    arguments = { default = { initial_value = 0 } }
+    arguments = {
+        default = { initial_value = 0 }
+        description = {
+            initial_value = "the initial value"
+        }
+    }
 )]
 fn counter(initial_value: i64) -> JuizResult<Box<Counter>> {
     Ok(Box::new(Counter {
@@ -97,8 +103,14 @@ A ContainerProcess is a Process that **takes the Container as its first argument
 ```rust title="src/lib.rs (added)"
 #[juiz_component_container_process(
     container_type = "counter"
+    typed = "all"
     description = "Adds step to the value and returns it."
-    arguments = { default = { step = 1 } }
+    arguments = {
+        default = { step = 1 }
+        description = {
+            step = "the value to add"
+        }
+    }
 )]
 fn counter_increment(container: &mut ContainerImpl<Counter>, step: i64) -> JuizResult<i64> {
     container.value += step;
@@ -110,7 +122,7 @@ fn counter_increment(container: &mut ContainerImpl<Counter>, step: i64) -> JuizR
 | --- | --- |
 | `#[juiz_component_container_process(...)]` | Makes this function a ContainerProcess. The function name `counter_increment` becomes the type name |
 | `container_type = "counter"` | The type name of the Container to bind to |
-| `arguments = { default = { step = 1 } }` | The default value of the argument `step` |
+| `typed = "all"`, `arguments = { default = { ... } description = { ... } }` | As in the Process of Chapter 1: put the types in the manifest, and give the default value and description of the argument `step` |
 | `container: &mut ContainerImpl<Counter>` | Takes the Container as the first argument. You can read and write the value inside, as in `container.value` |
 | `step: i64` | The second and later arguments are passed when calling, just like the Process in chapter 1 |
 
@@ -120,6 +132,7 @@ fn counter_increment(container: &mut ContainerImpl<Counter>, step: i64) -> JuizR
 /// Receiving the container as `&ContainerImpl` (not `&mut`) makes this ContainerProcess readonly.
 #[juiz_component_container_process(
     container_type = "counter"
+    typed = "all"
     description = "Returns the value."
 )]
 fn counter_get(container: &ContainerImpl<Counter>) -> JuizResult<i64> {

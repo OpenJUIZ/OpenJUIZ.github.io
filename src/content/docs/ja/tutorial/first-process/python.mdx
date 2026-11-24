@@ -330,7 +330,7 @@ py-modules = []
 ## やってみよう
 
 - `app/python/my_juiz.py` を書き換えて、足す代わりに掛け算(`a * b`)を返すようにしてみましょう。Python はビルドが要らないので、`juiz` を起動し直すだけで、`{"a": 3, "b": 4}` に対して `12` が返ってくるはずです。
-- `juiz pkg add process my_juiz_sub` を打つと、`app/python/my_juiz.py` と `app/app.conf` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `a - b` に書き換え、`juiz` を起動し直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
+- `juiz pkg add process my_juiz_sub` を打つと、`app/python/my_juiz.py`・`app/app.conf`・`juizdesign.yaml` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `a - b` に書き換え、`juiz` を起動し直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
 
 ## まとめ
 

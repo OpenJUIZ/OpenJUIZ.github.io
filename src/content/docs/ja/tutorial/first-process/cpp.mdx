@@ -408,7 +408,7 @@ juiz_sdk_bundle(my_juiz)
 ## やってみよう
 
 - `src/my_juiz.cpp` を書き換えて、足す代わりに掛け算(`a * b`)を返すようにしてみましょう。`scripts/dev.sh` でビルドし直して `juiz` を起動し直すと、`{"a": 3, "b": 4}` に対して `12` が返ってくるはずです。
-- `juiz pkg add process my_juiz_sub` を打つと、`src/my_juiz.cpp` と `app/app.conf` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `a - b` に書き換え、ビルドし直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
+- `juiz pkg add process my_juiz_sub` を打つと、`src/my_juiz.cpp`・`app/app.conf`・`juizdesign.yaml` に Process `my_juiz_sub` が足されます(中身は `my_juiz_add` と同じ `a + b`)。足された関数を `a - b` に書き換え、ビルドし直して呼び出してみましょう。`juiz process list` に 2 つの Process が並びます。
 
 ## まとめ
 
