@@ -112,6 +112,8 @@ Subsystems registered through brokers other than HTTP, such as the IPC broker ([
 
 From juiz 0.3.0, the web UI follows every connected juiz no matter which way the parent/child link points. In the example above, opening `/ui/` of talker on port 8001 also shows listener, as 親系 (Master system). For a base and its apps started with `juiz run` (for example mobile_sim with mapper_gmapping and teleop_twist), the base's `/ui/` shows all the apps too. Even when the juiz are connected in a loop, each one is shown only once.
 
+A juiz that is not connected can be opened from "ほかの系" (Other systems) in the left pane (from the version after juiz 0.3.6). It lists the systems running on this machine from the [name list](/guides/naming/); for a system with an HTTP broker, "開く" (Open) opens its web UI in another window. The system you are looking at is marked.
+
 ## Settings
 
 Open the 設定 (settings) button above the left tree. Values are saved in your browser.

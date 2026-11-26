@@ -176,14 +176,17 @@ Where to connect is decided in this order.
 
 1. `--depend chatter_base=http://192.168.0.10:8100` on the command line (`ipc://<name>` also works)
 2. An entry in the app configuration file's `subsystems` that has `package: chatter_base`
-3. Default: `ipc://chatter_base` (a base on the same machine)
+3. A base with the right name and version in the name list of this machine, the LAN or the peers (from the version after juiz 0.3.6, see [Naming service](/guides/naming/#juiz-run-and-base-packages))
+4. Default: `ipc://chatter_base` (a base on the same machine)
+
+Writing only a kind instead of a URL, as in `--depend chatter_base=http`, picks a broker of that kind from the name list.
 
 ```yaml
 # Configuration file that uses a base on another machine
 subsystems:
   - package: chatter_base
     type_name: http
-    name: "192.168.0.10"      # without a port, base.http_port of the installed chatter_base is used
+    name: "192.168.0.10"      # without a port, the port found in the name list is used, or else base.http_port of the installed chatter_base
 ```
 
 If the base is not running and juiz run was not started from a terminal, it tells you what to do and stops (it never starts the base on its own).
@@ -230,7 +233,7 @@ choose [1]:
 | When it cannot ask | Starts on a free port and prints `warning: port 8000 is in use; the HTTP broker uses 8001` | Stops with an error |
 
 - The "free port" is the first one that can be taken counting up from the original number (up to the original + 100).
-- If a base moves to another port, apps that connect over HTTP look for `base.http_port` and will not find it. juiz run says so before asking.
+- If a base moves to another port, apps on other machines that connect over HTTP look for `base.http_port` and will not find it. juiz run says so before asking. From the version after juiz 0.3.6, apps on the same machine find the new port in the [name list](/guides/naming/) (apps on other machines also find it through LAN advertising or peers).
 - For an app, when the program on the port is a juiz, choice 1) may carry `(join it as its subsystem)`. Picking it connects the app to that juiz as its subsystem (apps that depend on a base never do this; see [When a port is in use](/guides/config/#when-a-port-is-in-use)).
 - The chosen port is used only this time and is not remembered. To always use the same one, set it with `--http-port <n>` or `option.http_broker.port` in the configuration file.
 
@@ -257,7 +260,7 @@ choose [1]:
 | Choice | What happens |
 | --- | --- |
 | 1) Start it now | Shown only when a version in range is installed. Starts the base **in another window** and waits up to 10 seconds for it before going on. Stopping the app does not stop the base |
-| 2) Choose a running one | Shown only when bases with the right name and version run over IPC on this machine (such as `ipc://chatter_base2`) |
+| 2) Choose a running one | Shown only when bases with the right name and version run on this machine (such as `ipc://chatter_base2`). From the version after juiz 0.3.6, the bases in the [name list](/guides/naming/) are listed, including those running over HTTP, qmp or zenoh |
 | 3) Enter where it is | Type a URL in the same form as `--depend`. Without a port, as in `http://192.168.0.10`, `base.http_port` is filled in |
 | 4) Retry | Pick this after starting the base yourself |
 | 5) Quit | Ends without doing anything |
@@ -279,7 +282,8 @@ Where to connect is then decided in this order.
 1. `--depend` on the command line
 2. The remembered connection
 3. An entry in the app configuration file's `subsystems` that has `package:`
-4. Default: `ipc://<name of the base>`
+4. A base found in the name list (this machine, the LAN and the peers; from the version after juiz 0.3.6, see [Naming service](/guides/naming/#juiz-run-and-base-packages))
+5. Default: `ipc://<name of the base>`
 
 If the remembered place cannot be reached, juiz run asks again. To forget it, start with `--forget-depends`.
 
