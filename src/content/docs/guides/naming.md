@@ -8,8 +8,8 @@ sidebar:
 The naming service looks up where to connect to a juiz (`ipc://…`, `http://…`, `qmp://…`, `zenoh://…`) from its name (a package name or the name of a System).
 You can point at a juiz by name, as in `juiz -s mobile_sim process list`, without remembering URLs or port numbers. Even when a base package starts on another port because its port was in use, apps find the base by name.
 
-:::note[Available from the version after juiz 0.3.6]
-The naming service is available from the version after juiz 0.3.6.
+:::note[Available from juiz 0.3.7]
+The naming service is available from juiz 0.3.7.
 :::
 
 ## Three ways to find a juiz
@@ -19,7 +19,7 @@ There is no central name server and no daemon. Three ways are layered.
 | Way | Reach | Default |
 | --- | --- | --- |
 | [The name list of this machine](#the-name-list-of-this-machine) | The same machine (the same user) | Registering and looking up are on |
-| [LAN discovery (mDNS)](#lan-discovery-mdns) | A LAN that multicast reaches | Advertising is off. Looking up is on in a juiz built with the feature `naming-mdns` |
+| [LAN discovery (mDNS)](#lan-discovery-mdns) | A LAN that multicast reaches | Advertising is off. Looking up is on in a juiz built with the feature `naming-mdns` (the pip one has it) |
 | [Asking a known juiz (peers)](#asking-a-known-juiz-peers) | The URLs you write | Only when written |
 
 A lookup looks at the name list of this machine first, and at the LAN and the peers only when nothing is found there.
@@ -212,7 +212,9 @@ The HTTP broker of juiz has no authentication. Advertising a juiz on the LAN tel
 
 ### Getting a juiz with the feature
 
-LAN discovery works only in a juiz built with the feature `naming-mdns`.
+LAN discovery works in a juiz built with the feature `naming-mdns`. The juiz installed with pip (`pip install juiz-cli`) already has it, so it works as is.
+
+When installing with cargo, build it with the feature:
 
 ```sh
 cargo install juiz_app --features naming-mdns

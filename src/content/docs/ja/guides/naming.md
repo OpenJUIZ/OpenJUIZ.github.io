@@ -8,8 +8,8 @@ sidebar:
 ネーミングサービスは、名前(パッケージ名や System の名前)から、その juiz につながるブローカーの接続先(`ipc://…`・`http://…`・`qmp://…`・`zenoh://…`)を引く仕組みです。
 URL やポート番号を覚えていなくても、`juiz -s mobile_sim process list` のように名前で juiz を指せます。基礎パッケージのポートが使われていて別の番号で起動しても、アプリは名前で基礎を見つけます。
 
-:::note[juiz 0.3.6 の次の版から使えます]
-ネーミングサービスは juiz 0.3.6 の次の版から使えます。
+:::note[juiz 0.3.7 から使えます]
+ネーミングサービスは juiz 0.3.7 から使えます。
 :::
 
 ## 3 つの見つけ方
@@ -19,7 +19,7 @@ URL やポート番号を覚えていなくても、`juiz -s mobile_sim process 
 | 見つけ方 | 届く範囲 | 既定 |
 | --- | --- | --- |
 | [この機械の登録](#この機械の登録) | 同じ機械(同じユーザー) | 登録も引くのも有効 |
-| [LAN の自動発見(mDNS)](#lan-の自動発見mdns) | マルチキャストが届く LAN | 広告は既定オフ。引くのは feature `naming-mdns` 入りの juiz なら有効 |
+| [LAN の自動発見(mDNS)](#lan-の自動発見mdns) | マルチキャストが届く LAN | 広告は既定オフ。引くのは feature `naming-mdns` 入りの juiz(pip 版は入り)なら有効 |
 | [知っている juiz に聞く(peers)](#知っている-juiz-に聞くpeers) | URL を書いた先 | 書いたときだけ |
 
 名前で引くと、まずこの機械の登録を見て、見つからなかったときだけ LAN と peers を見ます。
@@ -212,7 +212,9 @@ juiz の HTTP ブローカーには認証がありません。LAN に「ここ�
 
 ### juiz を用意する
 
-LAN の自動発見は、feature `naming-mdns` を入れてビルドした juiz だけで使えます。
+LAN の自動発見は、feature `naming-mdns` 入りの juiz で使えます。pip で入れた juiz(`pip install juiz-cli`)には最初から入っているので、そのまま使えます。
+
+cargo で入れるときは、feature を付けてビルドします。
 
 ```sh
 cargo install juiz_app --features naming-mdns
