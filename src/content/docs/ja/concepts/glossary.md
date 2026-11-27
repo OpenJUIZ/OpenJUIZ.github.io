@@ -92,7 +92,7 @@ Process の出力を、別の Process の引数につなぐ使い方です。デ
 
 ### Broker(仲介)
 
-System の中身を外に公開し、外から呼び出せるようにする部品です。HTTP(`http`)、同じマシンの中で速い IPC(`ipc`)、別のマシンへ速い Zenoh(`zenoh`)、QUIC(`qmp`)があります。→ [ブローカーの選び方](/ja/guides/large-data/)
+System の中身を外に公開し、外から呼び出せるようにする部品です。HTTP(`http`)、同じマシンの中で速い IPC(`ipc`)、別のマシンへ速い Zenoh(`zenoh`)、QUIC(`qmp`)があります。Zenoh は `juiz broker install zenoh` で後から入れます。→ [ブローカーの選び方](/ja/guides/large-data/)、[ブローカーのプラグイン](/ja/guides/broker-plugin/)
 
 ### 管理画面
 

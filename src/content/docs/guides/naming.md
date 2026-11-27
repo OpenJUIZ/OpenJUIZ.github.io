@@ -101,6 +101,8 @@ When a juiz runs several brokers, the first one that can be used in this order i
 
 On the same machine IPC comes first because it is fast and uses no port. For other machines the order is by speed ([choosing a broker](/guides/large-data/), [Zenoh broker](/guides/zenoh-broker/)). To fix the kind, write it, as in `name://mobile_sim?type=http` or `--depend mobile_sim=http`.
 
+It connects through `zenoh` only when the looking-up `juiz` has the Zenoh broker installed (`juiz broker install zenoh`, see [Broker plugins](/guides/broker-plugin/)). Otherwise it skips `zenoh` and uses the next kind.
+
 ### Starting two juiz with the same name
 
 Only one registration with the same name can exist on the same machine in the same namespace.

@@ -1,6 +1,6 @@
 ---
 title: Zenoh broker
-description: How to install and configure the Zenoh broker, which calls juiz in other processes and on other machines over Zenoh's TCP, and how to speed it up with shared memory.
+description: How to install (juiz broker install zenoh) and configure the Zenoh broker, which calls juiz in other processes and on other machines over Zenoh's TCP, and how to speed it up with shared memory.
 sidebar:
   order: 9.5
 ---
@@ -8,8 +8,8 @@ sidebar:
 The Zenoh broker calls juiz in other processes and on other machines over [Zenoh](https://zenoh.io/)'s TCP transport. Its type name (the ID prefix) is `zenoh`.
 Like the QUIC broker (`qmp`) it reaches other machines and sends images as raw pixels instead of PNG. It is about 2.5–3 times as fast as QUIC, and it uses shared memory for peers on the same machine, which brings it close to the IPC broker.
 
-:::note[Available from juiz 0.2.9]
-The Zenoh broker is available from juiz 0.2.9.
+:::note[Installed differently from the release after juiz 0.3.7]
+The Zenoh broker is available from juiz 0.2.9. From the release after juiz 0.3.7 it is no longer built into `juiz`; you add it with `juiz broker install zenoh` ([Installing](#installing)). The configuration file and `zenoh://` IDs stay the same.
 :::
 
 ## How it differs from the other brokers
@@ -21,7 +21,7 @@ The Zenoh broker is available from juiz 0.2.9.
 | Transport | QUIC (UDP) | TCP; shared memory for peers on the same machine | Unix domain socket / named pipe |
 | Encryption | Yes (the peer is not verified) | **No** (plain TCP) | No (only the same user can connect) |
 | A call returning a 720p image | about 7 ms | TCP about 2.4 ms / shared memory about 1.3 ms | about 0.8 ms |
-| Built into `juiz` | Yes | Yes in the pip `juiz-cli`; with cargo, the `zenoh-broker` feature | Yes |
+| How to get it | Built in | `juiz broker install zenoh` | Built in |
 
 As a rule of thumb:
 
@@ -33,30 +33,36 @@ For choosing among all brokers and handling large data such as images, see [Choo
 
 ## Installing
 
-Whether `juiz` has Zenoh built in depends on how you installed it.
+The Zenoh broker is not built into the `juiz` command. Install it as a [broker plugin](/guides/broker-plugin/) with `juiz broker install`. This is the same whether you installed `juiz` with pip (`juiz-cli`) or with cargo (`juiz_app`).
+
+```sh
+juiz broker install zenoh
+# => installed zenoh broker 0.4.0 (juiz_zenoh_broker, broker ABI 1) to /home/me/.juiz/brokers/zenoh/0.4.0
+#    Use it with 'type_name: zenoh' in the conf, or IDs like zenoh://<host>:<port>/…
+```
+
+It downloads a prebuilt archive from the Releases of [OpenJUIZ/juiz_zenoh_broker](https://github.com/OpenJUIZ/juiz_zenoh_broker), picking a version that your `juiz` can load and a build for your OS and CPU (x86_64 and arm64 on Linux and macOS, x86_64 on Windows), and puts it in `~/.juiz/brokers/zenoh/<version>/`. No Rust toolchain is needed. After that, write `type_name: zenoh` in the configuration file or use `zenoh://` IDs; you do not need to list it under `plugins`.
+
+- `juiz broker list` shows whether it is installed, and `juiz broker remove zenoh` removes it. To install or pin a particular version, see [Broker plugins](/guides/broker-plugin/).
+- juiz_zenoh_broker's version does not follow juiz's (it starts at 0.4.0). `juiz broker install` picks a version your `juiz` can load.
+- If you write `type_name: zenoh` or connect with `-s zenoh://...` on a `juiz` that does not have it, you get this error:
+
+```text
+The broker type 'zenoh' is not installed. Install it with 'juiz broker install zenoh'.
+```
+
+Install it on both the listening and the calling `juiz` (on separate machines, run `juiz broker install zenoh` on each).
+
+### Installing with juiz 0.3.7 and earlier
+
+Up to juiz 0.3.7, the Zenoh broker was built into `juiz`. Those versions do not have the `juiz broker` command.
 
 | Installed with | Zenoh broker |
 |---|---|
-| `pip install juiz-cli` | Built in. Ready to use |
-| `cargo install juiz_app` | Not built in. Reinstall with `cargo install juiz_app --features zenoh-broker` |
-| Loading `juiz_zenoh_broker` as a plugin | Works with a `juiz` without the feature, through `plugins.broker_factories.zenoh_broker` in the configuration file |
+| `pip install juiz-cli` | Built in |
+| `cargo install juiz_app` | Reinstall with `cargo install juiz_app --version 0.3.7 --features zenoh-broker` |
 
-Zenoh takes a long time to build (it roughly doubles the first build of `juiz`), so cargo leaves it out by default.
-
-```sh
-cargo install juiz_app --features zenoh-broker
-```
-
-If you write `type_name: zenoh` or connect with `-s zenoh://...` on a `juiz` without Zenoh, you get an unknown-broker-type error that points to the two ways above.
-
-To load it as a plugin, run `cargo build -p juiz_zenoh_broker` in the [juiz repository](https://github.com/OpenJUIZ/juiz) and list the resulting `libzenoh_broker.so` (`.dylib` on macOS, `zenoh_broker.dll` on Windows) under `plugins` like any other plugin. Plugins are loaded through the Rust ABI, so build it with the same rustc and the same juiz version as the `juiz` that loads it.
-
-```yaml
-plugins:
-  broker_factories:
-    zenoh_broker:
-      path: "./target/debug"
-```
+`juiz_zenoh_broker` on crates.io ends at 0.3.7. It does not work with newer juiz, so switch to `juiz broker install zenoh`.
 
 ## Usage
 
@@ -189,8 +195,9 @@ Time per call to a Process in another process on the same machine (cloud, 4 vCPU
 - Shared memory is about 1.8 times as fast as TCP at 720p and about 2.5 times at 4K; a 4K return value is about as fast as IPC. When you send large images as arguments, Zenoh is faster than IPC.
 - To other machines it sends over TCP, so the network speed matters more (about 22 ms for 720p on 1 Gbps).
 
-To measure on your own machine, run this in the juiz repository:
+To measure on your own machine, run this in the [juiz_zenoh_broker](https://github.com/OpenJUIZ/juiz_zenoh_broker) repository:
 
 ```sh
-cargo test --release -p juiz_zenoh_broker --test zenoh_bench_test -- --ignored --nocapture --test-threads=1
+cargo test --release --test broker -- bench:: --ignored --nocapture --test-threads=1
+JUIZ_ZENOH_BENCH_TCP_ONLY=1 cargo test --release --test broker -- bench:: --ignored --nocapture --test-threads=1   # without shared memory
 ```

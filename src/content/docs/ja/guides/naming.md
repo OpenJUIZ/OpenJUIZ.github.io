@@ -101,6 +101,8 @@ mobile_sim is ambiguous: robot1/mobile_sim (this machine), robot2/mobile_sim@rob
 
 同じ機械では、速くてポートを使わない IPC を先にします。別の機械では、速い順([ブローカーの選び方](/ja/guides/large-data/)、[Zenoh ブローカー](/ja/guides/zenoh-broker/))です。種類を決めたいときは、`name://mobile_sim?type=http` や `--depend mobile_sim=http` のように種類を書きます。
 
+`zenoh` につなぐのは、引く側の `juiz` に Zenoh ブローカーを入れてあるとき(`juiz broker install zenoh`、[ブローカーのプラグイン](/ja/guides/broker-plugin/))だけです。入れていなければ `zenoh` を飛ばして次の種類を使います。
+
 ### 同じ名前の juiz を 2 つ起動したとき
 
 同じ機械・同じネームスペースに、同じ名前の登録は 1 つしか置けません。
