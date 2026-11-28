@@ -14,8 +14,8 @@ Some brokers are built into the `juiz` command, and others are **plugins that yo
 
 Brokers that you install later are built against the **broker plugin C ABI**. `juiz` can load one even if it was built with a different rustc or a different juiz version, as long as the ABI version matches. That is why they can be shipped as prebuilt archives for each OS and installed with `juiz broker install`, and why heavy dependencies such as Zenoh stay out of `juiz` itself.
 
-:::note[Available from the release after juiz 0.3.7]
-The `juiz broker` command and the broker plugin C ABI are available from the release after juiz 0.3.7. For installing the Zenoh broker with juiz 0.3.7 and earlier, see [Zenoh broker](/guides/zenoh-broker/#installing-with-juiz-037-and-earlier).
+:::note[Available from juiz 0.4.0]
+The `juiz broker` command and the broker plugin C ABI are available from juiz 0.4.0. For installing the Zenoh broker with juiz 0.3.7 and earlier, see [Zenoh broker](/guides/zenoh-broker/#installing-with-juiz-037-and-earlier).
 :::
 
 ## The `juiz broker` command
@@ -175,7 +175,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-juiz_sdk = "x.y.z"     # the release after juiz 0.3.7 or later (one that has broker_cabi)
+juiz_sdk = "0.4.0"     # juiz 0.4.0 or later (one that has broker_cabi)
 serde_json = "1"
 ```
 

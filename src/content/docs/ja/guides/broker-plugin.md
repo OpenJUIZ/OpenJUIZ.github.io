@@ -14,8 +14,8 @@ sidebar:
 
 後から入れるブローカーは、**ブローカーのプラグインの C ABI** で作られています。読み込む `juiz` と違う rustc・違う版の juiz でビルドしたものでも、ABI の版が同じなら読み込めます。そのため、OS ごとにビルド済みのアーカイブを配り、`juiz broker install` で入れるだけで使えます。重い依存(Zenoh など)を `juiz` 本体に入れずに済みます。
 
-:::note[juiz 0.3.7 の次の版から使えます]
-`juiz broker` コマンドとブローカーのプラグインの C ABI は、juiz 0.3.7 の次の版から使えます。juiz 0.3.7 までの Zenoh ブローカーの入れ方は [Zenoh ブローカー](/ja/guides/zenoh-broker/#juiz-037-までの入れ方) を見てください。
+:::note[juiz 0.4.0 から使えます]
+`juiz broker` コマンドとブローカーのプラグインの C ABI は、juiz 0.4.0 から使えます。juiz 0.3.7 までの Zenoh ブローカーの入れ方は [Zenoh ブローカー](/ja/guides/zenoh-broker/#juiz-037-までの入れ方) を見てください。
 :::
 
 ## `juiz broker` コマンド
@@ -175,7 +175,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-juiz_sdk = "x.y.z"     # juiz 0.3.7 の次の版以降(broker_cabi があるもの)
+juiz_sdk = "0.4.0"     # juiz 0.4.0 以降(broker_cabi があるもの)
 serde_json = "1"
 ```
 

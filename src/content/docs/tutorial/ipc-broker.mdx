@@ -480,7 +480,7 @@ juiz broker install zenoh
 It downloads the prebuilt broker from GitHub Releases and puts it in `~/.juiz/brokers/zenoh/`. After that, just write `type_name: zenoh` in the configuration file. If you write `type_name: zenoh` with a `juiz` that does not have it, the error tells you to run `juiz broker install zenoh`.
 
 <Aside type="note">
-The `juiz broker` command is available from the release after juiz 0.3.7. Up to juiz 0.3.7, the pip `juiz-cli` had Zenoh built in, and with cargo you reinstalled with `cargo install juiz_app --version 0.3.7 --features zenoh-broker`. The [Broker plugins](/guides/broker-plugin/) guide explains how brokers are added later.
+The `juiz broker` command is available from juiz 0.4.0. Up to juiz 0.3.7, the pip `juiz-cli` had Zenoh built in, and with cargo you reinstalled with `cargo install juiz_app --version 0.3.7 --features zenoh-broker`. The [Broker plugins](/guides/broker-plugin/) guide explains how brokers are added later.
 </Aside>
 
 ### Writing the configuration files

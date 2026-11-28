@@ -480,7 +480,7 @@ juiz broker install zenoh
 ビルド済みのブローカーを GitHub Releases から取ってきて、`~/.juiz/brokers/zenoh/` に置きます。入れた後は、設定ファイルに `type_name: zenoh` を書くだけで使えます。入れていない `juiz` で `type_name: zenoh` を書くと、`juiz broker install zenoh` を打つように案内されます。
 
 <Aside type="note">
-`juiz broker` コマンドは juiz 0.3.7 の次の版から使えます。juiz 0.3.7 までは、pip の `juiz-cli` には Zenoh が組み込まれていて、cargo では `cargo install juiz_app --version 0.3.7 --features zenoh-broker` で入れ直していました。ブローカーを後から入れる仕組みは [ブローカーのプラグイン](/ja/guides/broker-plugin/) のガイドで説明しています。
+`juiz broker` コマンドは juiz 0.4.0 から使えます。juiz 0.3.7 までは、pip の `juiz-cli` には Zenoh が組み込まれていて、cargo では `cargo install juiz_app --version 0.3.7 --features zenoh-broker` で入れ直していました。ブローカーを後から入れる仕組みは [ブローカーのプラグイン](/ja/guides/broker-plugin/) のガイドで説明しています。
 </Aside>
 
 ### 設定ファイルの書き方
