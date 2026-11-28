@@ -92,7 +92,7 @@ Everything in one `juiz` process: its instances, brokers and so on. When you con
 
 ### Broker (仲介)
 
-A building block that exposes the contents of a System so that they can be called from outside. There are HTTP (`http`), IPC (`ipc`, fast within one machine), Zenoh (`zenoh`, fast to other machines) and QUIC (`qmp`). → [Choosing a broker](/guides/large-data/)
+A building block that exposes the contents of a System so that they can be called from outside. There are HTTP (`http`), IPC (`ipc`, fast within one machine), Zenoh (`zenoh`, fast to other machines) and QUIC (`qmp`). Zenoh is added later with `juiz broker install zenoh`. → [Choosing a broker](/guides/large-data/), [Broker plugins](/guides/broker-plugin/)
 
 ### Web UI
 

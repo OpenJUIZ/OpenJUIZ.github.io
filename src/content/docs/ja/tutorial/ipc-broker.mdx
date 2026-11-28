@@ -471,12 +471,17 @@ Zenoh ブローカーは [Zenoh](https://zenoh.io/) の TCP で別のマシン�
 
 ### 入れ方
 
-| `juiz` の入れ方 | Zenoh ブローカー |
-| --- | --- |
-| `pip install juiz-cli` | 組み込み済み。そのまま使えます |
-| `cargo install juiz_app` | 組み込まれていません。`cargo install juiz_app --version 0.3.5 --features zenoh-broker` で入れ直します |
+Zenoh ブローカーは `juiz` コマンドに組み込まれていないので、使う前に 1 度だけ入れます。pip で入れた `juiz` でも cargo で入れた `juiz` でも同じです。
 
-組み込まれていない `juiz` で `type_name: zenoh` を書くと、知らないブローカーの種類としてエラーになり、入れ方が案内されます。
+```sh
+juiz broker install zenoh
+```
+
+ビルド済みのブローカーを GitHub Releases から取ってきて、`~/.juiz/brokers/zenoh/` に置きます。入れた後は、設定ファイルに `type_name: zenoh` を書くだけで使えます。入れていない `juiz` で `type_name: zenoh` を書くと、`juiz broker install zenoh` を打つように案内されます。
+
+<Aside type="note">
+`juiz broker` コマンドは juiz 0.3.7 の次の版から使えます。juiz 0.3.7 までは、pip の `juiz-cli` には Zenoh が組み込まれていて、cargo では `cargo install juiz_app --version 0.3.7 --features zenoh-broker` で入れ直していました。ブローカーを後から入れる仕組みは [ブローカーのプラグイン](/ja/guides/broker-plugin/) のガイドで説明しています。
+</Aside>
 
 ### 設定ファイルの書き方
 
@@ -513,7 +518,7 @@ Zenoh ブローカーは暗号化もアクセス制御もしません。信頼�
 
 ## ほかの選択肢
 
-`juiz` コマンドに組み込まれているブローカーは、ここまでの 3 つと QUIC ブローカーの 4 種類です。どれも、Process のコードを変えずに選べます。
+ブローカーは、ここまでの 3 つと QUIC ブローカーの 4 種類です。HTTP・IPC・QUIC は `juiz` コマンドに組み込まれていて、Zenoh は `juiz broker install zenoh` で入れます。どれも、Process のコードを変えずに選べます。
 
 | | HTTP(`http`) | IPC(`ipc`) | Zenoh(`zenoh`) | QUIC(`qmp`) |
 | --- | --- | --- | --- | --- |
@@ -544,7 +549,7 @@ QUIC ブローカーは UDP のポートを使い、使用中なら起動に失�
 
 ## まとめ
 
-- juiz の通信の部分はブローカーで、HTTP のほかに IPC・Zenoh・QUIC を選べます。どれも `juiz` コマンドに組み込まれていて(Zenoh は cargo では feature を付けて入れます)、設定ファイルの `brokers` で作ります。IPC は `--ipc <名前>` でも作れます。
+- juiz の通信の部分はブローカーで、HTTP のほかに IPC・Zenoh・QUIC を選べます。HTTP・IPC・QUIC は `juiz` コマンドに組み込まれていて、Zenoh は `juiz broker install zenoh` で入れます。どれも設定ファイルの `brokers` で作ります。IPC は `--ipc <名前>` でも作れます。
 - ID の先頭(`http://`・`ipc://`・`zenoh://`・`qmp://`)が、どのブローカーを通るかを表します。`juiz -s`・`process call`・`connection create` は、ID を変えるだけで別のブローカーを使います。
 - 1 つの juiz は複数のブローカーを同時に持てます。同じ Process に、ブローカーごとの ID があります。`mastersystem` の `broker_type` で、サブシステムとしてつなぐブローカーを選ぶと、Topic の値もそのブローカーで届きます。
 - 同じマシンの中は IPC、別のマシンとは Zenoh が速い選択です。HTTP は、ブラウザや管理画面から触るために残しておけます。

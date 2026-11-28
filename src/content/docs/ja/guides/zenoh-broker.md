@@ -1,6 +1,6 @@
 ---
 title: Zenoh ブローカー
-description: Zenoh の TCP で別プロセス・別マシンの juiz を呼び出す Zenoh ブローカーの入れ方・設定・共有メモリでの高速化を説明します。
+description: Zenoh の TCP で別プロセス・別マシンの juiz を呼び出す Zenoh ブローカーの入れ方(juiz broker install zenoh)・設定・共有メモリでの高速化を説明します。
 sidebar:
   order: 9.5
 ---
@@ -8,8 +8,8 @@ sidebar:
 Zenoh ブローカーは、[Zenoh](https://zenoh.io/) の TCP で別プロセスや別マシンの juiz を呼び出すブローカーです。ブローカーの種類名(ID の先頭)は `zenoh` です。
 QUIC ブローカー(`qmp`)と同じく別のマシンにも届き、画像を PNG にせず画素のまま送ります。そのうえで QUIC より 2.5〜3 倍ほど速く、同じマシンの相手には共有メモリで送るので、IPC ブローカーに近い速さが出ます。
 
-:::note[juiz 0.2.9 から使えます]
-Zenoh ブローカーは juiz 0.2.9 から使えます。
+:::note[juiz 0.3.7 の次の版から入れ方が変わりました]
+Zenoh ブローカーは juiz 0.2.9 から使えます。juiz 0.3.7 の次の版からは `juiz` に組み込まず、`juiz broker install zenoh` で後から入れます([入れ方](#入れ方))。設定ファイルと `zenoh://` の書き方は変わりません。
 :::
 
 ## ほかのブローカーとの違い
@@ -21,7 +21,7 @@ Zenoh ブローカーは juiz 0.2.9 から使えます。
 | 通り道 | QUIC(UDP) | TCP。同じマシンの相手には共有メモリ | Unix ドメインソケット / 名前付きパイプ |
 | 暗号化 | あり(相手の確認はしない) | **なし**(平文の TCP) | なし(同じユーザーだけが繋げる) |
 | 720p の画像を返す call | 約 7ms | TCP 約 2.4ms / 共有メモリ 約 1.3ms | 約 0.8ms |
-| `juiz` への組み込み | 組み込み済み | pip の `juiz-cli` は組み込み済み。cargo では feature `zenoh-broker` | 組み込み済み |
+| 入れ方 | 組み込み済み | `juiz broker install zenoh` | 組み込み済み |
 
 目安は次のとおりです。
 
@@ -33,30 +33,36 @@ Zenoh ブローカーは juiz 0.2.9 から使えます。
 
 ## 入れ方
 
-`juiz` コマンドへの Zenoh の組み込みは、入れ方によって違います。
+Zenoh ブローカーは `juiz` コマンドに組み込まれていません。[ブローカーのプラグイン](/ja/guides/broker-plugin/)として、`juiz broker install` で入れます。pip で入れた `juiz`(`juiz-cli`)でも cargo で入れた `juiz`(`juiz_app`)でも同じです。
+
+```sh
+juiz broker install zenoh
+# => installed zenoh broker 0.4.0 (juiz_zenoh_broker, broker ABI 1) to /home/me/.juiz/brokers/zenoh/0.4.0
+#    Use it with 'type_name: zenoh' in the conf, or IDs like zenoh://<host>:<port>/…
+```
+
+[OpenJUIZ/juiz_zenoh_broker](https://github.com/OpenJUIZ/juiz_zenoh_broker) の Releases から、その `juiz` が読める版で、その OS・CPU 向け(Linux・macOS の x86_64 と arm64、Windows の x86_64)のビルド済みのアーカイブを取ってきて、`~/.juiz/brokers/zenoh/<版>/` に置きます。Rust のツールチェーンは要りません。入れた後は、設定ファイルに `type_name: zenoh` を書くか `zenoh://` の ID を使うだけで、`plugins` に書く必要はありません。
+
+- 入っているかは `juiz broker list` で、消すときは `juiz broker remove zenoh` です。版を決めて入れる・固定するなどは [ブローカーのプラグイン](/ja/guides/broker-plugin/) を見てください。
+- juiz_zenoh_broker の版は juiz の版とそろえていません(0.4.0 から)。`juiz broker install` が、その `juiz` で読める版を選びます。
+- 入れていない `juiz` で `type_name: zenoh` を書いたり `-s zenoh://...` で繋ごうとしたりすると、次のエラーになります。
+
+```text
+The broker type 'zenoh' is not installed. Install it with 'juiz broker install zenoh'.
+```
+
+待ち受ける側と呼び出す側の両方の `juiz` に入れてください(別のマシンなら、それぞれのマシンで `juiz broker install zenoh` を打ちます)。
+
+### juiz 0.3.7 までの入れ方
+
+juiz 0.3.7 までは、Zenoh ブローカーを `juiz` に組み込んでいました。この版の `juiz` には `juiz broker` コマンドがありません。
 
 | 入れ方 | Zenoh ブローカー |
 |---|---|
-| `pip install juiz-cli` | 組み込み済み。そのまま使えます |
-| `cargo install juiz_app` | 組み込まれません。`cargo install juiz_app --features zenoh-broker` で入れ直します |
-| `juiz_zenoh_broker` をプラグインとして読む | feature なしの `juiz` でも、設定ファイルの `plugins.broker_factories.zenoh_broker` で読めます |
+| `pip install juiz-cli` | 組み込み済み |
+| `cargo install juiz_app` | `cargo install juiz_app --version 0.3.7 --features zenoh-broker` で入れ直す |
 
-Zenoh はビルドに時間がかかる(`juiz` の初回ビルドが 2 倍ほどになる)ので、cargo では既定で外してあります。
-
-```sh
-cargo install juiz_app --features zenoh-broker
-```
-
-組み込まれていない `juiz` で `type_name: zenoh` を書いたり `-s zenoh://...` で繋ごうとしたりすると、知らないブローカーの種類としてエラーになり、上の 2 つの方法が案内されます。
-
-プラグインとして読むときは、[juiz のリポジトリ](https://github.com/OpenJUIZ/juiz) で `cargo build -p juiz_zenoh_broker` を実行してできた `libzenoh_broker.so`(macOS は `.dylib`、Windows は `zenoh_broker.dll`)を、ほかのプラグインと同じく `plugins` に書きます。プラグインは Rust の ABI で読み込むので、読み込む `juiz` と同じ rustc・同じ版の juiz でビルドしてください。
-
-```yaml
-plugins:
-  broker_factories:
-    zenoh_broker:
-      path: "./target/debug"
-```
+crates.io の `juiz_zenoh_broker` は 0.3.7 で終わりです。新しい juiz では使えないので、`juiz broker install zenoh` に切り替えてください。
 
 ## 使い方
 
@@ -189,8 +195,9 @@ brokers:
 - 共有メモリは TCP より 720p で約 1.8 倍、4K で約 2.5 倍速く、4K の戻り値は IPC と同じくらいです。引数で大きな画像を送るときは、IPC より Zenoh の方が速くなります。
 - 別のマシンへは TCP で送るので、回線の速さ(1 Gbps で 720p は約 22ms)の方が効きます。
 
-手元で測るときは、juiz のリポジトリで次を実行してください。
+手元で測るときは、[juiz_zenoh_broker](https://github.com/OpenJUIZ/juiz_zenoh_broker) のリポジトリで次を実行してください。
 
 ```sh
-cargo test --release -p juiz_zenoh_broker --test zenoh_bench_test -- --ignored --nocapture --test-threads=1
+cargo test --release --test broker -- bench:: --ignored --nocapture --test-threads=1
+JUIZ_ZENOH_BENCH_TCP_ONLY=1 cargo test --release --test broker -- bench:: --ignored --nocapture --test-threads=1   # 共有メモリを切る
 ```

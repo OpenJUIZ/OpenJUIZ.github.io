@@ -471,12 +471,17 @@ The Zenoh broker connects to juiz on other machines over [Zenoh](https://zenoh.i
 
 ### Installing
 
-| How you installed `juiz` | Zenoh broker |
-| --- | --- |
-| `pip install juiz-cli` | Built in. Use it as it is |
-| `cargo install juiz_app` | Not built in. Reinstall with `cargo install juiz_app --version 0.3.5 --features zenoh-broker` |
+The Zenoh broker is not built into the `juiz` command, so install it once before using it. This is the same whether you installed `juiz` with pip or with cargo.
 
-If you write `type_name: zenoh` with a `juiz` that does not have it built in, you get an error about an unknown broker type that tells you how to install it.
+```sh
+juiz broker install zenoh
+```
+
+It downloads the prebuilt broker from GitHub Releases and puts it in `~/.juiz/brokers/zenoh/`. After that, just write `type_name: zenoh` in the configuration file. If you write `type_name: zenoh` with a `juiz` that does not have it, the error tells you to run `juiz broker install zenoh`.
+
+<Aside type="note">
+The `juiz broker` command is available from the release after juiz 0.3.7. Up to juiz 0.3.7, the pip `juiz-cli` had Zenoh built in, and with cargo you reinstalled with `cargo install juiz_app --version 0.3.7 --features zenoh-broker`. The [Broker plugins](/guides/broker-plugin/) guide explains how brokers are added later.
+</Aside>
 
 ### Writing the configuration files
 
@@ -513,7 +518,7 @@ For the shared memory settings (`ulimit -l` on Linux and macOS) and other detail
 
 ## Other options
 
-The brokers built into the `juiz` command are the three above and the QUIC broker, four in total. You can choose any of them without changing the Process code.
+There are four brokers: the three above and the QUIC broker. HTTP, IPC and QUIC are built into the `juiz` command, and Zenoh is installed with `juiz broker install zenoh`. You can choose any of them without changing the Process code.
 
 | | HTTP (`http`) | IPC (`ipc`) | Zenoh (`zenoh`) | QUIC (`qmp`) |
 | --- | --- | --- | --- | --- |
@@ -544,7 +549,7 @@ How to choose a broker and how large data such as images are handled are summari
 
 ## Summary
 
-- The transport in juiz is a broker, and besides HTTP you can choose IPC, Zenoh and QUIC. All are built into the `juiz` command (with cargo, Zenoh needs a feature), and you create them with `brokers` in the configuration file. IPC can also be created with `--ipc <name>`.
+- The transport in juiz is a broker, and besides HTTP you can choose IPC, Zenoh and QUIC. HTTP, IPC and QUIC are built into the `juiz` command, and Zenoh is installed with `juiz broker install zenoh`. You create them all with `brokers` in the configuration file. IPC can also be created with `--ipc <name>`.
 - The start of an ID (`http://`, `ipc://`, `zenoh://`, `qmp://`) tells which broker it goes through. `juiz -s`, `process call` and `connection create` use another broker just by changing the ID.
 - One juiz can have several brokers at the same time, and the same Process has one ID per broker. `broker_type` in `mastersystem` chooses the broker for joining as a subsystem, and the Topic values then travel over that broker.
 - IPC within one machine and Zenoh between machines are the fast choices. You can keep HTTP for the browser and the web UI.
